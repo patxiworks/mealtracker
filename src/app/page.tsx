@@ -6,33 +6,23 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { format, startOfWeek, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Sun, Moon, Utensils } from 'lucide-react';
+import { Sun, Utensils, Moon } from 'lucide-react';
 import Link from 'next/link';
-
-interface AttendanceData {
-  breakfast: number;
-  lunch: number;
-  dinner: number;
-}
-
-interface DailyReport {
-  [date: string]: AttendanceData;
-}
-
-const today = new Date();
+import { createUserMealAttendance, getUserMealAttendance, updateUserMealAttendance } from "@/lib/firebase/db";
+import { useToast } from "@/hooks/use-toast";
 
 const formatDate = (date: Date): string => {
   return format(date, "yyyy-MM-dd");
 };
 
 const MealCheckin = () => {
-  const [weeklyAttendance, setWeeklyAttendance] = useState<DailyReport>({});
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(today);
   const [username, setUsername] = useState<string | null>(null);
   const [inputUsername, setInputUsername] = useState("");
+  const [mealAttendance, setMealAttendance] = useState<Record<string, { breakfast: boolean, lunch: boolean, dinner: boolean }>>({});
+  const weekDates = getWeekDates(new Date());
+  const { toast } = useToast();
 
   useEffect(() => {
     // Load username from localStorage on component mount
@@ -40,22 +30,32 @@ const MealCheckin = () => {
     if (storedUsername) {
       setUsername(storedUsername);
     }
-
-     // Load initial weekly attendance from localStorage on component mount
-     const storedWeeklyAttendance = localStorage.getItem("weeklyAttendance");
-     if (storedWeeklyAttendance) {
-       setWeeklyAttendance(JSON.parse(storedWeeklyAttendance));
-     }
   }, []);
 
   useEffect(() => {
-    if (username) {
-      // Load meal attendance from localStorage when username is available
-      const storedMealAttendance = localStorage.getItem(`${username}-mealAttendance`);
-      if (storedMealAttendance) {
-        setMealAttendance(JSON.parse(storedMealAttendance));
+    const loadMealAttendance = async () => {
+      if (username) {
+        try {
+          const attendanceData = await getUserMealAttendance(username);
+          if (attendanceData) {
+            setMealAttendance(attendanceData);
+          } else {
+            // If no data exists for the user, initialize it in the database
+            const initialAttendance = weekDates.reduce((acc, date) => {
+              acc[formatDate(date)] = { breakfast: false, lunch: false, dinner: false };
+              return acc;
+            }, {} as Record<string, { breakfast: boolean, lunch: boolean, dinner: boolean }>);
+
+            await createUserMealAttendance(username, initialAttendance);
+            setMealAttendance(initialAttendance);
+          }
+        } catch (error) {
+          console.error("Error loading meal attendance:", error);
+        }
       }
-    }
+    };
+
+    loadMealAttendance();
   }, [username]);
 
   const handleSignIn = () => {
@@ -68,82 +68,49 @@ const MealCheckin = () => {
   const handleSignOut = () => {
     setUsername(null);
     localStorage.removeItem("username");
+    setMealAttendance({}); // Clear local state on sign-out
   };
 
-  const getWeekDates = (date: Date): Date[] => {
+  function getWeekDates(date: Date): Date[] {
     const weekStart = startOfWeek(date, { weekStartsOn: 0 });
     const dates: Date[] = [];
     for (let i = 0; i < 7; i++) {
       dates.push(addDays(weekStart, i));
     }
     return dates;
-  };
+  }
 
-  const weekDates = selectedDate ? getWeekDates(selectedDate) : getWeekDates(today);
-
-  const [mealAttendance, setMealAttendance] = useState<Record<string, {breakfast: boolean, lunch: boolean, dinner: boolean}>>(
-    weekDates.reduce((acc, date) => {
-      acc[formatDate(date)] = { breakfast: false, lunch: false, dinner: false };
-      return acc;
-    }, {} as Record<string, {breakfast: boolean, lunch: boolean, dinner: boolean}>)
-  );
-
-  useEffect(() => {
-    // Save meal attendance to localStorage whenever it changes
-    if (username) {
-      localStorage.setItem(`${username}-mealAttendance`, JSON.stringify(mealAttendance));
+  const updateMealAttendance = async (date: Date, meal: string, checked: boolean) => {
+    if (!username) {
+      toast({
+        title: "Error",
+        description: "Please sign in to update meal attendance.",
+      });
+      return;
     }
-  }, [mealAttendance, username]);
 
-  const updateMealAttendance = (date: Date, meal: string, checked: boolean) => {
     const dateKey = formatDate(date);
-    setMealAttendance((prev) => {
-      const updatedAttendance = {
-        ...prev,
-        [dateKey]: { ...prev[dateKey], [meal]: checked },
-      };
-      return updatedAttendance;
-    });
+    const updatedAttendance = {
+      ...mealAttendance,
+      [dateKey]: { ...mealAttendance[dateKey], [meal]: checked },
+    };
+
+    setMealAttendance(updatedAttendance);
+
+    try {
+      await updateUserMealAttendance(username, updatedAttendance);
+      toast({
+        title: "Success",
+        description: `Attendance updated for ${meal} on ${dateKey}.`,
+      });
+    } catch (error) {
+      console.error("Error updating meal attendance:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update attendance. Please try again.",
+      });
+    }
   };
-
-  const handleCheckIn = () => {
-     if (!username) {
-       alert("Please sign in to check in for meals.");
-       return;
-     }
- 
-     // Aggregate attendance for the week, accounting for existing attendance.
-     setWeeklyAttendance((prevAttendance) => {
-       const updatedAttendance: DailyReport = { ...prevAttendance };
- 
-       weekDates.forEach((date) => {
-         const dateKey = formatDate(date);
-         const currentDayAttendance = mealAttendance[dateKey];
- 
-         if (!updatedAttendance[dateKey]) {
-           updatedAttendance[dateKey] = { breakfast: 0, lunch: 0, dinner: 0 };
-         }
- 
-         // Update attendance based on whether the user is checking in or out.
-         updatedAttendance[dateKey] = {
-           breakfast: (updatedAttendance[dateKey].breakfast || 0) + (currentDayAttendance.breakfast ? 1 : 0) - ((prevAttendance[dateKey]?.breakfast || 0) > 0 && !(currentDayAttendance.breakfast) ? 1 : 0),
-           lunch: (updatedAttendance[dateKey].lunch || 0) + (currentDayAttendance.lunch ? 1 : 0) - ((prevAttendance[dateKey]?.lunch || 0) > 0 && !(currentDayAttendance.lunch) ? 1 : 0),
-           dinner: (updatedAttendance[dateKey].dinner || 0) + (currentDayAttendance.dinner ? 1 : 0) - ((prevAttendance[dateKey]?.dinner || 0) > 0 && !(currentDayAttendance.dinner) ? 1 : 0),
-         };
-       });
- 
-       // Save updated attendance to localStorage
-       localStorage.setItem("weeklyAttendance", JSON.stringify(updatedAttendance));
-       return updatedAttendance;
-     });
- 
-     alert("Weekly attendance updated!");
-   };
-
-  useEffect(() => {
-    // Save weekly attendance to localStorage whenever it changes
-    localStorage.setItem("weeklyAttendance", JSON.stringify(weeklyAttendance));
-  }, [weeklyAttendance]);
 
   if (!username) {
     return (
@@ -211,8 +178,8 @@ const MealCheckin = () => {
                   </div>
 
                   {/* Lunch */}
-                   <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary w-32">
-                    <label htmlFor={`lunch-${formatDate(date)}`}  className="mb-1 text-center">
+                  <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary w-32">
+                    <label htmlFor={`lunch-${formatDate(date)}`} className="mb-1 text-center">
                       <Utensils className="mr-1 inline-block" size={20} />
                       Lunch:
                     </label>
@@ -242,11 +209,6 @@ const MealCheckin = () => {
                 </div>
               </div>
             ))}
-            <div className="flex justify-center">
-              <Button onClick={handleCheckIn} className="bg-primary text-primary-foreground hover:bg-primary/80 mr-2">
-                Check In Weekly Attendance
-              </Button>
-            </div>
           </section>
         </CardContent>
       </Card>

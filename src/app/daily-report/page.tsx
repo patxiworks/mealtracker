@@ -29,6 +29,7 @@ import {
   TableCell,
   TableCaption,
 } from "@/components/ui/table"
+import { getDailyReportData } from "@/lib/firebase/db";
 
 interface AttendanceData {
   breakfast: number;
@@ -49,14 +50,26 @@ const formatDate = (date: Date): string => {
 const DailyReportPage = () => {
   const [dailyReport, setDailyReport] = useState<DailyReport>({});
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(today);
+  const [loading, setLoading] = useState(true);
 
-  // Load daily report data from localStorage
+  // Load daily report data from Firebase
   useEffect(() => {
-    const storedWeeklyAttendance = localStorage.getItem("weeklyAttendance");
-    if (storedWeeklyAttendance) {
-      setDailyReport(JSON.parse(storedWeeklyAttendance));
-    }
-  }, []);
+    const fetchDailyReport = async () => {
+      setLoading(true);
+      try {
+        const formattedDate = selectedDate ? formatDate(selectedDate) : formatDate(today);
+        const reportData = await getDailyReportData(formattedDate);
+        setDailyReport({ [formattedDate]: reportData });
+      } catch (error) {
+        console.error("Error fetching daily report:", error);
+        // Optionally set an error state to display a message to the user
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDailyReport();
+  }, [selectedDate]);
 
   const formattedDate = selectedDate ? formatDate(selectedDate) : formatDate(today);
   const attendanceForSelectedDate = dailyReport[formattedDate] || { breakfast: 0, lunch: 0, dinner: 0 };
@@ -104,48 +117,54 @@ const DailyReportPage = () => {
             <h3 className="text-lg font-semibold">
               Attendance for {formattedDate}
             </h3>
-            <Card>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={chartData}>
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="value" fill="#82ca9d" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent>
-                <Table>
-                  <TableCaption>
-                    Meal attendance data for {formattedDate}
-                  </TableCaption>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[100px]">Meal</TableHead>
-                      <TableHead>Attendees</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>Breakfast</TableCell>
-                      <TableCell>{attendanceForSelectedDate.breakfast}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Lunch</TableCell>
-                      <TableCell>{attendanceForSelectedDate.lunch}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Dinner</TableCell>
-                      <TableCell>{attendanceForSelectedDate.dinner}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+            {loading ? (
+              <div>Loading...</div>
+            ) : (
+              <>
+                <Card>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={chartData}>
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Bar dataKey="value" fill="#82ca9d" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent>
+                    <Table>
+                      <TableCaption>
+                        Meal attendance data for {formattedDate}
+                      </TableCaption>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[100px]">Meal</TableHead>
+                          <TableHead>Attendees</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        <TableRow>
+                          <TableCell>Breakfast</TableCell>
+                          <TableCell>{attendanceForSelectedDate.breakfast}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>Lunch</TableCell>
+                          <TableCell>{attendanceForSelectedDate.lunch}</TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell>Dinner</TableCell>
+                          <TableCell>{attendanceForSelectedDate.dinner}</TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </section>
         </CardContent>
       </Card>
