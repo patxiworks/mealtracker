@@ -1,19 +1,23 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { format, startOfWeek, addDays } from "date-fns";
-import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
-import { Sun, Utensils, Moon, Check, X, PackageCheck } from 'lucide-react';
+import {useState, useEffect} from 'react';
+import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
+import {Button} from '@/components/ui/button';
+import {Separator} from '@/components/ui/separator';
+import {format, startOfWeek, addDays} from 'date-fns';
+import {cn} from '@/lib/utils';
+import {Input} from '@/components/ui/input';
+import {Sun, Utensils, Moon, Check, X, PackageCheck} from 'lucide-react';
 import Link from 'next/link';
-import { createUserMealAttendance, getUserMealAttendance, updateUserMealAttendance } from "@/lib/firebase/db";
-import { useToast } from "@/hooks/use-toast";
+import {
+  createUserMealAttendance,
+  getUserMealAttendance,
+  updateUserMealAttendance,
+} from '@/lib/firebase/db';
+import {useToast} from '@/hooks/use-toast';
 
 const formatDate = (date: Date): string => {
-  return format(date, "yyyy-MM-dd");
+  return format(date, 'yyyy-MM-dd');
 };
 
 // Define the meal status type
@@ -27,14 +31,16 @@ interface MealAttendanceState {
 
 const MealCheckin = () => {
   const [username, setUsername] = useState<string | null>(null);
-  const [inputUsername, setInputUsername] = useState("");
-  const [mealAttendance, setMealAttendance] = useState<Record<string, MealAttendanceState>>({});
+  const [inputUsername, setInputUsername] = useState('');
+  const [mealAttendance, setMealAttendance] = useState<
+    Record<string, MealAttendanceState>
+  >({});
   const weekDates = getWeekDates(new Date());
-  const { toast } = useToast();
+  const {toast} = useToast();
 
   useEffect(() => {
     // Load username from localStorage on component mount
-    const storedUsername = localStorage.getItem("username");
+    const storedUsername = localStorage.getItem('username');
     if (storedUsername) {
       setUsername(storedUsername);
     }
@@ -50,7 +56,7 @@ const MealCheckin = () => {
           } else {
             // If no data exists for the user, initialize it in the database
             const initialAttendance = weekDates.reduce((acc, date) => {
-              acc[formatDate(date)] = { breakfast: null, lunch: null, dinner: null };
+              acc[formatDate(date)] = {breakfast: null, lunch: null, dinner: null};
               return acc;
             }, {} as Record<string, MealAttendanceState>);
 
@@ -58,10 +64,12 @@ const MealCheckin = () => {
             setMealAttendance(initialAttendance);
           }
         } catch (error: any) {
-          console.error("Error loading meal attendance:", error);
+          console.error('Error loading meal attendance:', error);
           toast({
-            title: "Error",
-            description: `Failed to load meal attendance. ${error.message || 'Please check your connection.'}`,
+            title: 'Error',
+            description: `Failed to load meal attendance. ${
+              error.message || 'Please check your connection.'
+            }`,
           });
         }
       }
@@ -71,20 +79,20 @@ const MealCheckin = () => {
   }, [username, weekDates, toast]);
 
   const handleSignIn = () => {
-    if (inputUsername.trim() !== "") {
+    if (inputUsername.trim() !== '') {
       setUsername(inputUsername);
-      localStorage.setItem("username", inputUsername);
+      localStorage.setItem('username', inputUsername);
     }
   };
 
   const handleSignOut = () => {
     setUsername(null);
-    localStorage.removeItem("username");
+    localStorage.removeItem('username');
     setMealAttendance({}); // Clear local state on sign-out
   };
 
   function getWeekDates(date: Date): Date[] {
-    const weekStart = startOfWeek(date, { weekStartsOn: 0 });
+    const weekStart = startOfWeek(date, {weekStartsOn: 0});
     const dates: Date[] = [];
     for (let i = 0; i < 7; i++) {
       dates.push(addDays(weekStart, i));
@@ -92,11 +100,15 @@ const MealCheckin = () => {
     return dates;
   }
 
-  const updateMealAttendance = async (date: Date, meal: string, status: MealStatus) => {
+  const updateMealAttendance = async (
+    date: Date,
+    meal: string,
+    status: MealStatus
+  ) => {
     if (!username) {
       toast({
-        title: "Error",
-        description: "Please sign in to update meal attendance.",
+        title: 'Error',
+        description: 'Please sign in to update meal attendance.',
       });
       return;
     }
@@ -104,7 +116,7 @@ const MealCheckin = () => {
     const dateKey = formatDate(date);
     const updatedAttendance = {
       ...mealAttendance,
-      [dateKey]: { ...mealAttendance[dateKey], [meal]: status },
+      [dateKey]: {...mealAttendance[dateKey], [meal]: status},
     };
 
     setMealAttendance(updatedAttendance);
@@ -112,14 +124,16 @@ const MealCheckin = () => {
     try {
       await updateUserMealAttendance(username, updatedAttendance);
       toast({
-        title: "Success",
+        title: 'Success',
         description: `Attendance updated for ${meal} on ${dateKey}.`,
       });
     } catch (error: any) {
-      console.error("Error updating meal attendance:", error);
+      console.error('Error updating meal attendance:', error);
       toast({
-        title: "Error",
-        description: `Failed to update attendance. ${error.message || 'Please try again later.'}`,
+        title: 'Error',
+        description: `Failed to update attendance. ${
+          error.message || 'Please try again later.'
+        }`,
       });
     }
   };
@@ -133,10 +147,9 @@ const MealCheckin = () => {
         newStatus = 'absent';
       } else if (status === 'absent') {
         newStatus = 'packed';
+      } else {
+        newStatus = null;
       }
-       else {
-            newStatus = null
-       }
       updateMealAttendance(date, meal, newStatus);
     };
 
@@ -170,7 +183,7 @@ const MealCheckin = () => {
                 id="username"
                 placeholder="Enter your username"
                 value={inputUsername}
-                onChange={(e) => setInputUsername(e.target.value)}
+                onChange={e => setInputUsername(e.target.value)}
               />
             </div>
             <Button onClick={handleSignIn}>Sign In</Button>
@@ -187,7 +200,7 @@ const MealCheckin = () => {
           <div className="flex justify-between items-center">
             <CardTitle className="text-2xl">Weekly Mealtime Tracker</CardTitle>
             <div className="flex gap-4 items-center">
-              <Link href="/daily-report/page">
+              <Link href="/daily-report">
                 <Button variant="secondary">View Daily Report</Button>
               </Link>
               <Button variant="outline" onClick={handleSignOut}>
@@ -201,9 +214,9 @@ const MealCheckin = () => {
           <section className="grid gap-2">
             <h2 className="text-xl font-semibold">Weekly Meal Check-in</h2>
             <Separator />
-            {weekDates.map((date) => (
+            {weekDates.map(date => (
               <div key={formatDate(date)} className="mb-4">
-                <h3 className="text-lg font-semibold">{format(date, "EEEE, yyyy-MM-dd")}</h3>
+                <h3 className="text-lg font-semibold">{format(date, 'EEEE, yyyy-MM-dd')}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Breakfast */}
                   <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary w-32">
@@ -211,7 +224,11 @@ const MealCheckin = () => {
                       <Sun className="mr-1 inline-block" size={20} />
                       Breakfast:
                     </label>
-                    {renderMealStatusIcon(date, "breakfast", mealAttendance[formatDate(date)]?.breakfast)}
+                    {renderMealStatusIcon(
+                      date,
+                      'breakfast',
+                      mealAttendance[formatDate(date)]?.breakfast
+                    )}
                   </div>
 
                   {/* Lunch */}
@@ -220,7 +237,11 @@ const MealCheckin = () => {
                       <Utensils className="mr-1 inline-block" size={20} />
                       Lunch:
                     </label>
-                    {renderMealStatusIcon(date, "lunch", mealAttendance[formatDate(date)]?.lunch)}
+                    {renderMealStatusIcon(
+                      date,
+                      'lunch',
+                      mealAttendance[formatDate(date)]?.lunch
+                    )}
                   </div>
 
                   {/* Dinner */}
@@ -229,7 +250,11 @@ const MealCheckin = () => {
                       <Moon className="mr-1 inline-block" size={20} />
                       Dinner:
                     </label>
-                    {renderMealStatusIcon(date, "dinner", mealAttendance[formatDate(date)]?.dinner)}
+                    {renderMealStatusIcon(
+                      date,
+                      'dinner',
+                      mealAttendance[formatDate(date)]?.dinner
+                    )}
                   </div>
                 </div>
               </div>
