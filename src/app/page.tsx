@@ -87,8 +87,8 @@ const MealCheckin = () => {
                 <h3 className="text-lg font-semibold">{format(date, "EEEE, yyyy-MM-dd")}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Breakfast */}
-                  <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary">
-                    <label htmlFor={`breakfast-${formatDate(date)}`}>Breakfast:</label>
+                  <div className="flex items-center justify-center p-4 rounded-lg bg-secondary">
+                    <label htmlFor={`breakfast-${formatDate(date)}`} className="mr-2">Breakfast:</label>
                     <Checkbox
                       id={`breakfast-${formatDate(date)}`}
                       checked={mealAttendance[formatDate(date)]?.breakfast || false}
@@ -99,8 +99,8 @@ const MealCheckin = () => {
                   </div>
 
                   {/* Lunch */}
-                  <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary">
-                    <label htmlFor={`lunch-${formatDate(date)}`}>Lunch:</label>
+                   <div className="flex items-center justify-center p-4 rounded-lg bg-secondary">
+                    <label htmlFor={`lunch-${formatDate(date)}`}  className="mr-2">Lunch:</label>
                     <Checkbox
                       id={`lunch-${formatDate(date)}`}
                       checked={mealAttendance[formatDate(date)]?.lunch || false}
@@ -109,8 +109,8 @@ const MealCheckin = () => {
                   </div>
 
                   {/* Dinner */}
-                  <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary">
-                    <label htmlFor={`dinner-${formatDate(date)}`}>Dinner:</label>
+                  <div className="flex items-center justify-center p-4 rounded-lg bg-secondary">
+                    <label htmlFor={`dinner-${formatDate(date)}`} className="mr-2">Dinner:</label>
                     <Checkbox
                       id={`dinner-${formatDate(date)}`}
                       checked={mealAttendance[formatDate(date)]?.dinner || false}
