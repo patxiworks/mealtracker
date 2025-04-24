@@ -4,7 +4,7 @@ import {useState, useEffect} from 'react';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
 import {Separator} from '@/components/ui/separator';
-import {format, startOfWeek, addDays, subWeeks, isWithinInterval} from 'date-fns';
+import {format, startOfWeek, addDays, addWeeks, isWithinInterval} from 'date-fns';
 import {cn} from '@/lib/utils';
 import {Input} from '@/components/ui/input';
 import {Sun, Utensils, Moon, Check, X, PackageCheck} from 'lucide-react';
@@ -196,8 +196,8 @@ const MealCheckin = () => {
     );
   }
 
-  const weekOptions = Array.from({ length: 8 }, (_, i) => {
-    const weekStart = subWeeks(new Date(), i);
+  const weekOptions = Array.from({ length: 4 }, (_, i) => { // Show current week and next 3 weeks
+    const weekStart = addWeeks(new Date(), i);
     const start = startOfWeek(weekStart, { weekStartsOn: 0 });
     const end = addDays(start, 6);
     return {
