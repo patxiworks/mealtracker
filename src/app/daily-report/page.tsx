@@ -60,8 +60,13 @@ const DailyReportPage = () => {
         const formattedDate = selectedDate ? formatDate(selectedDate) : formatDate(today);
         const reportData = await getDailyReportData(formattedDate);
         setDailyReport({ [formattedDate]: reportData });
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching daily report:", error);
+        // Optionally set an error state to display a message to the user
+         console.error("Error fetching daily report:", error);
+        // Optionally set an error state to display a message to the user
+        console.error("Error fetching daily report:", error);
+        // Optionally set an error state to display a message to the user
         // Optionally set an error state to display a message to the user
       } finally {
         setLoading(false);

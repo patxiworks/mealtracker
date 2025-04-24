@@ -49,14 +49,18 @@ const MealCheckin = () => {
             await createUserMealAttendance(username, initialAttendance);
             setMealAttendance(initialAttendance);
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error("Error loading meal attendance:", error);
+          toast({
+            title: "Error",
+            description: `Failed to load meal attendance. ${error.message || 'Please check your connection.'}`,
+          });
         }
       }
     };
 
     loadMealAttendance();
-  }, [username]);
+  }, [username, weekDates, toast]);
 
   const handleSignIn = () => {
     if (inputUsername.trim() !== "") {
@@ -103,11 +107,11 @@ const MealCheckin = () => {
         title: "Success",
         description: `Attendance updated for ${meal} on ${dateKey}.`,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating meal attendance:", error);
       toast({
         title: "Error",
-        description: "Failed to update attendance. Please try again.",
+        description: `Failed to update attendance. ${error.message || 'Please try again later.'}`,
       });
     }
   };
