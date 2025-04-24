@@ -138,21 +138,7 @@ const MealCheckin = () => {
     }
   };
 
-  const renderMealStatusIcon = (date: Date, meal: string, status: MealStatus) => {
-    const handleStatusClick = () => {
-      let newStatus: MealStatus = null;
-      if (status === null) {
-        newStatus = 'present';
-      } else if (status === 'present') {
-        newStatus = 'absent';
-      } else if (status === 'absent') {
-        newStatus = 'packed';
-      } else {
-        newStatus = null;
-      }
-      updateMealAttendance(date, meal, newStatus);
-    };
-
+  const getMealStatusIcon = (date: Date, meal: string, status: MealStatus) => {
     let icon = null;
     if (status === 'present') {
       icon = <Check className="h-5 w-5 text-green-500" />;
@@ -161,12 +147,23 @@ const MealCheckin = () => {
     } else if (status === 'packed') {
       icon = <PackageCheck className="h-5 w-5 text-blue-500" />;
     }
+    return icon;
+  };
 
-    return (
-      <button onClick={handleStatusClick} className="rounded-full p-1 hover:bg-accent">
-        {icon}
-      </button>
-    );
+  const handleMealTimeBoxClick = (date: Date, meal: string) => {
+    const dateKey = formatDate(date);
+    const currentStatus = mealAttendance[dateKey]?.[meal];
+    let newStatus: MealStatus = null;
+    if (currentStatus === null) {
+      newStatus = 'present';
+    } else if (currentStatus === 'present') {
+      newStatus = 'absent';
+    } else if (currentStatus === 'absent') {
+      newStatus = 'packed';
+    } else {
+      newStatus = null;
+    }
+    updateMealAttendance(date, meal, newStatus);
   };
 
   if (!username) {
@@ -219,42 +216,39 @@ const MealCheckin = () => {
                 <h3 className="text-lg font-semibold">{format(date, 'EEEE, yyyy-MM-dd')}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Breakfast */}
-                  <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary w-32">
+                  <div
+                    className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary w-32 hover:bg-accent cursor-pointer"
+                    onClick={() => handleMealTimeBoxClick(date, 'breakfast')}
+                  >
                     <label htmlFor={`breakfast-${formatDate(date)}`} className="mb-1 text-center">
                       <Sun className="mr-1 inline-block" size={20} />
                       Breakfast:
                     </label>
-                    {renderMealStatusIcon(
-                      date,
-                      'breakfast',
-                      mealAttendance[formatDate(date)]?.breakfast
-                    )}
+                    <div>{getMealStatusIcon(date, 'breakfast', mealAttendance[formatDate(date)]?.breakfast)}</div>
                   </div>
 
                   {/* Lunch */}
-                  <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary w-32">
+                  <div
+                    className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary w-32 hover:bg-accent cursor-pointer"
+                    onClick={() => handleMealTimeBoxClick(date, 'lunch')}
+                  >
                     <label htmlFor={`lunch-${formatDate(date)}`} className="mb-1 text-center">
                       <Utensils className="mr-1 inline-block" size={20} />
                       Lunch:
                     </label>
-                    {renderMealStatusIcon(
-                      date,
-                      'lunch',
-                      mealAttendance[formatDate(date)]?.lunch
-                    )}
+                    <div>{getMealStatusIcon(date, 'lunch', mealAttendance[formatDate(date)]?.lunch)}</div>
                   </div>
 
                   {/* Dinner */}
-                  <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary w-32">
+                  <div
+                    className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary w-32 hover:bg-accent cursor-pointer"
+                    onClick={() => handleMealTimeBoxClick(date, 'dinner')}
+                  >
                     <label htmlFor={`dinner-${formatDate(date)}`} className="mb-1 text-center">
                       <Moon className="mr-1 inline-block" size={20} />
                       Dinner:
                     </label>
-                    {renderMealStatusIcon(
-                      date,
-                      'dinner',
-                      mealAttendance[formatDate(date)]?.dinner
-                    )}
+                    <div>{getMealStatusIcon(date, 'dinner', mealAttendance[formatDate(date)]?.dinner)}</div>
                   </div>
                 </div>
               </div>
