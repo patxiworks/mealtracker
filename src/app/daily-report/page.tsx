@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
-import { format, startOfWeek, addDays } from "date-fns";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -50,15 +50,12 @@ const DailyReportPage = () => {
   const [dailyReport, setDailyReport] = useState<DailyReport>({});
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(today);
 
-  // Dummy data for demonstration purposes
+  // Load daily report data from localStorage
   useEffect(() => {
-    // In a real application, this data would be fetched from a database or API
-    const dummyData: DailyReport = {
-      "2024-07-10": { breakfast: 15, lunch: 25, dinner: 30 },
-      "2024-07-11": { breakfast: 18, lunch: 22, dinner: 28 },
-      "2024-07-12": { breakfast: 20, lunch: 28, dinner: 35 },
-    };
-    setDailyReport(dummyData);
+    const storedWeeklyAttendance = localStorage.getItem("weeklyAttendance");
+    if (storedWeeklyAttendance) {
+      setDailyReport(JSON.parse(storedWeeklyAttendance));
+    }
   }, []);
 
   const formattedDate = selectedDate ? formatDate(selectedDate) : formatDate(today);

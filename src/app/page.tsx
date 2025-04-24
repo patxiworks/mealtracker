@@ -40,6 +40,12 @@ const MealCheckin = () => {
     if (storedUsername) {
       setUsername(storedUsername);
     }
+
+     // Load initial weekly attendance from localStorage on component mount
+     const storedWeeklyAttendance = localStorage.getItem("weeklyAttendance");
+     if (storedWeeklyAttendance) {
+       setWeeklyAttendance(JSON.parse(storedWeeklyAttendance));
+     }
   }, []);
 
   useEffect(() => {
@@ -101,40 +107,43 @@ const MealCheckin = () => {
   };
 
   const handleCheckIn = () => {
-    if (!username) {
-      alert("Please sign in to check in for meals.");
-      return;
-    }
+     if (!username) {
+       alert("Please sign in to check in for meals.");
+       return;
+     }
+ 
+     // Aggregate attendance for the week, accounting for existing attendance.
+     setWeeklyAttendance((prevAttendance) => {
+       const updatedAttendance: DailyReport = { ...prevAttendance };
+ 
+       weekDates.forEach((date) => {
+         const dateKey = formatDate(date);
+         const currentDayAttendance = mealAttendance[dateKey];
+ 
+         if (!updatedAttendance[dateKey]) {
+           updatedAttendance[dateKey] = { breakfast: 0, lunch: 0, dinner: 0 };
+         }
+ 
+         // Update attendance based on whether the user is checking in or out.
+         updatedAttendance[dateKey] = {
+           breakfast: (updatedAttendance[dateKey].breakfast || 0) + (currentDayAttendance.breakfast ? 1 : 0) - ((prevAttendance[dateKey]?.breakfast || 0) > 0 && !(currentDayAttendance.breakfast) ? 1 : 0),
+           lunch: (updatedAttendance[dateKey].lunch || 0) + (currentDayAttendance.lunch ? 1 : 0) - ((prevAttendance[dateKey]?.lunch || 0) > 0 && !(currentDayAttendance.lunch) ? 1 : 0),
+           dinner: (updatedAttendance[dateKey].dinner || 0) + (currentDayAttendance.dinner ? 1 : 0) - ((prevAttendance[dateKey]?.dinner || 0) > 0 && !(currentDayAttendance.dinner) ? 1 : 0),
+         };
+       });
+ 
+       // Save updated attendance to localStorage
+       localStorage.setItem("weeklyAttendance", JSON.stringify(updatedAttendance));
+       return updatedAttendance;
+     });
+ 
+     alert("Weekly attendance updated!");
+   };
 
-    // Aggregate attendance for the week, accounting for existing attendance and only adding current user's entries.
-    setWeeklyAttendance((prevAttendance) => {
-      const updatedAttendance: DailyReport = { ...prevAttendance };
-
-      weekDates.forEach((date) => {
-        const dateKey = formatDate(date);
-        const currentDayAttendance = mealAttendance[dateKey];
-
-        if (!updatedAttendance[dateKey]) {
-          updatedAttendance[dateKey] = { breakfast: 0, lunch: 0, dinner: 0 };
-        }
-
-        updatedAttendance[dateKey] = {
-          breakfast: currentDayAttendance.breakfast
-            ? (updatedAttendance[dateKey].breakfast || 0) + 1
-            : (updatedAttendance[dateKey].breakfast || 0), // Ensure we don't decrement existing values
-          lunch: currentDayAttendance.lunch
-            ? (updatedAttendance[dateKey].lunch || 0) + 1
-            : (updatedAttendance[dateKey].lunch || 0),
-          dinner: currentDayAttendance.dinner
-            ? (updatedAttendance[dateKey].dinner || 0) + 1
-            : (updatedAttendance[dateKey].dinner || 0),
-        };
-      });
-      return updatedAttendance; // Return the updated state object
-    });
-
-    alert("Weekly attendance updated!");
-  };
+  useEffect(() => {
+    // Save weekly attendance to localStorage whenever it changes
+    localStorage.setItem("weeklyAttendance", JSON.stringify(weeklyAttendance));
+  }, [weeklyAttendance]);
 
   if (!username) {
     return (
