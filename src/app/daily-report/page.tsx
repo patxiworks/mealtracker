@@ -10,17 +10,15 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import {
   Chart,
-  ChartBar,
-  ChartBarSeries,
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-  useChart,
-  ChartXAxis,
-  ChartYAxis,
-} from "@/components/ui/chart";
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
+import { CalendarIcon } from "lucide-react";
 
 interface AttendanceData {
   breakfast: number;
@@ -55,21 +53,6 @@ const DailyReportPage = () => {
 
   const formattedDate = selectedDate ? formatDate(selectedDate) : formatDate(today);
   const attendanceForSelectedDate = dailyReport[formattedDate] || { breakfast: 0, lunch: 0, dinner: 0 };
-
-  const mealConfig = {
-    breakfast: {
-      label: "Breakfast",
-      color: "hsl(var(--chart-1))",
-    },
-    lunch: {
-      label: "Lunch",
-      color: "hsl(var(--chart-2))",
-    },
-    dinner: {
-      label: "Dinner",
-      color: "hsl(var(--chart-3))",
-    },
-  };
 
   const chartData = [
     { name: "Breakfast", value: attendanceForSelectedDate.breakfast },
@@ -116,21 +99,15 @@ const DailyReportPage = () => {
             </h3>
             <Card>
               <CardContent>
-                <ChartContainer config={mealConfig} className="h-[300px]">
-                  <Chart data={chartData}>
-                    <ChartXAxis dataKey="name" />
-                    <ChartYAxis />
-                    <ChartTooltip>
-                      <ChartTooltipContent />
-                    </ChartTooltip>
-                    <ChartLegend>
-                      <ChartLegendContent />
-                    </ChartLegend>
-                    <ChartBarSeries dataKey="value">
-                      <ChartBar radius={[4, 4, 0, 0]} />
-                    </ChartBarSeries>
-                  </Chart>
-                </ChartContainer>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={chartData}>
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="value" fill="#82ca9d" />
+                  </BarChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           </section>
@@ -141,5 +118,3 @@ const DailyReportPage = () => {
 };
 
 export default DailyReportPage;
-
-import { CalendarIcon } from "@radix-ui/react-icons"

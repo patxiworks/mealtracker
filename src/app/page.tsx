@@ -87,32 +87,33 @@ const MealCheckin = () => {
       return;
     }
 
-    const updatedAttendance: DailyReport = { ...weeklyAttendance };
+    // Aggregate attendance for the week, accounting for existing attendance and only adding current user's entries.
+    setWeeklyAttendance((prevAttendance) => {
+      const updatedAttendance: DailyReport = { ...prevAttendance };
 
-    weekDates.forEach((date) => {
-      const dateKey = formatDate(date);
-      const currentDayAttendance = mealAttendance[dateKey];
+      weekDates.forEach((date) => {
+        const dateKey = formatDate(date);
+        const currentDayAttendance = mealAttendance[dateKey];
 
-      // Initialize attendance data for the day if it doesn't exist
-      if (!updatedAttendance[dateKey]) {
-        updatedAttendance[dateKey] = { breakfast: 0, lunch: 0, dinner: 0 };
-      }
+        if (!updatedAttendance[dateKey]) {
+          updatedAttendance[dateKey] = { breakfast: 0, lunch: 0, dinner: 0 };
+        }
 
-      // Update attendance counts based on checkbox values. Increment if checkbox is checked, decrement if unchecked
-      updatedAttendance[dateKey] = {
-        breakfast: currentDayAttendance.breakfast
-          ? updatedAttendance[dateKey].breakfast + 1
-          : updatedAttendance[dateKey].breakfast,
-        lunch: currentDayAttendance.lunch
-          ? updatedAttendance[dateKey].lunch + 1
-          : updatedAttendance[dateKey].lunch,
-        dinner: currentDayAttendance.dinner
-          ? updatedAttendance[dateKey].dinner + 1
-          : updatedAttendance[dateKey].dinner,
-      };
+        updatedAttendance[dateKey] = {
+          breakfast: currentDayAttendance.breakfast
+            ? (updatedAttendance[dateKey].breakfast || 0) + 1
+            : (updatedAttendance[dateKey].breakfast || 0), // Ensure we don't decrement existing values
+          lunch: currentDayAttendance.lunch
+            ? (updatedAttendance[dateKey].lunch || 0) + 1
+            : (updatedAttendance[dateKey].lunch || 0),
+          dinner: currentDayAttendance.dinner
+            ? (updatedAttendance[dateKey].dinner || 0) + 1
+            : (updatedAttendance[dateKey].dinner || 0),
+        };
+      });
+      return updatedAttendance; // Return the updated state object
     });
 
-    setWeeklyAttendance(updatedAttendance);
     alert("Weekly attendance updated!");
   };
 
@@ -166,9 +167,9 @@ const MealCheckin = () => {
                 <h3 className="text-lg font-semibold">{format(date, "EEEE, yyyy-MM-dd")}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Breakfast */}
-                  <div className="flex items-center justify-center p-4 rounded-lg bg-secondary w-32">
-                    <label htmlFor={`breakfast-${formatDate(date)}`} className="mr-2">
-                      <Sun className="mr-1" size={20} />
+                  <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary w-32">
+                    <label htmlFor={`breakfast-${formatDate(date)}`} className="mb-1 text-center">
+                      <Sun className="mr-1 inline-block" size={20} />
                       Breakfast:
                     </label>
                     <Checkbox
@@ -177,26 +178,28 @@ const MealCheckin = () => {
                       onCheckedChange={(checked) =>
                         updateMealAttendance(date, "breakfast", checked)
                       }
+                      className="mx-auto"
                     />
                   </div>
 
                   {/* Lunch */}
-                   <div className="flex items-center justify-center p-4 rounded-lg bg-secondary w-32">
-                    <label htmlFor={`lunch-${formatDate(date)}`}  className="mr-2">
-                      <Utensils className="mr-1" size={20} />
+                   <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary w-32">
+                    <label htmlFor={`lunch-${formatDate(date)}`}  className="mb-1 text-center">
+                      <Utensils className="mr-1 inline-block" size={20} />
                       Lunch:
                     </label>
                     <Checkbox
                       id={`lunch-${formatDate(date)}`}
                       checked={mealAttendance[formatDate(date)]?.lunch || false}
                       onCheckedChange={(checked) => updateMealAttendance(date, "lunch", checked)}
+                      className="mx-auto"
                     />
                   </div>
 
                   {/* Dinner */}
-                  <div className="flex items-center justify-center p-4 rounded-lg bg-secondary w-32">
-                    <label htmlFor={`dinner-${formatDate(date)}`} className="mr-2">
-                      <Moon className="mr-1" size={20} />
+                  <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary w-32">
+                    <label htmlFor={`dinner-${formatDate(date)}`} className="mb-1 text-center">
+                      <Moon className="mr-1 inline-block" size={20} />
                       Dinner:
                     </label>
                     <Checkbox
@@ -205,6 +208,7 @@ const MealCheckin = () => {
                       onCheckedChange={(checked) =>
                         updateMealAttendance(date, "dinner", checked)
                       }
+                      className="mx-auto"
                     />
                   </div>
                 </div>
