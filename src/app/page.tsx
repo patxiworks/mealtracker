@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -9,6 +9,7 @@ import { format, startOfWeek, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 
 interface AttendanceData {
   breakfast: number;
@@ -29,6 +30,28 @@ const formatDate = (date: Date): string => {
 const MealCheckin = () => {
   const [weeklyAttendance, setWeeklyAttendance] = useState<DailyReport>({});
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(today);
+  const [username, setUsername] = useState<string | null>(null);
+  const [inputUsername, setInputUsername] = useState("");
+
+  useEffect(() => {
+    // Load username from localStorage on component mount
+    const storedUsername = localStorage.getItem("username");
+    if (storedUsername) {
+      setUsername(storedUsername);
+    }
+  }, []);
+
+  const handleSignIn = () => {
+    if (inputUsername.trim() !== "") {
+      setUsername(inputUsername);
+      localStorage.setItem("username", inputUsername);
+    }
+  };
+
+  const handleSignOut = () => {
+    setUsername(null);
+    localStorage.removeItem("username");
+  };
 
   const getWeekDates = (date: Date): Date[] => {
     const weekStart = startOfWeek(date, { weekStartsOn: 0 });
@@ -57,6 +80,11 @@ const MealCheckin = () => {
   };
 
   const handleCheckIn = () => {
+    if (!username) {
+      alert("Please sign in to check in for meals.");
+      return;
+    }
+
     const updatedAttendance: DailyReport = { ...weeklyAttendance };
 
     weekDates.forEach((date) => {
@@ -71,14 +99,14 @@ const MealCheckin = () => {
       // Update attendance counts based on checkbox values. Increment if checkbox is checked, decrement if unchecked
       updatedAttendance[dateKey] = {
         breakfast: currentDayAttendance.breakfast
-          ? (updatedAttendance[dateKey].breakfast || 0) + 1
-          : (updatedAttendance[dateKey].breakfast || 0) > 0 ? (updatedAttendance[dateKey].breakfast || 0) - 1 : 0,
+          ? updatedAttendance[dateKey].breakfast + 1
+          : Math.max(0, updatedAttendance[dateKey].breakfast - 1),
         lunch: currentDayAttendance.lunch
-          ? (updatedAttendance[dateKey].lunch || 0) + 1
-          : (updatedAttendance[dateKey].lunch || 0) > 0 ? (updatedAttendance[dateKey].lunch || 0) - 1 : 0,
+          ? updatedAttendance[dateKey].lunch + 1
+          : Math.max(0, updatedAttendance[dateKey].lunch - 1),
         dinner: currentDayAttendance.dinner
-          ? (updatedAttendance[dateKey].dinner || 0) + 1
-          : (updatedAttendance[dateKey].dinner || 0) > 0 ? (updatedAttendance[dateKey].dinner || 0) - 1 : 0,
+          ? updatedAttendance[dateKey].dinner + 1
+          : Math.max(0, updatedAttendance[dateKey].dinner - 1),
       };
     });
 
@@ -91,11 +119,40 @@ const MealCheckin = () => {
     return weeklyAttendance[dateKey] || { breakfast: 0, lunch: 0, dinner: 0 };
   };
 
+  if (!username) {
+    return (
+      <div className="container mx-auto py-10">
+        <Card className="w-full max-w-md mx-auto">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-2xl">Sign In</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <div className="grid gap-2">
+              <label htmlFor="username">Username:</label>
+              <Input
+                id="username"
+                placeholder="Enter your username"
+                value={inputUsername}
+                onChange={(e) => setInputUsername(e.target.value)}
+              />
+            </div>
+            <Button onClick={handleSignIn}>Sign In</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto py-10">
       <Card className="w-full max-w-4xl mx-auto">
         <CardHeader className="pb-2">
-          <CardTitle className="text-2xl">Weekly Mealtime Tracker</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-2xl">Weekly Mealtime Tracker</CardTitle>
+            <Button variant="outline" onClick={handleSignOut}>
+              Sign Out ({username})
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="grid gap-4">
           {/* Meal Check-in Section */}
@@ -151,7 +208,7 @@ const MealCheckin = () => {
           <Separator />
           {/* Daily Report Section */}
           <section className="grid gap-2">
-            <h2 className="text-xl font-semibold">Daily Report</h2 >
+            <h2 className="text-xl font-semibold">Daily Report</h2>
             <Separator />
             <div className="flex items-center space-x-2">
               <Popover>
@@ -163,7 +220,7 @@ const MealCheckin = () => {
                       !selectedDate && "text-muted-foreground"
                     )}
                   >
-                    {selectedDate ? format(selectedDate, "yyyy-MM-dd") : <span>Pick a date</span >}
+                    {selectedDate ? format(selectedDate, "yyyy-MM-dd") : <span>Pick a date</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -185,7 +242,7 @@ const MealCheckin = () => {
           </section>
         </CardContent>
       </Card>
-    </div >
+    </div>
   );
 };
 
