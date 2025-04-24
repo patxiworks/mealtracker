@@ -8,7 +8,7 @@ import { format, startOfWeek, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Sun, Utensils, Moon } from 'lucide-react';
+import { Sun, Utensils, Moon, Check, X } from 'lucide-react';
 import Link from 'next/link';
 import { createUserMealAttendance, getUserMealAttendance, updateUserMealAttendance } from "@/lib/firebase/db";
 import { useToast } from "@/hooks/use-toast";
@@ -17,10 +17,19 @@ const formatDate = (date: Date): string => {
   return format(date, "yyyy-MM-dd");
 };
 
+// Define the meal status type
+type MealStatus = boolean | null;
+
+interface MealAttendanceState {
+  breakfast: MealStatus;
+  lunch: MealStatus;
+  dinner: MealStatus;
+}
+
 const MealCheckin = () => {
   const [username, setUsername] = useState<string | null>(null);
   const [inputUsername, setInputUsername] = useState("");
-  const [mealAttendance, setMealAttendance] = useState<Record<string, { breakfast: boolean, lunch: boolean, dinner: boolean }>>({});
+  const [mealAttendance, setMealAttendance] = useState<Record<string, MealAttendanceState>>({});
   const weekDates = getWeekDates(new Date());
   const { toast } = useToast();
 
@@ -42,9 +51,9 @@ const MealCheckin = () => {
           } else {
             // If no data exists for the user, initialize it in the database
             const initialAttendance = weekDates.reduce((acc, date) => {
-              acc[formatDate(date)] = { breakfast: false, lunch: false, dinner: false };
+              acc[formatDate(date)] = { breakfast: null, lunch: null, dinner: null };
               return acc;
-            }, {} as Record<string, { breakfast: boolean, lunch: boolean, dinner: boolean }>);
+            }, {} as Record<string, MealAttendanceState>);
 
             await createUserMealAttendance(username, initialAttendance);
             setMealAttendance(initialAttendance);
@@ -84,7 +93,7 @@ const MealCheckin = () => {
     return dates;
   }
 
-  const updateMealAttendance = async (date: Date, meal: string, checked: boolean) => {
+  const updateMealAttendance = async (date: Date, meal: string, status: MealStatus) => {
     if (!username) {
       toast({
         title: "Error",
@@ -96,7 +105,7 @@ const MealCheckin = () => {
     const dateKey = formatDate(date);
     const updatedAttendance = {
       ...mealAttendance,
-      [dateKey]: { ...mealAttendance[dateKey], [meal]: checked },
+      [dateKey]: { ...mealAttendance[dateKey], [meal]: status },
     };
 
     setMealAttendance(updatedAttendance);
@@ -114,6 +123,33 @@ const MealCheckin = () => {
         description: `Failed to update attendance. ${error.message || 'Please try again later.'}`,
       });
     }
+  };
+
+  const renderMealStatusIcon = (date: Date, meal: string, status: MealStatus) => {
+    const handleStatusClick = () => {
+        let newStatus: MealStatus = null;
+        if (status === null) {
+            newStatus = true;
+        } else if (status === true) {
+            newStatus = false;
+        } else {
+            newStatus = null;
+        }
+        updateMealAttendance(date, meal, newStatus);
+    };
+
+    let icon = null;
+    if (status === true) {
+        icon = <Check className="h-5 w-5 text-green-500" />;
+    } else if (status === false) {
+        icon = <X className="h-5 w-5 text-red-500" />;
+    }
+
+    return (
+      <button onClick={handleStatusClick} className="rounded-full p-1 hover:bg-accent">
+        {icon}
+      </button>
+    );
   };
 
   if (!username) {
@@ -147,7 +183,7 @@ const MealCheckin = () => {
           <div className="flex justify-between items-center">
             <CardTitle className="text-2xl">Weekly Mealtime Tracker</CardTitle>
             <div className="flex gap-4 items-center">
-              <Link href="/daily-report">
+              <Link href="/daily-report/page">
                 <Button variant="secondary">View Daily Report</Button>
               </Link>
               <Button variant="outline" onClick={handleSignOut}>
@@ -171,14 +207,7 @@ const MealCheckin = () => {
                       <Sun className="mr-1 inline-block" size={20} />
                       Breakfast:
                     </label>
-                    <Checkbox
-                      id={`breakfast-${formatDate(date)}`}
-                      checked={mealAttendance[formatDate(date)]?.breakfast || false}
-                      onCheckedChange={(checked) =>
-                        updateMealAttendance(date, "breakfast", checked)
-                      }
-                      className="mx-auto"
-                    />
+                    {renderMealStatusIcon(date, "breakfast", mealAttendance[formatDate(date)]?.breakfast)}
                   </div>
 
                   {/* Lunch */}
@@ -187,12 +216,7 @@ const MealCheckin = () => {
                       <Utensils className="mr-1 inline-block" size={20} />
                       Lunch:
                     </label>
-                    <Checkbox
-                      id={`lunch-${formatDate(date)}`}
-                      checked={mealAttendance[formatDate(date)]?.lunch || false}
-                      onCheckedChange={(checked) => updateMealAttendance(date, "lunch", checked)}
-                      className="mx-auto"
-                    />
+                    {renderMealStatusIcon(date, "lunch", mealAttendance[formatDate(date)]?.lunch)}
                   </div>
 
                   {/* Dinner */}
@@ -201,14 +225,7 @@ const MealCheckin = () => {
                       <Moon className="mr-1 inline-block" size={20} />
                       Dinner:
                     </label>
-                    <Checkbox
-                      id={`dinner-${formatDate(date)}`}
-                      checked={mealAttendance[formatDate(date)]?.dinner || false}
-                      onCheckedChange={(checked) =>
-                        updateMealAttendance(date, "dinner", checked)
-                      }
-                      className="mx-auto"
-                    />
+                    {renderMealStatusIcon(date, "dinner", mealAttendance[formatDate(date)]?.dinner)}
                   </div>
                 </div>
               </div>

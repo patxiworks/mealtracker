@@ -1,13 +1,24 @@
 // src/lib/firebase/db.ts
 import { db } from './firebase';
 import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 
 const USERS_COLLECTION = 'users';
+
+// Define the meal status type
+type MealStatus = boolean | null;
+
+// Define the meal attendance state
+interface MealAttendanceState {
+  breakfast: MealStatus;
+  lunch: MealStatus;
+  dinner: MealStatus;
+}
 
 // Function to create user meal attendance data
 export const createUserMealAttendance = async (
   username: string,
-  initialAttendance: Record<string, { breakfast: boolean; lunch: boolean; dinner: boolean }>
+  initialAttendance: Record<string, MealAttendanceState>
 ) => {
   try {
     const userDocRef = doc(db, USERS_COLLECTION, username);
@@ -28,7 +39,7 @@ export const getUserMealAttendance = async (username: string) => {
     const docSnapshot = await getDoc(userDocRef);
 
     if (docSnapshot.exists()) {
-      return docSnapshot.data().mealAttendance;
+      return docSnapshot.data().mealAttendance as Record<string, MealAttendanceState>;
     } else {
       return null; // User data not found
     }
@@ -41,7 +52,7 @@ export const getUserMealAttendance = async (username: string) => {
 // Function to update user meal attendance data
 export const updateUserMealAttendance = async (
   username: string,
-  updatedAttendance: Record<string, { breakfast: boolean; lunch: boolean; dinner: boolean }>
+  updatedAttendance: Record<string, MealAttendanceState>
 ) => {
   try {
     const userDocRef = doc(db, USERS_COLLECTION, username);
@@ -66,11 +77,11 @@ export const getDailyReportData = async (date: string) => {
     snapshot.forEach((doc) => {
       const userData = doc.data();
       const mealAttendance = userData.mealAttendance || {};
-      const dailyAttendance = mealAttendance[date] || { breakfast: false, lunch: false, dinner: false };
+      const dailyAttendance: MealAttendanceState = mealAttendance[date] || { breakfast: null, lunch: null, dinner: null };
 
-      if (dailyAttendance.breakfast) breakfastCount++;
-      if (dailyAttendance.lunch) lunchCount++;
-      if (dailyAttendance.dinner) dinnerCount++;
+      if (dailyAttendance.breakfast === true) breakfastCount++;
+      if (dailyAttendance.lunch === true) lunchCount++;
+      if (dailyAttendance.dinner === true) dinnerCount++;
     });
 
     return {
@@ -83,5 +94,3 @@ export const getDailyReportData = async (date: string) => {
     throw error;
   }
 };
-
-import { collection, getDocs } from 'firebase/firestore';
