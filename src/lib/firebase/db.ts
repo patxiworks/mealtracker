@@ -6,7 +6,7 @@ import { collection, getDocs } from 'firebase/firestore';
 const USERS_COLLECTION = 'users';
 
 // Define the meal status type
-type MealStatus = boolean | null;
+type MealStatus = 'present' | 'absent' | 'packed' | null;
 
 // Define the meal attendance state
 interface MealAttendanceState {
@@ -70,24 +70,34 @@ export const updateUserMealAttendance = async (
 export const getDailyReportData = async (date: string) => {
   try {
     const snapshot = await getDocs(collection(db, USERS_COLLECTION));
-    let breakfastCount = 0;
-    let lunchCount = 0;
-    let dinnerCount = 0;
+    let breakfastPresentCount = 0;
+    let lunchPresentCount = 0;
+    let dinnerPresentCount = 0;
+      let breakfastPackedCount = 0;
+      let lunchPackedCount = 0;
+      let dinnerPackedCount = 0;
 
     snapshot.forEach((doc) => {
       const userData = doc.data();
       const mealAttendance = userData.mealAttendance || {};
       const dailyAttendance: MealAttendanceState = mealAttendance[date] || { breakfast: null, lunch: null, dinner: null };
 
-      if (dailyAttendance.breakfast === true) breakfastCount++;
-      if (dailyAttendance.lunch === true) lunchCount++;
-      if (dailyAttendance.dinner === true) dinnerCount++;
+      if (dailyAttendance.breakfast === 'present') breakfastPresentCount++;
+      if (dailyAttendance.lunch === 'present') lunchPresentCount++;
+      if (dailyAttendance.dinner === 'present') dinnerPresentCount++;
+
+        if (dailyAttendance.breakfast === 'packed') breakfastPackedCount++;
+        if (dailyAttendance.lunch === 'packed') lunchPackedCount++;
+        if (dailyAttendance.dinner === 'packed') dinnerPackedCount++;
     });
 
     return {
-      breakfast: breakfastCount,
-      lunch: lunchCount,
-      dinner: dinnerCount,
+      breakfast: breakfastPresentCount,
+      lunch: lunchPresentCount,
+      dinner: dinnerPresentCount,
+        breakfastPacked: breakfastPackedCount,
+        lunchPacked: lunchPackedCount,
+        dinnerPacked: dinnerPackedCount,
     };
   } catch (error) {
     console.error('Error getting daily report data:', error);

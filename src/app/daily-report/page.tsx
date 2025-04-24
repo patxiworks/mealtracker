@@ -35,6 +35,9 @@ interface AttendanceData {
   breakfast: number;
   lunch: number;
   dinner: number;
+    breakfastPacked: number;
+    lunchPacked: number;
+    dinnerPacked: number;
 }
 
 interface DailyReport {
@@ -77,12 +80,15 @@ const DailyReportPage = () => {
   }, [selectedDate]);
 
   const formattedDate = selectedDate ? formatDate(selectedDate) : formatDate(today);
-  const attendanceForSelectedDate = dailyReport[formattedDate] || { breakfast: 0, lunch: 0, dinner: 0 };
+  const attendanceForSelectedDate = dailyReport[formattedDate] || { breakfast: 0, lunch: 0, dinner: 0, breakfastPacked: 0, lunchPacked: 0, dinnerPacked: 0 };
 
   const chartData = [
     { name: "Breakfast", value: attendanceForSelectedDate.breakfast },
     { name: "Lunch", value: attendanceForSelectedDate.lunch },
     { name: "Dinner", value: attendanceForSelectedDate.dinner },
+      { name: "Breakfast Packed", value: attendanceForSelectedDate.breakfastPacked },
+      { name: "Lunch Packed", value: attendanceForSelectedDate.lunchPacked },
+      { name: "Dinner Packed", value: attendanceForSelectedDate.dinnerPacked },
   ];
 
   return (
@@ -148,21 +154,25 @@ const DailyReportPage = () => {
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-[100px]">Meal</TableHead>
-                          <TableHead>Attendees</TableHead>
+                          <TableHead>Present</TableHead>
+                            <TableHead>Packed</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         <TableRow>
                           <TableCell>Breakfast</TableCell>
                           <TableCell>{attendanceForSelectedDate.breakfast}</TableCell>
+                            <TableCell>{attendanceForSelectedDate.breakfastPacked}</TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell>Lunch</TableCell>
                           <TableCell>{attendanceForSelectedDate.lunch}</TableCell>
+                            <TableCell>{attendanceForSelectedDate.lunchPacked}</TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell>Dinner</TableCell>
                           <TableCell>{attendanceForSelectedDate.dinner}</TableCell>
+                            <TableCell>{attendanceForSelectedDate.dinnerPacked}</TableCell>
                         </TableRow>
                       </TableBody>
                     </Table>

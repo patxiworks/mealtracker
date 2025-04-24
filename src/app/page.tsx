@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { format, startOfWeek, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Sun, Utensils, Moon, Check, X } from 'lucide-react';
+import { Sun, Utensils, Moon, Check, X, PackageCheck } from 'lucide-react';
 import Link from 'next/link';
 import { createUserMealAttendance, getUserMealAttendance, updateUserMealAttendance } from "@/lib/firebase/db";
 import { useToast } from "@/hooks/use-toast";
@@ -18,7 +17,7 @@ const formatDate = (date: Date): string => {
 };
 
 // Define the meal status type
-type MealStatus = boolean | null;
+type MealStatus = 'present' | 'absent' | 'packed' | null;
 
 interface MealAttendanceState {
   breakfast: MealStatus;
@@ -127,22 +126,27 @@ const MealCheckin = () => {
 
   const renderMealStatusIcon = (date: Date, meal: string, status: MealStatus) => {
     const handleStatusClick = () => {
-        let newStatus: MealStatus = null;
-        if (status === null) {
-            newStatus = true;
-        } else if (status === true) {
-            newStatus = false;
-        } else {
-            newStatus = null;
-        }
-        updateMealAttendance(date, meal, newStatus);
+      let newStatus: MealStatus = null;
+      if (status === null) {
+        newStatus = 'present';
+      } else if (status === 'present') {
+        newStatus = 'absent';
+      } else if (status === 'absent') {
+        newStatus = 'packed';
+      }
+       else {
+            newStatus = null
+       }
+      updateMealAttendance(date, meal, newStatus);
     };
 
     let icon = null;
-    if (status === true) {
-        icon = <Check className="h-5 w-5 text-green-500" />;
-    } else if (status === false) {
-        icon = <X className="h-5 w-5 text-red-500" />;
+    if (status === 'present') {
+      icon = <Check className="h-5 w-5 text-green-500" />;
+    } else if (status === 'absent') {
+      icon = <X className="h-5 w-5 text-red-500" />;
+    } else if (status === 'packed') {
+      icon = <PackageCheck className="h-5 w-5 text-blue-500" />;
     }
 
     return (
