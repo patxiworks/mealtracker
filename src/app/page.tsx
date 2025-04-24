@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, startOfWeek, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
@@ -29,101 +29,109 @@ const formatDate = (date: Date): string => {
 const MealCheckin = () => {
   const [attendance, setAttendance] = useState<DailyReport>({});
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(today);
-  const [breakfastCount, setBreakfastCount] = useState<number>(0);
-  const [lunchCount, setLunchCount] = useState<number>(0);
-  const [dinnerCount, setDinnerCount] = useState<number>(0);
+  const [weeklyAttendance, setWeeklyAttendance] = useState<Record<string, AttendanceData>>({});
 
-  const handleCheckIn = (meal: string) => {
-    const dateKey = formatDate(selectedDate || today);
+  const getWeekDates = (date: Date): Date[] => {
+    const weekStart = startOfWeek(date, { weekStartsOn: 0 });
+    const dates: Date[] = [];
+    for (let i = 0; i < 7; i++) {
+      dates.push(addDays(weekStart, i));
+    }
+    return dates;
+  };
 
-    setAttendance((prevAttendance) => {
-      const currentData = prevAttendance[dateKey] || {
-        breakfast: 0,
-        lunch: 0,
-        dinner: 0,
-      };
+  const weekDates = selectedDate ? getWeekDates(selectedDate) : getWeekDates(today);
 
-      let updatedData: AttendanceData;
-      switch (meal) {
-        case "breakfast":
-          updatedData = { ...currentData, breakfast: breakfastCount };
-          break;
-        case "lunch":
-          updatedData = { ...currentData, lunch: lunchCount };
-          break;
-        case "dinner":
-          updatedData = { ...currentData, dinner: dinnerCount };
-          break;
-        default:
-          updatedData = currentData;
-      }
+  const [mealCounts, setMealCounts] = useState<Record<string, AttendanceData>>(
+    weekDates.reduce((acc, date) => {
+      acc[formatDate(date)] = { breakfast: 0, lunch: 0, dinner: 0 };
+      return acc;
+    }, {} as Record<string, AttendanceData>)
+  );
 
-      return {
-        ...prevAttendance,
-        [dateKey]: updatedData,
-      };
+  const updateMealCount = (date: Date, meal: string, count: number) => {
+    const dateKey = formatDate(date);
+    setMealCounts((prev) => ({
+      ...prev,
+      [dateKey]: { ...prev[dateKey], [meal]: count },
+    }));
+  };
+
+  const handleCheckIn = () => {
+    const updatedAttendance: Record<string, AttendanceData> = {};
+    weekDates.forEach((date) => {
+      const dateKey = formatDate(date);
+      updatedAttendance[dateKey] = mealCounts[dateKey];
     });
-    alert(`Checked in ${breakfastCount} for breakfast, ${lunchCount} for lunch, and ${dinnerCount} for dinner on ${dateKey}!`);
+    setWeeklyAttendance(updatedAttendance);
+    alert("Weekly attendance updated!");
   };
 
-  const getDailyReport = (): AttendanceData => {
-    const dateKey = formatDate(selectedDate || today);
-    return attendance[dateKey] || { breakfast: 0, lunch: 0, dinner: 0 };
+  const getDailyReport = (date: Date): AttendanceData => {
+    const dateKey = formatDate(date);
+    return weeklyAttendance[dateKey] || { breakfast: 0, lunch: 0, dinner: 0 };
   };
-
-  const dailyReport = getDailyReport();
 
   return (
     <div className="container mx-auto py-10">
       <Card className="w-full max-w-4xl mx-auto">
         <CardHeader className="pb-2">
-          <CardTitle className="text-2xl">Mealtime Tracker</CardTitle>
+          <CardTitle className="text-2xl">Weekly Mealtime Tracker</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
           {/* Meal Check-in Section */}
           <section className="grid gap-2">
-            <h2 className="text-xl font-semibold">Meal Check-in</h2>
+            <h2 className="text-xl font-semibold">Weekly Meal Check-in</h2>
             <Separator />
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Breakfast */}
-              <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary">
-                <label htmlFor="breakfast">Breakfast:</label>
-                <Input
-                  type="number"
-                  id="breakfast"
-                  className="w-24 text-center"
-                  value={breakfastCount}
-                  onChange={(e) => setBreakfastCount(Number(e.target.value))}
-                />
-              </div>
+            {weekDates.map((date) => (
+              <div key={formatDate(date)} className="mb-4">
+                <h3 className="text-lg font-semibold">{format(date, "EEEE, yyyy-MM-dd")}</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Breakfast */}
+                  <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary">
+                    <label htmlFor={`breakfast-${formatDate(date)}`}>Breakfast:</label>
+                    <Input
+                      type="number"
+                      id={`breakfast-${formatDate(date)}`}
+                      className="w-24 text-center"
+                      value={mealCounts[formatDate(date)]?.breakfast || 0}
+                      onChange={(e) =>
+                        updateMealCount(date, "breakfast", Number(e.target.value))
+                      }
+                    />
+                  </div>
 
-              {/* Lunch */}
-              <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary">
-                <label htmlFor="lunch">Lunch:</label>
-                <Input
-                  type="number"
-                  id="lunch"
-                  className="w-24 text-center"
-                  value={lunchCount}
-                  onChange={(e) => setLunchCount(Number(e.target.value))}
-                />
-              </div>
+                  {/* Lunch */}
+                  <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary">
+                    <label htmlFor={`lunch-${formatDate(date)}`}>Lunch:</label>
+                    <Input
+                      type="number"
+                      id={`lunch-${formatDate(date)}`}
+                      className="w-24 text-center"
+                      value={mealCounts[formatDate(date)]?.lunch || 0}
+                      onChange={(e) => updateMealCount(date, "lunch", Number(e.target.value))}
+                    />
+                  </div>
 
-              {/* Dinner */}
-              <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary">
-                <label htmlFor="dinner">Dinner:</label>
-                <Input
-                  type="number"
-                  id="dinner"
-                  className="w-24 text-center"
-                  value={dinnerCount}
-                  onChange={(e) => setDinnerCount(Number(e.target.value))}
-                />
+                  {/* Dinner */}
+                  <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary">
+                    <label htmlFor={`dinner-${formatDate(date)}`}>Dinner:</label>
+                    <Input
+                      type="number"
+                      id={`dinner-${formatDate(date)}`}
+                      className="w-24 text-center"
+                      value={mealCounts[formatDate(date)]?.dinner || 0}
+                      onChange={(e) =>
+                        updateMealCount(date, "dinner", Number(e.target.value))
+                      }
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
+            ))}
             <div className="flex justify-center">
-              <Button onClick={() => handleCheckIn("breakfast")} className="bg-primary text-primary-foreground hover:bg-primary/80 mr-2">
-                Check In
+              <Button onClick={handleCheckIn} className="bg-primary text-primary-foreground hover:bg-primary/80 mr-2">
+                Check In Weekly Attendance
               </Button>
             </div>
           </section>
@@ -157,9 +165,9 @@ const MealCheckin = () => {
               </Popover>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>Breakfast Attendees: {dailyReport.breakfast}</div>
-              <div>Lunch Attendees: {dailyReport.lunch}</div>
-              <div>Dinner Attendees: {dailyReport.dinner}</div>
+              <div>Breakfast Attendees: {getDailyReport(selectedDate || today).breakfast}</div>
+              <div>Lunch Attendees: {getDailyReport(selectedDate || today).lunch}</div>
+              <div>Dinner Attendees: {getDailyReport(selectedDate || today).dinner}</div>
             </div>
           </section>
         </CardContent>
