@@ -19,6 +19,16 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { CalendarIcon } from "lucide-react";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableFooter,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableCaption,
+} from "@/components/ui/table"
 
 interface AttendanceData {
   breakfast: number;
@@ -108,6 +118,35 @@ const DailyReportPage = () => {
                     <Bar dataKey="value" fill="#82ca9d" />
                   </BarChart>
                 </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent>
+                <Table>
+                  <TableCaption>
+                    Meal attendance data for {formattedDate}
+                  </TableCaption>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[100px]">Meal</TableHead>
+                      <TableHead>Attendees</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>Breakfast</TableCell>
+                      <TableCell>{attendanceForSelectedDate.breakfast}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Lunch</TableCell>
+                      <TableCell>{attendanceForSelectedDate.lunch}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Dinner</TableCell>
+                      <TableCell>{attendanceForSelectedDate.dinner}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           </section>
