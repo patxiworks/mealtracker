@@ -6,7 +6,7 @@ import {Button} from '@/components/ui/button';
 import {Separator} from '@/components/ui/separator';
 import {format, startOfWeek, addDays, addWeeks} from 'date-fns';
 import {cn} from '@/lib/utils';
-import {Check, Moon, PackageCheck, Sun, Utensils, X} from 'lucide-react';
+import {Sun, Utensils, Moon, PackageCheck, X, Check} from 'lucide-react';
 import Link from 'next/link';
 import {
   createUserMealAttendance,
@@ -15,7 +15,6 @@ import {
 } from '@/lib/firebase/db';
 import {useToast} from '@/hooks/use-toast';
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select';
-import {Checkbox} from "@/components/ui/checkbox";
 
 const formatDate = (date: Date): string => {
   return format(date, 'MMM dd, yyyy');
@@ -245,7 +244,7 @@ const MealCheckin = () => {
             {weekDates.map(date => (
               <div key={formatDate(date)} className="mb-4">
                 <h3 className="text-lg font-semibold">{format(date, 'EEEE, MMM dd, yyyy')}</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-flow-row md:grid-cols-3 gap-4">
                   {/* Breakfast */}
                   <div
                     className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary w-32 hover:bg-accent cursor-pointer"
