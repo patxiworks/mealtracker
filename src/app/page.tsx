@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Sun, Moon, Utensils } from 'lucide-react';
+import Link from 'next/link';
 
 interface AttendanceData {
   breakfast: number;
@@ -100,23 +102,18 @@ const MealCheckin = () => {
       updatedAttendance[dateKey] = {
         breakfast: currentDayAttendance.breakfast
           ? updatedAttendance[dateKey].breakfast + 1
-          : Math.max(0, updatedAttendance[dateKey].breakfast - 1),
+          : updatedAttendance[dateKey].breakfast,
         lunch: currentDayAttendance.lunch
           ? updatedAttendance[dateKey].lunch + 1
-          : Math.max(0, updatedAttendance[dateKey].lunch - 1),
+          : updatedAttendance[dateKey].lunch,
         dinner: currentDayAttendance.dinner
           ? updatedAttendance[dateKey].dinner + 1
-          : Math.max(0, updatedAttendance[dateKey].dinner - 1),
+          : updatedAttendance[dateKey].dinner,
       };
     });
 
     setWeeklyAttendance(updatedAttendance);
     alert("Weekly attendance updated!");
-  };
-
-  const getDailyReport = (date: Date): AttendanceData => {
-    const dateKey = formatDate(date);
-    return weeklyAttendance[dateKey] || { breakfast: 0, lunch: 0, dinner: 0 };
   };
 
   if (!username) {
@@ -149,9 +146,14 @@ const MealCheckin = () => {
         <CardHeader className="pb-2">
           <div className="flex justify-between items-center">
             <CardTitle className="text-2xl">Weekly Mealtime Tracker</CardTitle>
-            <Button variant="outline" onClick={handleSignOut}>
-              Sign Out ({username})
-            </Button>
+            <div className="flex gap-4 items-center">
+              <Link href="/daily-report">
+                <Button variant="secondary">View Daily Report</Button>
+              </Link>
+              <Button variant="outline" onClick={handleSignOut}>
+                Sign Out ({username})
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="grid gap-4">
@@ -164,8 +166,11 @@ const MealCheckin = () => {
                 <h3 className="text-lg font-semibold">{format(date, "EEEE, yyyy-MM-dd")}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Breakfast */}
-                  <div className="flex items-center justify-center p-4 rounded-lg bg-secondary">
-                    <label htmlFor={`breakfast-${formatDate(date)}`} className="mr-2">Breakfast:</label>
+                  <div className="flex items-center justify-center p-4 rounded-lg bg-secondary w-32">
+                    <label htmlFor={`breakfast-${formatDate(date)}`} className="mr-2">
+                      <Sun className="mr-1" size={20} />
+                      Breakfast:
+                    </label>
                     <Checkbox
                       id={`breakfast-${formatDate(date)}`}
                       checked={mealAttendance[formatDate(date)]?.breakfast || false}
@@ -176,8 +181,11 @@ const MealCheckin = () => {
                   </div>
 
                   {/* Lunch */}
-                   <div className="flex items-center justify-center p-4 rounded-lg bg-secondary">
-                    <label htmlFor={`lunch-${formatDate(date)}`}  className="mr-2">Lunch:</label>
+                   <div className="flex items-center justify-center p-4 rounded-lg bg-secondary w-32">
+                    <label htmlFor={`lunch-${formatDate(date)}`}  className="mr-2">
+                      <Utensils className="mr-1" size={20} />
+                      Lunch:
+                    </label>
                     <Checkbox
                       id={`lunch-${formatDate(date)}`}
                       checked={mealAttendance[formatDate(date)]?.lunch || false}
@@ -186,8 +194,11 @@ const MealCheckin = () => {
                   </div>
 
                   {/* Dinner */}
-                  <div className="flex items-center justify-center p-4 rounded-lg bg-secondary">
-                    <label htmlFor={`dinner-${formatDate(date)}`} className="mr-2">Dinner:</label>
+                  <div className="flex items-center justify-center p-4 rounded-lg bg-secondary w-32">
+                    <label htmlFor={`dinner-${formatDate(date)}`} className="mr-2">
+                      <Moon className="mr-1" size={20} />
+                      Dinner:
+                    </label>
                     <Checkbox
                       id={`dinner-${formatDate(date)}`}
                       checked={mealAttendance[formatDate(date)]?.dinner || false}
@@ -203,41 +214,6 @@ const MealCheckin = () => {
               <Button onClick={handleCheckIn} className="bg-primary text-primary-foreground hover:bg-primary/80 mr-2">
                 Check In Weekly Attendance
               </Button>
-            </div>
-          </section>
-          <Separator />
-          {/* Daily Report Section */}
-          <section className="grid gap-2">
-            <h2 className="text-xl font-semibold">Daily Report</h2>
-            <Separator />
-            <div className="flex items-center space-x-2">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-[280px] justify-start text-left font-normal",
-                      !selectedDate && "text-muted-foreground"
-                    )}
-                  >
-                    {selectedDate ? format(selectedDate, "yyyy-MM-dd") : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    disabledDate={(date) => date > today}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>Breakfast Attendees: {getDailyReport(selectedDate || today).breakfast}</div>
-              <div>Lunch Attendees: {getDailyReport(selectedDate || today).lunch}</div>
-              <div>Dinner Attendees: {getDailyReport(selectedDate || today).dinner}</div>
             </div>
           </section>
         </CardContent>
