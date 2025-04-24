@@ -4,10 +4,9 @@ import {useState, useEffect} from 'react';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
 import {Separator} from '@/components/ui/separator';
-import {format, startOfWeek, addDays, addWeeks, isWithinInterval} from 'date-fns';
+import {format, startOfWeek, addDays, addWeeks} from 'date-fns';
 import {cn} from '@/lib/utils';
-import {Input} from '@/components/ui/input';
-import {Sun, Utensils, Moon, Check, X, PackageCheck} from 'lucide-react';
+import {Check, Moon, PackageCheck, Sun, Utensils, X} from 'lucide-react';
 import Link from 'next/link';
 import {
   createUserMealAttendance,
@@ -16,9 +15,10 @@ import {
 } from '@/lib/firebase/db';
 import {useToast} from '@/hooks/use-toast';
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select';
+import {Checkbox} from "@/components/ui/checkbox";
 
 const formatDate = (date: Date): string => {
-  return format(date, 'yyyy-MM-dd');
+  return format(date, 'MMM dd, yyyy');
 };
 
 // Define the meal status type
@@ -182,9 +182,10 @@ const MealCheckin = () => {
           <CardContent className="grid gap-4">
             <div className="grid gap-2">
               <label htmlFor="username">Username:</label>
-              <Input
+              <input
                 id="username"
                 placeholder="Enter your username"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 value={inputUsername}
                 onChange={e => setInputUsername(e.target.value)}
               />
@@ -202,7 +203,7 @@ const MealCheckin = () => {
     const end = addDays(start, 6);
     return {
       start,
-      label: `${format(start, 'yyyy-MM-dd')} - ${format(end, 'yyyy-MM-dd')}`,
+      label: `${format(start, 'MMM dd, yyyy')} - ${format(end, 'MMM dd, yyyy')}`,
     };
   });
 
@@ -229,7 +230,7 @@ const MealCheckin = () => {
                   <h2 className="text-xl font-semibold">Weekly Meal Check-in</h2>
                   <Select onValueChange={(value) => handleWeekChange(new Date(value))}>
                       <SelectTrigger className="w-[280px]">
-                          <SelectValue placeholder={format(selectedWeekStart, 'yyyy-MM-dd')}/>
+                          <SelectValue placeholder={format(selectedWeekStart, 'MMM dd, yyyy')}/>
                       </SelectTrigger>
                       <SelectContent>
                           {weekOptions.map((week) => (
@@ -243,7 +244,7 @@ const MealCheckin = () => {
             <Separator />
             {weekDates.map(date => (
               <div key={formatDate(date)} className="mb-4">
-                <h3 className="text-lg font-semibold">{format(date, 'EEEE, yyyy-MM-dd')}</h3>
+                <h3 className="text-lg font-semibold">{format(date, 'EEEE, MMM dd, yyyy')}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Breakfast */}
                   <div

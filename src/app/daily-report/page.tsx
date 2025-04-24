@@ -47,7 +47,7 @@ interface DailyReport {
 const today = new Date();
 
 const formatDate = (date: Date): string => {
-  return format(date, "yyyy-MM-dd");
+  return format(date, "MMM dd, yyyy");
 };
 
 const DailyReportPage = () => {
@@ -111,7 +111,7 @@ const DailyReportPage = () => {
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, "yyyy-MM-dd") : <span>Pick a date</span>}
+                  {selectedDate ? format(selectedDate, "MMM dd, yyyy") : <span>Pick a date</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
