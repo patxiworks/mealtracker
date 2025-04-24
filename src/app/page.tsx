@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Calendar } from "@/components/ui/calendar";
 import { format, startOfWeek, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -43,6 +42,16 @@ const MealCheckin = () => {
     }
   }, []);
 
+  useEffect(() => {
+    if (username) {
+      // Load meal attendance from localStorage when username is available
+      const storedMealAttendance = localStorage.getItem(`${username}-mealAttendance`);
+      if (storedMealAttendance) {
+        setMealAttendance(JSON.parse(storedMealAttendance));
+      }
+    }
+  }, [username]);
+
   const handleSignIn = () => {
     if (inputUsername.trim() !== "") {
       setUsername(inputUsername);
@@ -73,12 +82,22 @@ const MealCheckin = () => {
     }, {} as Record<string, {breakfast: boolean, lunch: boolean, dinner: boolean}>)
   );
 
+  useEffect(() => {
+    // Save meal attendance to localStorage whenever it changes
+    if (username) {
+      localStorage.setItem(`${username}-mealAttendance`, JSON.stringify(mealAttendance));
+    }
+  }, [mealAttendance, username]);
+
   const updateMealAttendance = (date: Date, meal: string, checked: boolean) => {
     const dateKey = formatDate(date);
-    setMealAttendance((prev) => ({
-      ...prev,
-      [dateKey]: { ...prev[dateKey], [meal]: checked },
-    }));
+    setMealAttendance((prev) => {
+      const updatedAttendance = {
+        ...prev,
+        [dateKey]: { ...prev[dateKey], [meal]: checked },
+      };
+      return updatedAttendance;
+    });
   };
 
   const handleCheckIn = () => {
