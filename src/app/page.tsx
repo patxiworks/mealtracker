@@ -11,9 +11,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface AttendanceData {
-  breakfast: boolean;
-  lunch: boolean;
-  dinner: boolean;
+  breakfast: number;
+  lunch: number;
+  dinner: number;
 }
 
 interface DailyReport {
@@ -27,7 +27,7 @@ const formatDate = (date: Date): string => {
 };
 
 const MealCheckin = () => {
-  const [weeklyAttendance, setWeeklyAttendance] = useState<Record<string, AttendanceData>>({});
+  const [weeklyAttendance, setWeeklyAttendance] = useState<DailyReport>({});
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(today);
 
   const getWeekDates = (date: Date): Date[] => {
@@ -41,11 +41,11 @@ const MealCheckin = () => {
 
   const weekDates = selectedDate ? getWeekDates(selectedDate) : getWeekDates(today);
 
-  const [mealAttendance, setMealAttendance] = useState<Record<string, AttendanceData>>(
+  const [mealAttendance, setMealAttendance] = useState<Record<string, {breakfast: boolean, lunch: boolean, dinner: boolean}>>(
     weekDates.reduce((acc, date) => {
       acc[formatDate(date)] = { breakfast: false, lunch: false, dinner: false };
       return acc;
-    }, {} as Record<string, AttendanceData>)
+    }, {} as Record<string, {breakfast: boolean, lunch: boolean, dinner: boolean}>)
   );
 
   const updateMealAttendance = (date: Date, meal: string, checked: boolean) => {
@@ -57,18 +57,38 @@ const MealCheckin = () => {
   };
 
   const handleCheckIn = () => {
-    const updatedAttendance: Record<string, AttendanceData> = {};
+    const updatedAttendance: DailyReport = { ...weeklyAttendance };
+
     weekDates.forEach((date) => {
       const dateKey = formatDate(date);
-      updatedAttendance[dateKey] = mealAttendance[dateKey];
+      const currentDayAttendance = mealAttendance[dateKey];
+
+      // Initialize attendance data for the day if it doesn't exist
+      if (!updatedAttendance[dateKey]) {
+        updatedAttendance[dateKey] = { breakfast: 0, lunch: 0, dinner: 0 };
+      }
+
+      // Update attendance counts based on checkbox values. Increment if checkbox is checked, decrement if unchecked
+      updatedAttendance[dateKey] = {
+        breakfast: currentDayAttendance.breakfast
+          ? (updatedAttendance[dateKey].breakfast || 0) + 1
+          : (updatedAttendance[dateKey].breakfast || 0) > 0 ? (updatedAttendance[dateKey].breakfast || 0) - 1 : 0,
+        lunch: currentDayAttendance.lunch
+          ? (updatedAttendance[dateKey].lunch || 0) + 1
+          : (updatedAttendance[dateKey].lunch || 0) > 0 ? (updatedAttendance[dateKey].lunch || 0) - 1 : 0,
+        dinner: currentDayAttendance.dinner
+          ? (updatedAttendance[dateKey].dinner || 0) + 1
+          : (updatedAttendance[dateKey].dinner || 0) > 0 ? (updatedAttendance[dateKey].dinner || 0) - 1 : 0,
+      };
     });
+
     setWeeklyAttendance(updatedAttendance);
     alert("Weekly attendance updated!");
   };
 
   const getDailyReport = (date: Date): AttendanceData => {
     const dateKey = formatDate(date);
-    return weeklyAttendance[dateKey] || { breakfast: false, lunch: false, dinner: false };
+    return weeklyAttendance[dateKey] || { breakfast: 0, lunch: 0, dinner: 0 };
   };
 
   return (
@@ -158,9 +178,9 @@ const MealCheckin = () => {
               </Popover>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>Breakfast Attendees: {getDailyReport(selectedDate || today).breakfast ? "Yes" : "No"}</div>
-              <div>Lunch Attendees: {getDailyReport(selectedDate || today).lunch ? "Yes" : "No"}</div>
-              <div>Dinner Attendees: {getDailyReport(selectedDate || today).dinner ? "Yes" : "No"}</div>
+              <div>Breakfast Attendees: {getDailyReport(selectedDate || today).breakfast}</div>
+              <div>Lunch Attendees: {getDailyReport(selectedDate || today).lunch}</div>
+              <div>Dinner Attendees: {getDailyReport(selectedDate || today).dinner}</div>
             </div>
           </section>
         </CardContent>
