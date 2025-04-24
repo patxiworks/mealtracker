@@ -4,7 +4,7 @@ import {useState, useEffect} from 'react';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
 import {Separator} from '@/components/ui/separator';
-import {format, startOfWeek, addDays} from 'date-fns';
+import {format, startOfWeek, addDays, subWeeks, isWithinInterval} from 'date-fns';
 import {cn} from '@/lib/utils';
 import {Input} from '@/components/ui/input';
 import {Sun, Utensils, Moon, Check, X, PackageCheck} from 'lucide-react';
@@ -15,6 +15,7 @@ import {
   updateUserMealAttendance,
 } from '@/lib/firebase/db';
 import {useToast} from '@/hooks/use-toast';
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select';
 
 const formatDate = (date: Date): string => {
   return format(date, 'yyyy-MM-dd');
@@ -35,7 +36,8 @@ const MealCheckin = () => {
   const [mealAttendance, setMealAttendance] = useState<
     Record<string, MealAttendanceState>
   >({});
-  const weekDates = getWeekDates(new Date());
+  const [selectedWeekStart, setSelectedWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 0 }));
+  const weekDates = getWeekDates(selectedWeekStart);
   const {toast} = useToast();
 
   useEffect(() => {
@@ -91,8 +93,8 @@ const MealCheckin = () => {
     setMealAttendance({}); // Clear local state on sign-out
   };
 
-  function getWeekDates(date: Date): Date[] {
-    const weekStart = startOfWeek(date, {weekStartsOn: 0});
+  function getWeekDates(startDate: Date): Date[] {
+    const weekStart = startOfWeek(startDate, {weekStartsOn: 0});
     const dates: Date[] = [];
     for (let i = 0; i < 7; i++) {
       dates.push(addDays(weekStart, i));
@@ -166,6 +168,10 @@ const MealCheckin = () => {
     updateMealAttendance(date, meal, newStatus);
   };
 
+    const handleWeekChange = (weekStartDate: Date) => {
+        setSelectedWeekStart(weekStartDate);
+    };
+
   if (!username) {
     return (
       <div className="container mx-auto py-10">
@@ -190,6 +196,16 @@ const MealCheckin = () => {
     );
   }
 
+  const weekOptions = Array.from({ length: 8 }, (_, i) => {
+    const weekStart = subWeeks(new Date(), i);
+    const start = startOfWeek(weekStart, { weekStartsOn: 0 });
+    const end = addDays(start, 6);
+    return {
+      start,
+      label: `${format(start, 'yyyy-MM-dd')} - ${format(end, 'yyyy-MM-dd')}`,
+    };
+  });
+
   return (
     <div className="container mx-auto py-10">
       <Card className="w-full max-w-4xl mx-auto">
@@ -209,7 +225,21 @@ const MealCheckin = () => {
         <CardContent className="grid gap-4">
           {/* Meal Check-in Section */}
           <section className="grid gap-2">
-            <h2 className="text-xl font-semibold">Weekly Meal Check-in</h2>
+              <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold">Weekly Meal Check-in</h2>
+                  <Select onValueChange={(value) => handleWeekChange(new Date(value))}>
+                      <SelectTrigger className="w-[280px]">
+                          <SelectValue placeholder={format(selectedWeekStart, 'yyyy-MM-dd')}/>
+                      </SelectTrigger>
+                      <SelectContent>
+                          {weekOptions.map((week) => (
+                              <SelectItem key={week.start} value={week.start.toISOString()}>
+                                  {week.label}
+                              </SelectItem>
+                          ))}
+                      </SelectContent>
+                  </Select>
+              </div>
             <Separator />
             {weekDates.map(date => (
               <div key={formatDate(date)} className="mb-4">
