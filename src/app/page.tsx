@@ -1,6 +1,6 @@
 'use client';
 
-import {useState, useEffect} from 'react';
+import React, {useState, useEffect} from 'react';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
 import {Separator} from '@/components/ui/separator';
@@ -30,6 +30,9 @@ interface MealAttendanceState {
   breakfast: MealStatus;
   lunch: MealStatus;
   dinner: MealStatus;
+    breakfastPacked: MealStatus;
+    lunchPacked: MealStatus;
+    dinnerPacked: MealStatus;
 }
 
 const MealCheckin = () => {
@@ -71,7 +74,7 @@ const MealCheckin = () => {
           } else {
             // If no data exists for the user, initialize it in the database
             const initialAttendance = weekDates.reduce((acc, date) => {
-              acc[formatDate(date)] = {breakfast: null, lunch: null, dinner: null};
+              acc[formatDate(date)] = {breakfast: null, lunch: null, dinner: null, breakfastPacked: null, lunchPacked: null, dinnerPacked: null};
               return acc;
             }, {} as Record<string, MealAttendanceState>);
 
@@ -220,7 +223,7 @@ const MealCheckin = () => {
 
     try {
       const initialAttendance = weekDates.reduce((acc, date) => {
-        acc[formatDate(date)] = {breakfast: null, lunch: null, dinner: null};
+        acc[formatDate(date)] = {breakfast: null, lunch: null, dinner: null, breakfastPacked: null, lunchPacked: null, dinnerPacked: null};
         return acc;
       }, {} as Record<string, MealAttendanceState>);
 
@@ -374,32 +377,26 @@ const MealCheckin = () => {
             </div>
             <Separator />
 
-            <div className="grid grid-cols-1 sm:grid-cols-7 gap-4">
+            <div className="grid grid-cols-7 gap-4">
               {/* Header Row for Meal Icons */}
-              <div></div> {/* Empty cell for date column */}
-              <div className="flex flex-col items-center">
-                <Sun className="mr-1 inline-block" size={20} />
-                Breakfast
-              </div>
-              <div className="flex flex-col items-center">
-                <Utensils className="mr-1 inline-block" size={20} />
-                Lunch
-              </div>
-              <div className="flex flex-col items-center">
-                <Moon className="mr-1 inline-block" size={20} />
-                Dinner
-              </div>
+                <div></div> {/* Empty cell for date column */}
                 <div className="flex flex-col items-center">
-                    <PackageCheck className="mr-1 inline-block" size={20} />
-                    Breakfast Packed
+                    <Sun className="mr-1 inline-block" size={20} />
+                </div>
+                <div className="flex flex-col items-center">
+                    <Utensils className="mr-1 inline-block" size={20} />
+                </div>
+                <div className="flex flex-col items-center">
+                    <Moon className="mr-1 inline-block" size={20} />
                 </div>
                 <div className="flex flex-col items-center">
                     <PackageCheck className="mr-1 inline-block" size={20} />
-                    Lunch Packed
                 </div>
                 <div className="flex flex-col items-center">
                     <PackageCheck className="mr-1 inline-block" size={20} />
-                    Dinner Packed
+                </div>
+                <div className="flex flex-col items-center">
+                    <PackageCheck className="mr-1 inline-block" size={20} />
                 </div>
 
               {weekDates.map(date => (
