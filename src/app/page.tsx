@@ -40,7 +40,7 @@ const MealCheckin = () => {
   const weekDates = getWeekDates(selectedWeekStart);
   const {toast} = useToast();
     const [diet, setDiet] = useState<string | null>(null);
-    const [preloadedUsers, setPreloadedUsers] = useState<{ username: string; diet: string }[]>([]);
+    const [preloadedUsers, setPreloadedUsers] = useState<{ name: string; diet: string }[]>([]);
 
   useEffect(() => {
     // Load username from localStorage on component mount
@@ -183,7 +183,7 @@ const MealCheckin = () => {
 
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    const users = (data.users || []) as { username: string; diet: string }[];
+                    const users = (data.users || []) as { name: string; diet: string }[];
                     setPreloadedUsers(users);
                 } else {
                     console.log("No such document!");
@@ -198,9 +198,9 @@ const MealCheckin = () => {
         fetchUsers();
     }, []);
 
-    const handleSignInWithPreload = async (user: { username: string; diet: string }) => {
-        setUsername(user.username);
-        localStorage.setItem('username', user.username);
+    const handleSignInWithPreload = async (user: { name: string; diet: string }) => {
+        setUsername(user.name);
+        localStorage.setItem('username', user.name);
         localStorage.setItem('diet', user.diet);
         setDiet(user.diet);
 
@@ -210,7 +210,7 @@ const MealCheckin = () => {
                 return acc;
             }, {} as Record<string, MealAttendanceState>);
 
-            await createUserMealAttendance(user.username, initialAttendance, user.diet || null);
+            await createUserMealAttendance(user.name, initialAttendance, user.diet || null);
             setMealAttendance(initialAttendance);
         } catch (error: any) {
             console.error('Error creating user meal attendance:', error);
@@ -233,7 +233,7 @@ const MealCheckin = () => {
               <div className="grid gap-2">
                 <label htmlFor="preloaded-users">Choose User:</label>
                 <Select onValueChange={(value) => {
-                  const selectedUser = preloadedUsers.find(u => u.username === value);
+                  const selectedUser = preloadedUsers.find(u => u.name === value);
                   if (selectedUser) {
                     handleSignInWithPreload(selectedUser);
                   }
@@ -243,8 +243,8 @@ const MealCheckin = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {preloadedUsers.map(user => (
-                      <SelectItem key={user.username} value={user.username}>
-                        {user.username} ({user.diet})
+                      <SelectItem key={user.name} value={user.name}>
+                        {user.name} ({user.diet})
                       </SelectItem>
                     ))}
                   </SelectContent>
