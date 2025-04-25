@@ -45,6 +45,9 @@ interface DietCounts {
     breakfast: number;
     lunch: number;
     dinner: number;
+      breakfastPacked: number;
+      lunchPacked: number;
+      dinnerPacked: number;
   };
 }
 
@@ -77,7 +80,7 @@ const DailyReportPage = () => {
       } catch (error: any) {
         console.error("Error fetching daily report:", error);
         // Optionally set an error state to display a message to the user
-         console.error("Error fetching daily report:", error);
+        console.error("Error fetching daily report:", error);
         // Optionally set an error state to display a message to the user
         console.error("Error fetching daily report:", error);
         // Optionally set an error state to display a message to the user
@@ -206,6 +209,9 @@ const DailyReportPage = () => {
                           <TableHead>Breakfast</TableHead>
                           <TableHead>Lunch</TableHead>
                           <TableHead>Dinner</TableHead>
+                            <TableHead>Breakfast Packed</TableHead>
+                            <TableHead>Lunch Packed</TableHead>
+                            <TableHead>Dinner Packed</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -215,6 +221,9 @@ const DailyReportPage = () => {
                             <TableCell>{counts.breakfast}</TableCell>
                             <TableCell>{counts.lunch}</TableCell>
                             <TableCell>{counts.dinner}</TableCell>
+                              <TableCell>{counts.breakfastPacked}</TableCell>
+                              <TableCell>{counts.lunchPacked}</TableCell>
+                              <TableCell>{counts.dinnerPacked}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>

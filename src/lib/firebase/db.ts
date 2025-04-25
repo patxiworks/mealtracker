@@ -84,7 +84,7 @@ export const getDailyReportData = async (date: string) => {
       let dinnerPackedCount = 0;
 
     // Aggregate diet counts
-    const dietCounts: { [diet: string]: { breakfast: number; lunch: number; dinner: number } } = {};
+    const dietCounts: { [diet: string]: { breakfast: number; lunch: number; dinner: number, breakfastPacked: number, lunchPacked: number, dinnerPacked: number } } = {};
 
     snapshot.forEach((doc) => {
       const userData = doc.data();
@@ -103,11 +103,15 @@ export const getDailyReportData = async (date: string) => {
       // Track diet counts
       if (diet) {
         if (!dietCounts[diet]) {
-          dietCounts[diet] = { breakfast: 0, lunch: 0, dinner: 0 };
+          dietCounts[diet] = { breakfast: 0, lunch: 0, dinner: 0, breakfastPacked: 0, lunchPacked: 0, dinnerPacked: 0 };
         }
         if (dailyAttendance.breakfast === 'present') dietCounts[diet].breakfast++;
         if (dailyAttendance.lunch === 'present') dietCounts[diet].lunch++;
         if (dailyAttendance.dinner === 'present') dietCounts[diet].dinner++;
+
+          if (dailyAttendance.breakfast === 'packed') dietCounts[diet].breakfastPacked++;
+          if (dailyAttendance.lunch === 'packed') dietCounts[diet].lunchPacked++;
+          if (dailyAttendance.dinner === 'packed') dietCounts[diet].dinnerPacked++;
       }
     });
 
