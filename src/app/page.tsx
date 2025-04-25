@@ -364,7 +364,7 @@ const MealCheckin = () => {
             {weekDates.map(date => (
               <div key={formatDate(date)} className="mb-4">
                 <h5 className="text-lg font-semibold">{format(date, 'EEEE, MMM dd, yyyy')}</h5>
-                <div className="grid grid-flow-row gap-4">
+                <div className="grid grid-flow-col gap-4">
                   {/* Breakfast */}
                   <div
                     className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary w-32 hover:bg-accent cursor-pointer"
