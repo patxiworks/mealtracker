@@ -10,6 +10,7 @@ import { db } from '@/lib/firebase/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import {
   createUserMealAttendance,
+  getUserMealAttendance,
 } from '@/lib/firebase/db';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -94,10 +95,20 @@ const SignIn = () => {
     localStorage.setItem('selectedCentre', user.centre);
 
     try {
-      const initialAttendance = weekDates.reduce((acc, date) => {
-        acc[formatDate(date)] = { breakfast: null, lunch: null, dinner: null };
-        return acc;
-      }, {} as Record<string, MealAttendanceState>);
+        // Fetch existing meal attendance, if any
+        const existingUserData = await getUserMealAttendance(user.name);
+
+        // If existing data exists, use it. Otherwise, create initial attendance.
+        let initialAttendance;
+        if (existingUserData && existingUserData.mealAttendance) {
+            initialAttendance = existingUserData.mealAttendance;
+        } else {
+            initialAttendance = weekDates.reduce((acc, date) => {
+                acc[formatDate(date)] = { breakfast: null, lunch: null, dinner: null };
+                return acc;
+            }, {} as Record<string, MealAttendanceState>);
+        }
+
 
       await createUserMealAttendance(user.name, initialAttendance, user.diet || null, user.centre);
 
