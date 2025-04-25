@@ -40,6 +40,7 @@ const MealCheckin = () => {
   const {toast} = useToast();
     const [diet, setDiet] = useState<string | null>(null);
     const [inputDiet, setInputDiet] = useState('');
+    const [preloadedUsers, setPreloadedUsers] = useState<{ username: string; diet: string }[]>([]);
 
   useEffect(() => {
     // Load username from localStorage on component mount
@@ -195,6 +196,40 @@ const MealCheckin = () => {
         setSelectedWeekStart(weekStartDate);
     };
 
+    useEffect(() => {
+        // Load preloaded users (replace with your actual data source)
+        const users = [
+            { username: 'User1', diet: 'D1' },
+            { username: 'User2', diet: 'D2' },
+            { username: 'User3', diet: 'D3' },
+            // Add more users as needed
+        ];
+        setPreloadedUsers(users);
+    }, []);
+
+    const handleSignInWithPreload = async (user: { username: string; diet: string }) => {
+        setUsername(user.username);
+        localStorage.setItem('username', user.username);
+        localStorage.setItem('diet', user.diet);
+        setDiet(user.diet);
+
+        try {
+            const initialAttendance = weekDates.reduce((acc, date) => {
+                acc[formatDate(date)] = { breakfast: null, lunch: null, dinner: null };
+                return acc;
+            }, {} as Record<string, MealAttendanceState>);
+
+            await createUserMealAttendance(user.username, initialAttendance, user.diet || null);
+            setMealAttendance(initialAttendance);
+        } catch (error: any) {
+            console.error('Error creating user meal attendance:', error);
+            toast({
+                title: 'Error',
+                description: `Failed to create meal attendance. ${error.message || 'Please check your connection.'}`,
+            });
+        }
+    };
+
   if (!username) {
     return (
       <div className="container mx-auto py-10">
@@ -203,6 +238,28 @@ const MealCheckin = () => {
             <CardTitle className="text-2xl">Sign In</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
+            {preloadedUsers.length > 0 && (
+              <div className="grid gap-2">
+                <label htmlFor="preloaded-users">Choose User:</label>
+                <Select onValueChange={(value) => {
+                  const selectedUser = preloadedUsers.find(u => u.username === value);
+                  if (selectedUser) {
+                    handleSignInWithPreload(selectedUser);
+                  }
+                }}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a preloaded user" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {preloadedUsers.map(user => (
+                      <SelectItem key={user.username} value={user.username}>
+                        {user.username} ({user.diet})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="grid gap-2">
               <label htmlFor="username">Username:</label>
               <input
