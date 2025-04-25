@@ -244,7 +244,7 @@ const MealCheckin = () => {
                   <SelectContent>
                     {preloadedUsers.map(user => (
                       <SelectItem key={user.name} value={user.name}>
-                        {user.name} ({user.diet})
+                        {user.name} {user.diet ? `(${user.diet})` : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
