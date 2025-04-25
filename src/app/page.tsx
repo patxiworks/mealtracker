@@ -1,23 +1,21 @@
 "use client";
 
-import React, {useState, useEffect} from 'react';
-import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
-import {Button} from '@/components/ui/button';
-import {Separator} from '@/components/ui/separator';
-import {format, startOfWeek, addDays, addWeeks} from 'date-fns';
-import {cn} from '@/lib/utils';
-import {Sun, Utensils, Moon, PackageCheck, X, Check} from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { format, startOfWeek, addDays, addWeeks } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { Sun, Utensils, Moon, PackageCheck, X, Check } from 'lucide-react';
 import Link from 'next/link';
 import {
   createUserMealAttendance,
   getUserMealAttendance,
   updateUserMealAttendance,
 } from '@/lib/firebase/db';
-import {useToast} from '@/hooks/use-toast';
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select';
-import {db} from '@/lib/firebase/firebase';
-import {doc, getDoc} from 'firebase/firestore';
-import {Input} from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const formatDate = (date: Date): string => {
   return format(date, 'MMM dd, yyyy');
@@ -42,17 +40,20 @@ const MealCheckin = () => {
     Record<string, MealAttendanceState>
   >({});
   const [selectedWeekStart, setSelectedWeekStart] = useState<Date>(
-    startOfWeek(new Date(), {weekStartsOn: 0})
+    startOfWeek(new Date(), { weekStartsOn: 0 })
   );
   const weekDates = getWeekDates(selectedWeekStart);
-  const {toast} = useToast();
+  const { toast } = useToast();
   const [diet, setDiet] = useState<string | null>(null);
-  const [preloadedUsers, setPreloadedUsers] = useState<
-    {name: string; diet: string; centre: string}[]
-  >([]);
-  const [centreCode, setCentreCode] = useState<string | null>(null);
-  const [isValidCentreCode, setIsValidCentreCode] = useState<boolean>(false);
-  const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check if a centre is selected
+    const selectedCentre = localStorage.getItem('selectedCentre');
+    if (!selectedCentre) {
+      router.push('/select-centre'); // Redirect to centre selection page
+    }
+  }, [router]);
 
   useEffect(() => {
     // Load username from localStorage on component mount
@@ -77,7 +78,7 @@ const MealCheckin = () => {
           } else {
             // If no data exists for the user, initialize it in the database
             const initialAttendance = weekDates.reduce((acc, date) => {
-              acc[formatDate(date)] = {breakfast: null, lunch: null, dinner: null, breakfastPacked: null, lunchPacked: null, dinnerPacked: null};
+              acc[formatDate(date)] = { breakfast: null, lunch: null, dinner: null, breakfastPacked: null, lunchPacked: null, dinnerPacked: null };
               return acc;
             }, {} as Record<string, MealAttendanceState>);
 
@@ -89,9 +90,8 @@ const MealCheckin = () => {
           console.error('Error loading meal attendance:', error);
           toast({
             title: 'Error',
-            description: `Failed to load meal attendance. ${
-              error.message || 'Please check your connection.'
-            }`,
+            description: `Failed to load meal attendance. ${error.message || 'Please check your connection.'
+              }`,
           });
         }
       }
@@ -106,10 +106,11 @@ const MealCheckin = () => {
     localStorage.removeItem('diet');
     setMealAttendance({}); // Clear local state on sign-out
     setDiet(null);
+    router.push('/select-centre'); // Redirect to centre selection page
   };
 
   function getWeekDates(startDate: Date): Date[] {
-    const weekStart = startOfWeek(startDate, {weekStartsOn: 0});
+    const weekStart = startOfWeek(startDate, { weekStartsOn: 0 });
     const dates: Date[] = [];
     for (let i = 0; i < 7; i++) {
       dates.push(addDays(weekStart, i));
@@ -133,7 +134,7 @@ const MealCheckin = () => {
     const dateKey = formatDate(date);
     const updatedAttendance = {
       ...mealAttendance,
-      [dateKey]: {...(mealAttendance[dateKey] || {}), [meal]: status},
+      [dateKey]: { ...(mealAttendance[dateKey] || {}), [meal]: status },
     };
 
     setMealAttendance(updatedAttendance);
@@ -148,9 +149,8 @@ const MealCheckin = () => {
       console.error('Error updating meal attendance:', error);
       toast({
         title: 'Error',
-        description: `Failed to update attendance. ${
-          error.message || 'Please try again later.'
-        }`,
+        description: `Failed to update attendance. ${error.message || 'Please try again later.'
+          }`,
       });
     }
   };
@@ -187,167 +187,10 @@ const MealCheckin = () => {
     setSelectedWeekStart(weekStartDate);
   };
 
-  useEffect(() => {
-    // Load preloaded users from Firebase
-    const fetchUsers = async () => {
-      try {
-        const docRef = doc(db, 'centres', 'vi');
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          const users = (data.users || []) as {name: string; diet: string}[];
-          // Fetch the centre for each user
-          const usersWithCentre = await Promise.all(
-            users.map(async user => {
-              return {...user, centre: 'vi'}; // Assuming the centre is 'vi' for all users in this document.  Can modify as needed.
-            })
-          );
-          setPreloadedUsers(usersWithCentre as {name: string; diet: string; centre: string}[]);
-        } else {
-          console.log('No such document!');
-          setPreloadedUsers([]);
-        }
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        setPreloadedUsers([]);
-      }
-    };
-
-    fetchUsers();
-  }, []);
-
-  const handleSignInWithPreload = async (user: {
-    name: string;
-    diet: string;
-    centre: string;
-  }) => {
-    if (!isValidCentreCode) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a valid centre code.',
-      });
-      return;
-    }
-
-    setUsername(user.name);
-    localStorage.setItem('username', user.name);
-    localStorage.setItem('diet', user.diet);
-    setDiet(user.diet);
-
-    try {
-      const initialAttendance = weekDates.reduce((acc, date) => {
-        acc[formatDate(date)] = {breakfast: null, lunch: null, dinner: null, breakfastPacked: null, lunchPacked: null, dinnerPacked: null};
-        return acc;
-      }, {} as Record<string, MealAttendanceState>);
-
-      await createUserMealAttendance(user.name, initialAttendance, user.diet || null, user.centre);
-      setMealAttendance(initialAttendance);
-    } catch (error: any) {
-      console.error('Error creating user meal attendance:', error);
-      toast({
-        title: 'Error',
-        description: `Failed to create meal attendance. ${
-          error.message || 'Please check your connection.'
-        }`,
-      });
-    }
-  };
-
-  useEffect(() => {
-    const verifyCentreCode = async () => {
-      if (centreCode) {
-        try {
-          const docRef = doc(db, 'centres', 'vi');
-          const docSnap = await getDoc(docRef);
-
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            const correctCode = data.code;
-            setIsValidCentreCode(centreCode === correctCode);
-          } else {
-            console.log('No such document!');
-            setIsValidCentreCode(false);
-          }
-        } catch (error) {
-          console.error('Error fetching centre code:', error);
-          setIsValidCentreCode(false);
-        }
-      } else {
-        setIsValidCentreCode(false);
-      }
-    };
-
-    verifyCentreCode();
-  }, [centreCode]);
-
-  if (!username) {
-    return (
-      <div className="container mx-auto py-10">
-        <Card className="w-full max-w-md mx-auto">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-2xl">Sign In</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            {preloadedUsers.length > 0 && (
-              <div className="grid gap-2">
-                <label htmlFor="preloaded-users">Choose User:</label>
-                <Select
-                  onValueChange={value => {
-                    setSelectedUsername(value);
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a preloaded user" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {preloadedUsers.map(user => (
-                      <SelectItem key={user.name} value={user.name}>
-                        {user.name} {user.diet ? `(${user.diet})` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <div className="grid gap-2">
-              <label htmlFor="centre-code">Centre Code:</label>
-              <Input
-                id="centre-code"
-                placeholder="Enter centre code"
-                type="password"
-                onChange={e => setCentreCode(e.target.value)}
-              />
-              {!isValidCentreCode && centreCode && (
-                <p className="text-red-500 text-sm">Invalid centre code</p>
-              )}
-            </div>
-            <Button
-              disabled={!isValidCentreCode || !selectedUsername}
-              onClick={() => {
-                const selectedUser = preloadedUsers.find(u => u.name === selectedUsername);
-                if (selectedUser) {
-                  handleSignInWithPreload(selectedUser);
-                } else {
-                  toast({
-                    title: 'Error',
-                    description: 'Please select a user from the dropdown.',
-                  });
-                }
-              }}
-            >
-              Sign In
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const weekOptions = Array.from({length: 4}, (_, i) => {
+  const weekOptions = Array.from({ length: 4 }, (_, i) => {
     // Show current week and next 3 weeks
     const weekStart = addWeeks(new Date(), i);
-    const start = startOfWeek(weekStart, {weekStartsOn: 0});
+    const start = startOfWeek(weekStart, { weekStartsOn: 0 });
     const end = addDays(start, 6);
     return {
       start,
@@ -358,6 +201,12 @@ const MealCheckin = () => {
   const initialWeekOption = weekOptions.find(week =>
     format(week.start, 'yyyy-MM-dd') === format(selectedWeekStart, 'yyyy-MM-dd')
   ) || weekOptions[0];
+
+
+  if (!username) {
+    router.push('/sign-in');
+    return null;
+  }
 
   return (
     <div className="container mx-auto py-10">
@@ -394,7 +243,7 @@ const MealCheckin = () => {
             </div>
             <Separator />
 
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               {/* Header Row for Meal Icons */}
               <div></div> {/* Empty cell for date column */}
               <div className="flex flex-col items-center">
@@ -409,38 +258,38 @@ const MealCheckin = () => {
 
               {weekDates.map(date => (
                 <React.Fragment key={formatDate(date)}>
-                {/*<div className="text-lg font-semibold">{format(date, 'EEEE, MMM dd, yyyy')}</div>*/}
-                <div>
-                  <div className="font-semibold">{format(date, 'EEEE')}</div>
-                  <div className="text-sm">
-                    {format(date, 'MMM dd, yyyy')}
+                  {/*<div className="text-lg font-semibold">{format(date, 'EEEE, MMM dd, yyyy')}</div>*/}
+                  <div>
+                    <div className="font-semibold">{format(date, 'EEEE')}</div>
+                    <div className="text-sm">
+                      {format(date, 'MMM dd, yyyy')}
+                    </div>
                   </div>
-                </div>
 
-                {/* Breakfast */}
-                <div
-                  className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
-                  onClick={() => handleMealTimeBoxClick(date, 'breakfast')}
-                >
-                  {getMealStatusIcon(date, 'breakfast', mealAttendance[formatDate(date)]?.breakfast)}
-                </div>
+                  {/* Breakfast */}
+                  <div
+                    className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
+                    onClick={() => handleMealTimeBoxClick(date, 'breakfast')}
+                  >
+                    {getMealStatusIcon(date, 'breakfast', mealAttendance[formatDate(date)]?.breakfast)}
+                  </div>
 
-                {/* Lunch */}
-                <div
-                  className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
-                  onClick={() => handleMealTimeBoxClick(date, 'lunch')}
-                >
-                  {getMealStatusIcon(date, 'lunch', mealAttendance[formatDate(date)]?.lunch)}
-                </div>
+                  {/* Lunch */}
+                  <div
+                    className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
+                    onClick={() => handleMealTimeBoxClick(date, 'lunch')}
+                  >
+                    {getMealStatusIcon(date, 'lunch', mealAttendance[formatDate(date)]?.lunch)}
+                  </div>
 
-                {/* Dinner */}
-                <div
-                  className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
-                  onClick={() => handleMealTimeBoxClick(date, 'dinner')}
-                >
-                  {getMealStatusIcon(date, 'dinner', mealAttendance[formatDate(date)]?.dinner)}
-                </div>
-              </React.Fragment>
+                  {/* Dinner */}
+                  <div
+                    className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
+                    onClick={() => handleMealTimeBoxClick(date, 'dinner')}
+                  >
+                    {getMealStatusIcon(date, 'dinner', mealAttendance[formatDate(date)]?.dinner)}
+                  </div>
+                </React.Fragment>
               ))}
             </div>
           </section>
