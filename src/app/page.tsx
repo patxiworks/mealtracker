@@ -31,7 +31,6 @@ interface MealAttendanceState {
 
 const MealCheckin = () => {
   const [username, setUsername] = useState<string | null>(null);
-  const [inputUsername, setInputUsername] = useState('');
   const [mealAttendance, setMealAttendance] = useState<
     Record<string, MealAttendanceState>
   >({});
@@ -39,7 +38,6 @@ const MealCheckin = () => {
   const weekDates = getWeekDates(selectedWeekStart);
   const {toast} = useToast();
     const [diet, setDiet] = useState<string | null>(null);
-    const [inputDiet, setInputDiet] = useState('');
     const [preloadedUsers, setPreloadedUsers] = useState<{ username: string; diet: string }[]>([]);
 
   useEffect(() => {
@@ -48,6 +46,10 @@ const MealCheckin = () => {
     if (storedUsername) {
       setUsername(storedUsername);
     }
+      const storedDiet = localStorage.getItem('diet');
+      if (storedDiet) {
+          setDiet(storedDiet);
+      }
   }, []);
 
   useEffect(() => {
@@ -82,32 +84,6 @@ const MealCheckin = () => {
 
     loadMealAttendance();
   }, [username, weekDates, toast, diet]);
-
-    const handleSignIn = async () => {
-        if (inputUsername.trim() !== '') {
-            setUsername(inputUsername);
-            localStorage.setItem('username', inputUsername);
-            localStorage.setItem('diet', inputDiet);
-            setDiet(inputDiet);
-
-            // Ensure the diet is also stored alongside the user
-            try {
-                const initialAttendance = weekDates.reduce((acc, date) => {
-                    acc[formatDate(date)] = { breakfast: null, lunch: null, dinner: null };
-                    return acc;
-                }, {} as Record<string, MealAttendanceState>);
-
-                await createUserMealAttendance(inputUsername, initialAttendance, inputDiet || null); // Pass the diet to createUserMealAttendance
-                setMealAttendance(initialAttendance);
-            } catch (error: any) {
-                console.error('Error creating user meal attendance:', error);
-                toast({
-                    title: 'Error',
-                    description: `Failed to create meal attendance. ${error.message || 'Please check your connection.'}`,
-                });
-            }
-        }
-    };
 
   const handleSignOut = () => {
     setUsername(null);
@@ -260,27 +236,6 @@ const MealCheckin = () => {
                 </Select>
               </div>
             )}
-            <div className="grid gap-2">
-              <label htmlFor="username">Username:</label>
-              <input
-                id="username"
-                placeholder="Enter your username"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                value={inputUsername}
-                onChange={e => setInputUsername(e.target.value)}
-              />
-            </div>
-              <div className="grid gap-2">
-                  <label htmlFor="diet">Diet Label:</label>
-                  <input
-                      id="diet"
-                      placeholder="Enter your diet label (D1, D2, D3, etc.)"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      value={inputDiet}
-                      onChange={e => setInputDiet(e.target.value)}
-                  />
-              </div>
-            <Button onClick={handleSignIn}>Sign In</Button>
           </CardContent>
         </Card>
       </div>
