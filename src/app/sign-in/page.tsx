@@ -24,9 +24,6 @@ interface MealAttendanceState {
   breakfast: 'present' | 'absent' | 'packed' | null;
   lunch: 'present' | 'absent' | 'packed' | null;
   dinner: 'present' | 'absent' | 'packed' | null;
-  /*breakfastPacked: 'present' | 'absent' | 'packed' | null;
-  lunchPacked: 'present' | 'absent' | 'packed' | null;
-  dinnerPacked: 'present' | 'absent' | 'packed' | null;*/
 }
 
 const SignIn = () => {
@@ -98,7 +95,7 @@ const SignIn = () => {
 
     try {
       const initialAttendance = weekDates.reduce((acc, date) => {
-        acc[formatDate(date)] = { breakfast: null, lunch: null, dinner: null, breakfastPacked: null, lunchPacked: null, dinnerPacked: null };
+        acc[formatDate(date)] = { breakfast: null, lunch: null, dinner: null };
         return acc;
       }, {} as Record<string, MealAttendanceState>);
 
