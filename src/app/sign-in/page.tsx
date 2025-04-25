@@ -155,7 +155,7 @@ const SignIn = () => {
   }, [centreCode, router]);
 
   return (
-    
+    <>
       <div className="container mx-auto py-10">
         <Card className="w-full max-w-md mx-auto">
           <CardHeader className="pb-2">
@@ -212,15 +212,18 @@ const SignIn = () => {
               Sign In
             </Button>
           </CardContent>
-              <div className="text-center text-sm mt-2">
-                <Link href="/select-centre" className="text-muted-foreground hover:underline">
-                  Choose a different centre
-                </Link>
-              </div>
         </Card>
+
       </div>
-    
+      <div className="text-center text-sm mt-2">
+        <Link href="/select-centre" className="text-muted-foreground hover:underline">
+          Choose a different centre
+        </Link>
+      </div>
+    </>
   );
 };
 
 export default SignIn;
+
+
