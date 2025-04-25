@@ -53,9 +53,10 @@ const MealCheckin = () => {
     const loadMealAttendance = async () => {
       if (username) {
         try {
-          const attendanceData = await getUserMealAttendance(username);
-          if (attendanceData) {
-            setMealAttendance(attendanceData);
+          const userData = await getUserMealAttendance(username);
+          if (userData) {
+            setMealAttendance(userData.mealAttendance);
+            setDiet(userData.diet || null); // Load diet from database
           } else {
             // If no data exists for the user, initialize it in the database
             const initialAttendance = weekDates.reduce((acc, date) => {
@@ -63,7 +64,7 @@ const MealCheckin = () => {
               return acc;
             }, {} as Record<string, MealAttendanceState>);
 
-            await createUserMealAttendance(username, initialAttendance);
+            await createUserMealAttendance(username, initialAttendance, diet || null);
             setMealAttendance(initialAttendance);
           }
         } catch (error: any) {
@@ -79,12 +80,14 @@ const MealCheckin = () => {
     };
 
     loadMealAttendance();
-  }, [username, weekDates, toast]);
+  }, [username, weekDates, toast, diet]);
 
     const handleSignIn = async () => {
         if (inputUsername.trim() !== '') {
             setUsername(inputUsername);
             localStorage.setItem('username', inputUsername);
+            localStorage.setItem('diet', inputDiet);
+            setDiet(inputDiet);
 
             // Ensure the diet is also stored alongside the user
             try {
@@ -93,7 +96,7 @@ const MealCheckin = () => {
                     return acc;
                 }, {} as Record<string, MealAttendanceState>);
 
-                await createUserMealAttendance(inputUsername, initialAttendance, inputDiet); // Pass the diet to createUserMealAttendance
+                await createUserMealAttendance(inputUsername, initialAttendance, inputDiet || null); // Pass the diet to createUserMealAttendance
                 setMealAttendance(initialAttendance);
             } catch (error: any) {
                 console.error('Error creating user meal attendance:', error);
@@ -108,6 +111,7 @@ const MealCheckin = () => {
   const handleSignOut = () => {
     setUsername(null);
     localStorage.removeItem('username');
+      localStorage.removeItem('diet');
     setMealAttendance({}); // Clear local state on sign-out
       setDiet(null);
   };
@@ -137,7 +141,7 @@ const MealCheckin = () => {
     const dateKey = formatDate(date);
     const updatedAttendance = {
       ...mealAttendance,
-      [dateKey]: {...mealAttendance[dateKey], [meal]: status},
+      [dateKey]: {...(mealAttendance[dateKey] || {}), [meal]: status},
     };
 
     setMealAttendance(updatedAttendance);
