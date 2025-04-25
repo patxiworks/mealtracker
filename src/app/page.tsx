@@ -46,6 +46,7 @@ const MealCheckin = () => {
   const { toast } = useToast();
   const [diet, setDiet] = useState<string | null>(null);
   const router = useRouter();
+  const [isRouteInitialized, setIsRouteInitialized] = useState(false);
 
   useEffect(() => {
     // Check if a centre is selected
@@ -53,6 +54,7 @@ const MealCheckin = () => {
     if (!selectedCentre) {
       router.push('/select-centre'); // Redirect to centre selection page
     }
+    setIsRouteInitialized(true);
   }, [router]);
 
   useEffect(() => {
@@ -204,98 +206,101 @@ const MealCheckin = () => {
 
 
   if (!username) {
-    router.push('/sign-in');
+    if (isRouteInitialized) {
+      router.push('/sign-in');
+    }
     return null;
   }
 
   return (
-    <div className="container mx-auto py-10">
-      <Card className="w-full max-w-4xl mx-auto">
-        <CardHeader className="pb-2">
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-2xl">Weekly Mealtime Tracker</CardTitle>
-            <div className="flex gap-4 items-center">
-              <Link href="/daily-report">
-                <Button variant="secondary">View Daily Report</Button>
-              </Link>
-              <Button variant="outline" onClick={handleSignOut}>
-                Sign Out ({username})
-              </Button>
+    
+      <div className="container mx-auto py-10">
+        <Card className="w-full max-w-4xl mx-auto">
+          <CardHeader className="pb-2">
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-2xl">Weekly Mealtime Tracker</CardTitle>
+              <div className="flex gap-4 items-center">
+                <Link href="/daily-report">
+                  <Button variant="secondary">View Daily Report</Button>
+                </Link>
+                <Button variant="outline" onClick={handleSignOut}>
+                  Sign Out ({username})
+                </Button>
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          {/* Meal Check-in Section */}
-          <section className="grid gap-2">
-            <div className="flex items-center justify-between">
-              <Select onValueChange={value => handleWeekChange(new Date(value))}>
-                <SelectTrigger className="w-[280px]">
-                  <SelectValue placeholder={initialWeekOption.label} />
-                </SelectTrigger>
-                <SelectContent>
-                  {weekOptions.map(week => (
-                    <SelectItem key={week.start} value={week.start.toISOString()}>
-                      {week.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Separator />
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            {/* Meal Check-in Section */}
+            <section className="grid gap-2">
+              <div className="flex items-center justify-between">
+                <Select onValueChange={value => handleWeekChange(new Date(value))}>
+                  <SelectTrigger className="w-[280px]">
+                    <SelectValue placeholder={initialWeekOption.label} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {weekOptions.map(week => (
+                      <SelectItem key={week.start} value={week.start.toISOString()}>
+                        {week.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Separator />
 
-            <div className="grid grid-cols-3 gap-4">
-              {/* Header Row for Meal Icons */}
-              <div></div> {/* Empty cell for date column */}
-              <div className="flex flex-col items-center">
-                <Sun className="mr-1 inline-block" size={20} />
-              </div>
-              <div className="flex flex-col items-center">
-                <Utensils className="mr-1 inline-block" size={20} />
-              </div>
-              <div className="flex flex-col items-center">
-                <Moon className="mr-1 inline-block" size={20} />
-              </div>
+              <div className="grid grid-cols-3 gap-4">
+                {/* Header Row for Meal Icons */}
+                <div></div> {/* Empty cell for date column */}
+                <div className="flex flex-col items-center">
+                  <Sun className="mr-1 inline-block" size={20} />
+                </div>
+                <div className="flex flex-col items-center">
+                  <Utensils className="mr-1 inline-block" size={20} />
+                </div>
+                <div className="flex flex-col items-center">
+                  <Moon className="mr-1 inline-block" size={20} />
+                </div>
 
-              {weekDates.map(date => (
-                <React.Fragment key={formatDate(date)}>
-                  {/*<div className="text-lg font-semibold">{format(date, 'EEEE, MMM dd, yyyy')}</div>*/}
-                  <div>
-                    <div className="font-semibold">{format(date, 'EEEE')}</div>
-                    <div className="text-sm">
-                      {format(date, 'MMM dd, yyyy')}
+                {weekDates.map(date => (
+                  <React.Fragment key={formatDate(date)}>
+                    <div>
+                      <div className="font-semibold">{format(date, 'EEEE')}</div>
+                      <div className="text-sm">
+                        {format(date, 'MMM dd, yyyy')}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Breakfast */}
-                  <div
-                    className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
-                    onClick={() => handleMealTimeBoxClick(date, 'breakfast')}
-                  >
-                    {getMealStatusIcon(date, 'breakfast', mealAttendance[formatDate(date)]?.breakfast)}
-                  </div>
+                    {/* Breakfast */}
+                    <div
+                      className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
+                      onClick={() => handleMealTimeBoxClick(date, 'breakfast')}
+                    >
+                      {getMealStatusIcon(date, 'breakfast', mealAttendance[formatDate(date)]?.breakfast)}
+                    </div>
 
-                  {/* Lunch */}
-                  <div
-                    className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
-                    onClick={() => handleMealTimeBoxClick(date, 'lunch')}
-                  >
-                    {getMealStatusIcon(date, 'lunch', mealAttendance[formatDate(date)]?.lunch)}
-                  </div>
+                    {/* Lunch */}
+                    <div
+                      className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
+                      onClick={() => handleMealTimeBoxClick(date, 'lunch')}
+                    >
+                      {getMealStatusIcon(date, 'lunch', mealAttendance[formatDate(date)]?.lunch)}
+                    </div>
 
-                  {/* Dinner */}
-                  <div
-                    className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
-                    onClick={() => handleMealTimeBoxClick(date, 'dinner')}
-                  >
-                    {getMealStatusIcon(date, 'dinner', mealAttendance[formatDate(date)]?.dinner)}
-                  </div>
-                </React.Fragment>
-              ))}
-            </div>
-          </section>
-        </CardContent>
-      </Card>
-    </div>
+                    {/* Dinner */}
+                    <div
+                      className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
+                      onClick={() => handleMealTimeBoxClick(date, 'dinner')}
+                    >
+                      {getMealStatusIcon(date, 'dinner', mealAttendance[formatDate(date)]?.dinner)}
+                    </div>
+                  </React.Fragment>
+                ))}
+              </div>
+            </section>
+          </CardContent>
+        </Card>
+      </div>
+    
   );
 };
 
