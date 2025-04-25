@@ -24,9 +24,9 @@ interface MealAttendanceState {
   breakfast: 'present' | 'absent' | 'packed' | null;
   lunch: 'present' | 'absent' | 'packed' | null;
   dinner: 'present' | 'absent' | 'packed' | null;
-  breakfastPacked: 'present' | 'absent' | 'packed' | null;
+  /*breakfastPacked: 'present' | 'absent' | 'packed' | null;
   lunchPacked: 'present' | 'absent' | 'packed' | null;
-  dinnerPacked: 'present' | 'absent' | 'packed' | null;
+  dinnerPacked: 'present' | 'absent' | 'packed' | null;*/
 }
 
 const SignIn = () => {
