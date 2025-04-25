@@ -63,6 +63,13 @@ const DailyReportPage = () => {
   const [dailyReport, setDailyReport] = useState<DailyReport>({});
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(today);
   const [loading, setLoading] = useState(true);
+    const [selectedCentre, setSelectedCentre] = useState<string | null>(null);
+
+
+    useEffect(() => {
+        const centre = localStorage.getItem('selectedCentre');
+        setSelectedCentre(centre);
+    }, []);
 
   // Load daily report data from Firebase
   useEffect(() => {
@@ -70,7 +77,10 @@ const DailyReportPage = () => {
       setLoading(true);
       try {
         const formattedDate = selectedDate ? formatDate(selectedDate) : formatDate(today);
-        const reportData = await getDailyReportData(formattedDate);
+          const reportData = selectedCentre ? await getDailyReportData(formattedDate, selectedCentre) : {
+              attendance: { breakfast: 0, lunch: 0, dinner: 0 },
+              dietCounts: {},
+          };
         setDailyReport({ [formattedDate]: reportData });
       } catch (error: any) {
         console.error("Error fetching daily report:", error);
@@ -81,7 +91,7 @@ const DailyReportPage = () => {
     };
 
     fetchDailyReport();
-  }, [selectedDate]);
+  }, [selectedDate, selectedCentre]);
 
   const formattedDate = selectedDate ? formatDate(selectedDate) : formatDate(today);
   const reportForSelectedDate = dailyReport[formattedDate] || {
