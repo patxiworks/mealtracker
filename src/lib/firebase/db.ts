@@ -13,9 +13,6 @@ interface MealAttendanceState {
   breakfast: MealStatus;
   lunch: MealStatus;
   dinner: MealStatus;
-  breakfastPacked: MealStatus;
-  lunchPacked: MealStatus;
-  dinnerPacked: MealStatus;
 }
 
 // Function to create user meal attendance data
@@ -96,15 +93,15 @@ export const getDailyReportData = async (date: string) => {
     snapshot.forEach((doc) => {
       const userData = doc.data();
       const mealAttendance = userData.mealAttendance || {};
-      const dailyAttendance: MealAttendanceState = mealAttendance[date] || { breakfast: null, lunch: null, dinner: null, breakfastPacked: null, lunchPacked: null, dinnerPacked: null };
+      const dailyAttendance: MealAttendanceState = mealAttendance[date] || { breakfast: null, lunch: null, dinner: null };
       const diet = userData.diet as string | null;
 
       if (dailyAttendance.breakfast === 'present') breakfastPresentCount++;
       if (dailyAttendance.lunch === 'present') lunchPresentCount++;
       if (dailyAttendance.dinner === 'present') dinnerPresentCount++;
-      if (dailyAttendance.breakfastPacked === 'packed') breakfastPackedCount++;
-      if (dailyAttendance.lunchPacked === 'packed') lunchPackedCount++;
-      if (dailyAttendance.dinnerPacked === 'packed') dinnerPackedCount++;
+      // if (dailyAttendance.breakfastPacked === 'packed') breakfastPackedCount++;
+      // if (dailyAttendance.lunchPacked === 'packed') lunchPackedCount++;
+      // if (dailyAttendance.dinnerPacked === 'packed') dinnerPackedCount++;
 
       // Track diet counts
       if (diet) {
@@ -116,9 +113,9 @@ export const getDailyReportData = async (date: string) => {
         if (dailyAttendance.lunch === 'present') dietCounts[diet].lunch++;
         if (dailyAttendance.dinner === 'present') dietCounts[diet].dinner++;
 
-        if (dailyAttendance.breakfastPacked === 'packed') dietCountsPacked[diet].breakfastPacked++;
-        if (dailyAttendance.lunchPacked === 'packed') dietCountsPacked[diet].lunchPacked++;
-        if (dailyAttendance.dinnerPacked === 'packed') dietCountsPacked[diet].dinnerPacked++;
+        // if (dailyAttendance.breakfastPacked === 'packed') dietCountsPacked[diet].breakfastPacked++;
+        // if (dailyAttendance.lunchPacked === 'packed') dietCountsPacked[diet].lunchPacked++;
+        // if (dailyAttendance.dinnerPacked === 'packed') dietCountsPacked[diet].dinnerPacked++;
       }
     });
 

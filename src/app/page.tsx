@@ -28,10 +28,6 @@ interface MealAttendanceState {
   breakfast: MealStatus;
   lunch: MealStatus;
   dinner: MealStatus;
-  breakfastPacked: MealStatus;
-  lunchPacked: MealStatus;
-  dinnerPacked: MealStatus;
-  dinnerPacked: MealStatus;
 }
 
 const MealCheckin = () => {
@@ -80,7 +76,7 @@ const MealCheckin = () => {
           } else {
             // If no data exists for the user, initialize it in the database
             const initialAttendance = weekDates.reduce((acc, date) => {
-              acc[formatDate(date)] = { breakfast: null, lunch: null, dinner: null, breakfastPacked: null, lunchPacked: null, dinnerPacked: null };
+              acc[formatDate(date)] = { breakfast: null, lunch: null, dinner: null };
               return acc;
             }, {} as Record<string, MealAttendanceState>);
 
