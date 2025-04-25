@@ -15,6 +15,8 @@ import {
 } from '@/lib/firebase/db';
 import {useToast} from '@/hooks/use-toast';
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select';
+import { db } from "@/lib/firebase/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 const formatDate = (date: Date): string => {
   return format(date, 'MMM dd, yyyy');
@@ -173,14 +175,27 @@ const MealCheckin = () => {
     };
 
     useEffect(() => {
-        // Load preloaded users (replace with your actual data source)
-        const users = [
-            { username: 'User1', diet: 'D1' },
-            { username: 'User2', diet: 'D2' },
-            { username: 'User3', diet: 'D3' },
-            // Add more users as needed
-        ];
-        setPreloadedUsers(users);
+        // Load preloaded users from Firebase
+        const fetchUsers = async () => {
+            try {
+                const docRef = doc(db, "centres", "vi");
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    const users = (data.users || []) as { username: string; diet: string }[];
+                    setPreloadedUsers(users);
+                } else {
+                    console.log("No such document!");
+                    setPreloadedUsers([]);
+                }
+            } catch (error) {
+                console.error("Error fetching users:", error);
+                setPreloadedUsers([]);
+            }
+        };
+
+        fetchUsers();
     }, []);
 
     const handleSignInWithPreload = async (user: { username: string; diet: string }) => {
