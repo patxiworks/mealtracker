@@ -381,7 +381,7 @@ const MealCheckin = () => {
             </div>
             <Separator />
 
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-4 gap-4 my-8">
               {/* Header Row for Meal Icons */}
               <div></div> {/* Empty cell for date column */}
               <div className="flex flex-col items-center">
