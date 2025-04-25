@@ -16,6 +16,8 @@ import { useToast } from '@/hooks/use-toast';
 import {
   format, startOfWeek, addDays, addWeeks
 } from 'date-fns';
+import Link from 'next/link';
+import { cn } from "@/lib/utils"
 
 const formatDate = (date: Date): string => {
   return format(date, 'MMM dd, yyyy');
@@ -95,19 +97,19 @@ const SignIn = () => {
     localStorage.setItem('selectedCentre', user.centre);
 
     try {
-        // Fetch existing meal attendance, if any
-        const existingUserData = await getUserMealAttendance(user.name);
+      // Fetch existing meal attendance, if any
+      const existingUserData = await getUserMealAttendance(user.name);
 
-        // If existing data exists, use it. Otherwise, create initial attendance.
-        let initialAttendance;
-        if (existingUserData && existingUserData.mealAttendance) {
-            initialAttendance = existingUserData.mealAttendance;
-        } else {
-            initialAttendance = weekDates.reduce((acc, date) => {
-                acc[formatDate(date)] = { breakfast: null, lunch: null, dinner: null };
-                return acc;
-            }, {} as Record<string, MealAttendanceState>);
-        }
+      // If existing data exists, use it. Otherwise, create initial attendance.
+      let initialAttendance;
+      if (existingUserData && existingUserData.mealAttendance) {
+        initialAttendance = existingUserData.mealAttendance;
+      } else {
+        initialAttendance = weekDates.reduce((acc, date) => {
+          acc[formatDate(date)] = { breakfast: null, lunch: null, dinner: null };
+          return acc;
+        }, {} as Record<string, MealAttendanceState>);
+      }
 
 
       await createUserMealAttendance(user.name, initialAttendance, user.diet || null, user.centre);
@@ -153,64 +155,71 @@ const SignIn = () => {
   }, [centreCode, router]);
 
   return (
-    <div className="container mx-auto py-10">
-      <Card className="w-full max-w-md mx-auto">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-2xl">Sign In</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          {preloadedUsers.length > 0 && (
-            <div className="grid gap-2">
-              <label htmlFor="preloaded-users">Choose User:</label>
-              <Select
-                onValueChange={value => {
-                  setSelectedUsername(value);
-                }}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select a preloaded user" />
-                </SelectTrigger>
-                <SelectContent>
-                  {preloadedUsers.map(user => (
-                    <SelectItem key={user.name} value={user.name}>
-                      {user.name} {user.diet ? `(${user.diet})` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          <div className="grid gap-2">
-            <label htmlFor="centre-code">Centre Code:</label>
-            <Input
-              id="centre-code"
-              placeholder="Enter centre code"
-              type="password"
-              onChange={e => setCentreCode(e.target.value)}
-            />
-            {!isValidCentreCode && centreCode && (
-              <p className="text-red-500 text-sm">Invalid centre code</p>
+    
+      <div className="container mx-auto py-10">
+        <Card className="w-full max-w-md mx-auto">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-2xl">Sign In</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            {preloadedUsers.length > 0 && (
+              <div className="grid gap-2">
+                <label htmlFor="preloaded-users">Choose User:</label>
+                <Select
+                  onValueChange={value => {
+                    setSelectedUsername(value);
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a preloaded user" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {preloadedUsers.map(user => (
+                      <SelectItem key={user.name} value={user.name}>
+                        {user.name} {user.diet ? `(${user.diet})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
-          </div>
-          <Button
-            disabled={!isValidCentreCode || !selectedUsername}
-            onClick={() => {
-              const selectedUser = preloadedUsers.find(u => u.name === selectedUsername);
-              if (selectedUser) {
-                handleSignInWithPreload(selectedUser);
-              } else {
-                toast({
-                  title: 'Error',
-                  description: 'Please select a user from the dropdown.',
-                });
-              }
-            }}
-          >
-            Sign In
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
+            <div className="grid gap-2">
+              <label htmlFor="centre-code">Centre Code:</label>
+              <Input
+                id="centre-code"
+                placeholder="Enter centre code"
+                type="password"
+                onChange={e => setCentreCode(e.target.value)}
+              />
+              {!isValidCentreCode && centreCode && (
+                <p className="text-red-500 text-sm">Invalid centre code</p>
+              )}
+            </div>
+            <Button
+              disabled={!isValidCentreCode || !selectedUsername}
+              onClick={() => {
+                const selectedUser = preloadedUsers.find(u => u.name === selectedUsername);
+                if (selectedUser) {
+                  handleSignInWithPreload(selectedUser);
+                } else {
+                  toast({
+                    title: 'Error',
+                    description: 'Please select a user from the dropdown.',
+                  });
+                }
+              }}
+            >
+              Sign In
+            </Button>
+          </CardContent>
+              <div className="text-center text-sm mt-2">
+                <Link href="/select-centre" className="text-muted-foreground hover:underline">
+                  Choose a different centre
+                </Link>
+              </div>
+        </Card>
+      </div>
+    
   );
 };
 
