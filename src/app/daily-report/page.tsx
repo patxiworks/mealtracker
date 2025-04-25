@@ -45,16 +45,22 @@ interface DietCounts {
     breakfast: number;
     lunch: number;
     dinner: number;
-      breakfastPacked: number;
-      lunchPacked: number;
-      dinnerPacked: number;
   };
+}
+
+interface DietCountsPacked {
+    [diet: string]: {
+        breakfastPacked: number;
+        lunchPacked: number;
+        dinnerPacked: number;
+    };
 }
 
 interface DailyReport {
   [date: string]: {
     attendance: AttendanceData;
     dietCounts: DietCounts;
+      dietCountsPacked: DietCountsPacked;
   };
 }
 
@@ -97,9 +103,11 @@ const DailyReportPage = () => {
   const reportForSelectedDate = dailyReport[formattedDate] || {
     attendance: { breakfast: 0, lunch: 0, dinner: 0, breakfastPacked: 0, lunchPacked: 0, dinnerPacked: 0 },
     dietCounts: {},
+      dietCountsPacked: {},
   };
   const attendanceForSelectedDate = reportForSelectedDate.attendance;
   const dietCounts = reportForSelectedDate.dietCounts;
+    const dietCountsPacked = reportForSelectedDate.dietCountsPacked;
 
   const chartData = [
     { name: "Breakfast", value: attendanceForSelectedDate.breakfast },
@@ -209,9 +217,6 @@ const DailyReportPage = () => {
                           <TableHead>Breakfast</TableHead>
                           <TableHead>Lunch</TableHead>
                           <TableHead>Dinner</TableHead>
-                            <TableHead>Breakfast Packed</TableHead>
-                            <TableHead>Lunch Packed</TableHead>
-                            <TableHead>Dinner Packed</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -221,15 +226,38 @@ const DailyReportPage = () => {
                             <TableCell>{counts.breakfast}</TableCell>
                             <TableCell>{counts.lunch}</TableCell>
                             <TableCell>{counts.dinner}</TableCell>
-                              <TableCell>{counts.breakfastPacked}</TableCell>
-                              <TableCell>{counts.lunchPacked}</TableCell>
-                              <TableCell>{counts.dinnerPacked}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
                   </CardContent>
                 </Card>
+                  {/* Packed Diet Label Counts */}
+                  <Card>
+                      <CardContent>
+                          <Table>
+                              <TableCaption>Packed Dietary Attendance</TableCaption>
+                              <TableHeader>
+                                  <TableRow>
+                                      <TableHead>Diet</TableHead>
+                                      <TableHead>Breakfast Packed</TableHead>
+                                      <TableHead>Lunch Packed</TableHead>
+                                      <TableHead>Dinner Packed</TableHead>
+                                  </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                  {Object.entries(dietCountsPacked).map(([diet, counts]) => (
+                                      <TableRow key={diet}>
+                                          <TableCell>{diet}</TableCell>
+                                          <TableCell>{counts.breakfastPacked}</TableCell>
+                                          <TableCell>{counts.lunchPacked}</TableCell>
+                                          <TableCell>{counts.dinnerPacked}</TableCell>
+                                      </TableRow>
+                                  ))}
+                              </TableBody>
+                          </Table>
+                      </CardContent>
+                  </Card>
               </>
             )}
           </section>
