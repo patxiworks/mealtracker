@@ -19,6 +19,7 @@ import {
   TableCaption,
 } from "@/components/ui/table"
 import { getDailyReportData } from "@/lib/firebase/db";
+import { CalendarIcon } from "lucide-react";
 
 interface AttendanceData {
   breakfast: number;
