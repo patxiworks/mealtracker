@@ -341,6 +341,10 @@ const MealCheckin = () => {
     };
   });
 
+  const initialWeekOption = weekOptions.find(week =>
+    format(week.start, 'yyyy-MM-dd') === format(selectedWeekStart, 'yyyy-MM-dd')
+  ) || weekOptions[0];
+
   return (
     <div className="container mx-auto py-10">
       <Card className="w-full max-w-4xl mx-auto">
@@ -364,7 +368,7 @@ const MealCheckin = () => {
               {/*<h4 className="text-xl font-semibold">Mark your attendance to meals</h4>*/}
               <Select onValueChange={value => handleWeekChange(new Date(value))}>
                 <SelectTrigger className="w-[280px]">
-                  <SelectValue placeholder={format(selectedWeekStart, 'MMM dd, yyyy')} />
+                  <SelectValue placeholder={initialWeekOption.label} />
                 </SelectTrigger>
                 <SelectContent>
                   {weekOptions.map(week => (
@@ -377,7 +381,7 @@ const MealCheckin = () => {
             </div>
             <Separator />
 
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               {/* Header Row for Meal Icons */}
               <div></div> {/* Empty cell for date column */}
               <div className="flex flex-col items-center">
