@@ -8,16 +8,6 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import {
-  Chart,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
 import { CalendarIcon } from "lucide-react";
 import {
   Table,
@@ -157,19 +147,6 @@ const DailyReportPage = () => {
               <div>Loading...</div>
             ) : (
               <>
-                <Card>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={chartData}>
-                        <XAxis dataKey="name" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="value" fill="#82ca9d" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
                 <Card>
                   <CardContent>
                     <Table>
