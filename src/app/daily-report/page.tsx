@@ -35,9 +35,6 @@ interface AttendanceData {
   breakfast: number;
   lunch: number;
   dinner: number;
-  breakfastPacked: number;
-  lunchPacked: number;
-  dinnerPacked: number;
 }
 
 interface DietCounts {
@@ -48,13 +45,6 @@ interface DietCounts {
   };
 }
 
-interface DietCountsPacked {
-  [diet: string]: {
-    breakfastPacked: number;
-    lunchPacked: number;
-    dinnerPacked: number;
-  };
-}
 
 interface DailyReport {
   [date: string]: {
@@ -102,31 +92,56 @@ const DailyReportPage = () => {
   const dietCounts = reportForSelectedDate.dietCounts;
 
   // Function to calculate packed counts based on the "packed" status
-  const calculatePackedCounts = (dietCounts: DietCounts): DietCountsPacked => {
-    const dietCountsPacked: DietCountsPacked = {};
+  const calculatePackedCounts = (dietCounts: DietCounts): DietCounts => {
+    const dietCountsPacked: DietCounts = {};
 
     for (const diet in dietCounts) {
       dietCountsPacked[diet] = {
-        breakfastPacked: 0,
-        lunchPacked: 0,
-        dinnerPacked: 0,
+        breakfast: 0,
+        lunch: 0,
+        dinner: 0,
       };
 
       if (dietCounts[diet].breakfast === -1) {
-        dietCountsPacked[diet].breakfastPacked++;
+        dietCountsPacked[diet].breakfast++;
       }
       if (dietCounts[diet].lunch === -1) {
-        dietCountsPacked[diet].lunchPacked++;
+        dietCountsPacked[diet].lunch++;
       }
       if (dietCounts[diet].dinner === -1) {
-        dietCountsPacked[diet].dinnerPacked++;
+        dietCountsPacked[diet].dinner++;
       }
     }
 
     return dietCountsPacked;
   };
 
-  const dietCountsPacked = calculatePackedCounts(dietCounts);
+    const calculateDietPackedCounts = (dietCounts: DietCounts): DietCounts => {
+        const dietCountsPacked: DietCounts = {};
+
+        for (const diet in dietCounts) {
+            dietCountsPacked[diet] = {
+                breakfast: 0,
+                lunch: 0,
+                dinner: 0,
+            };
+
+            if (dietCounts[diet].breakfast < 0) {
+                dietCountsPacked[diet].breakfast = Math.abs(dietCounts[diet].breakfast);
+            }
+            if (dietCounts[diet].lunch < 0) {
+                dietCountsPacked[diet].lunch = Math.abs(dietCounts[diet].lunch);
+            }
+            if (dietCounts[diet].dinner < 0) {
+                dietCountsPacked[diet].dinner = Math.abs(dietCounts[diet].dinner);
+            }
+        }
+
+        return dietCountsPacked;
+    };
+
+
+  const dietCountsPacked = calculateDietPackedCounts(dietCounts);
 
 
   const chartData = [
@@ -263,9 +278,9 @@ const DailyReportPage = () => {
                         {Object.entries(dietCountsPacked).map(([diet, counts]) => (
                           <TableRow key={diet}>
                             <TableCell>{diet}</TableCell>
-                            <TableCell>{counts.breakfastPacked}</TableCell>
-                            <TableCell>{counts.lunchPacked}</TableCell>
-                            <TableCell>{counts.dinnerPacked}</TableCell>
+                            <TableCell>{counts.breakfast}</TableCell>
+                            <TableCell>{counts.lunch}</TableCell>
+                            <TableCell>{counts.dinner}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>

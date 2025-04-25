@@ -77,50 +77,53 @@ export const updateUserMealAttendance = async (
 
 // Function to get daily report data
 export const getDailyReportData = async (date: string) => {
-  try {
-    const snapshot = await getDocs(collection(db, USERS_COLLECTION));
-    let breakfastPresentCount = 0;
-    let lunchPresentCount = 0;
-    let dinnerPresentCount = 0;
+    try {
+        const snapshot = await getDocs(collection(db, USERS_COLLECTION));
+        let breakfastPresentCount = 0;
+        let lunchPresentCount = 0;
+        let dinnerPresentCount = 0;
 
-    // Aggregate diet counts
-    const dietCounts: { [diet: string]: { breakfast: number; lunch: number; dinner: number } } = {};
+        // Aggregate diet counts
+        const dietCounts: { [diet: string]: { breakfast: number; lunch: number; dinner: number } } = {};
 
-    snapshot.forEach((doc) => {
-      const userData = doc.data();
-      const mealAttendance = userData.mealAttendance || {};
-      const dailyAttendance: MealAttendanceState = mealAttendance[date] || { breakfast: null, lunch: null, dinner: null };
-      const diet = userData.diet as string | null;
+        snapshot.forEach((doc) => {
+            const userData = doc.data();
+            const mealAttendance = userData.mealAttendance || {};
+            const dailyAttendance: MealAttendanceState = mealAttendance[date] || { breakfast: null, lunch: null, dinner: null };
+            const diet = userData.diet as string | null;
 
-      if (dailyAttendance.breakfast === 'present') breakfastPresentCount++;
-      if (dailyAttendance.lunch === 'present') lunchPresentCount++;
-      if (dailyAttendance.dinner === 'present') dinnerPresentCount++;
+            if (dailyAttendance.breakfast === 'present') breakfastPresentCount++;
+            else if (dailyAttendance.breakfast === 'packed') breakfastPresentCount--;
+            if (dailyAttendance.lunch === 'present') lunchPresentCount++;
+            else if (dailyAttendance.lunch === 'packed') lunchPresentCount--;
+            if (dailyAttendance.dinner === 'present') dinnerPresentCount++;
+            else if (dailyAttendance.dinner === 'packed') dinnerPresentCount--;
 
-      // Track diet counts
-      if (diet) {
-        if (!dietCounts[diet]) {
-          dietCounts[diet] = { breakfast: 0, lunch: 0, dinner: 0 };
-        }
+            // Track diet counts
+            if (diet) {
+                if (!dietCounts[diet]) {
+                    dietCounts[diet] = { breakfast: 0, lunch: 0, dinner: 0 };
+                }
 
-        if (dailyAttendance.breakfast === 'present') dietCounts[diet].breakfast++;
-        else if (dailyAttendance.breakfast === 'packed') dietCounts[diet].breakfast = -1;
-        if (dailyAttendance.lunch === 'present') dietCounts[diet].lunch++;
-        else if (dailyAttendance.lunch === 'packed') dietCounts[diet].lunch = -1;
-        if (dailyAttendance.dinner === 'present') dietCounts[diet].dinner++;
-        else if (dailyAttendance.dinner === 'packed')  dietCounts[diet].dinner = -1;
-      }
-    });
+                if (dailyAttendance.breakfast === 'present') dietCounts[diet].breakfast++;
+                else if (dailyAttendance.breakfast === 'packed') dietCounts[diet].breakfast = -1;
+                if (dailyAttendance.lunch === 'present') dietCounts[diet].lunch++;
+                else if (dailyAttendance.lunch === 'packed') dietCounts[diet].lunch = -1;
+                if (dailyAttendance.dinner === 'present') dietCounts[diet].dinner++;
+                else if (dailyAttendance.dinner === 'packed') dietCounts[diet].dinner = -1;
+            }
+        });
 
-    return {
-      attendance: {
-        breakfast: breakfastPresentCount,
-        lunch: lunchPresentCount,
-        dinner: dinnerPresentCount,
-      },
-      dietCounts: dietCounts,
-    };
-  } catch (error) {
-    console.error('Error getting daily report data:', error);
-    throw error;
-  }
+        return {
+            attendance: {
+                breakfast: breakfastPresentCount,
+                lunch: lunchPresentCount,
+                dinner: dinnerPresentCount,
+            },
+            dietCounts: dietCounts,
+        };
+    } catch (error) {
+        console.error('Error getting daily report data:', error);
+        throw error;
+    }
 };
