@@ -85,8 +85,12 @@ export const getDailyReportData = async (date: string, centre: string) => {
     let lunchPresentCount = 0;
     let dinnerPresentCount = 0;
 
-    // Aggregate diet counts
-    const dietCounts: { [diet: string]: { breakfast: number; lunch: number; dinner: number } } = {};
+    // Aggregate diet counts for present meals
+    const dietCountsPresent: { [diet: string]: { breakfast: number; lunch: number; dinner: number } } = {};
+
+    // Aggregate diet counts for packed meals
+    const dietCountsPacked: { [diet: string]: { breakfast: number; lunch: number; dinner: number } } = {};
+
 
     snapshot.forEach((doc) => {
       const userData = doc.data();
@@ -94,26 +98,38 @@ export const getDailyReportData = async (date: string, centre: string) => {
       const dailyAttendance: MealAttendanceState = mealAttendance[date] || { breakfast: null, lunch: null, dinner: null };
       const diet = userData.diet as string | null;
 
+      // Handle present meals
       if (dailyAttendance.breakfast === 'present') breakfastPresentCount++;
-      else if (dailyAttendance.breakfast === 'packed') breakfastPresentCount--;
       if (dailyAttendance.lunch === 'present') lunchPresentCount++;
-      else if (dailyAttendance.lunch === 'packed') lunchPresentCount--;
       if (dailyAttendance.dinner === 'present') dinnerPresentCount++;
-      else if (dailyAttendance.dinner === 'packed') dinnerPresentCount--;
 
-      // Track diet counts
+      // Track diet counts for present meals
       if (diet) {
-        if (!dietCounts[diet]) {
-          dietCounts[diet] = { breakfast: 0, lunch: 0, dinner: 0 };
+        if (!dietCountsPresent[diet]) {
+          dietCountsPresent[diet] = { breakfast: 0, lunch: 0, dinner: 0 };
         }
 
-        if (dailyAttendance.breakfast === 'present') dietCounts[diet].breakfast++;
-        else if (dailyAttendance.breakfast === 'packed') dietCounts[diet].breakfast = -1;
-        if (dailyAttendance.lunch === 'present') dietCounts[diet].lunch++;
-        else if (dailyAttendance.lunch === 'packed') dietCounts[diet].lunch = -1;
-        if (dailyAttendance.dinner === 'present') dietCounts[diet].dinner++;
-        else if (dailyAttendance.dinner === 'packed') dietCounts[diet].dinner = -1;
+        if (dailyAttendance.breakfast === 'present') dietCountsPresent[diet].breakfast++;
+        if (dailyAttendance.lunch === 'present') dietCountsPresent[diet].lunch++;
+        if (dailyAttendance.dinner === 'present') dietCountsPresent[diet].dinner++;
       }
+
+      // Handle packed meals
+      if (dailyAttendance.breakfast === 'packed') breakfastPresentCount--;
+      if (dailyAttendance.lunch === 'packed') lunchPresentCount--;
+      if (dailyAttendance.dinner === 'packed') dinnerPresentCount--;
+
+      // Track diet counts for packed meals
+      if (diet) {
+        if (!dietCountsPacked[diet]) {
+          dietCountsPacked[diet] = { breakfast: 0, lunch: 0, dinner: 0 };
+        }
+
+        if (dailyAttendance.breakfast === 'packed') dietCountsPacked[diet].breakfast++;
+        if (dailyAttendance.lunch === 'packed') dietCountsPacked[diet].lunch++;
+        if (dailyAttendance.dinner === 'packed') dietCountsPacked[diet].dinner++;
+      }
+
     });
 
     return {
@@ -122,7 +138,8 @@ export const getDailyReportData = async (date: string, centre: string) => {
         lunch: lunchPresentCount,
         dinner: dinnerPresentCount,
       },
-      dietCounts: dietCounts,
+      dietCountsPresent: dietCountsPresent,
+      dietCountsPacked: dietCountsPacked,
     };
   } catch (error) {
     console.error('Error getting daily report data:', error);
