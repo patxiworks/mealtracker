@@ -30,9 +30,9 @@ interface MealAttendanceState {
   breakfast: MealStatus;
   lunch: MealStatus;
   dinner: MealStatus;
-    breakfastPacked: MealStatus;
-    lunchPacked: MealStatus;
-    dinnerPacked: MealStatus;
+  breakfastPacked: MealStatus;
+  lunchPacked: MealStatus;
+  dinnerPacked: MealStatus;
 }
 
 const MealCheckin = () => {
@@ -377,27 +377,18 @@ const MealCheckin = () => {
             </div>
             <Separator />
 
-            <div className="grid grid-cols-7 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               {/* Header Row for Meal Icons */}
-                <div></div> {/* Empty cell for date column */}
-                <div className="flex flex-col items-center">
-                    <Sun className="mr-1 inline-block" size={20} />
-                </div>
-                <div className="flex flex-col items-center">
-                    <Utensils className="mr-1 inline-block" size={20} />
-                </div>
-                <div className="flex flex-col items-center">
-                    <Moon className="mr-1 inline-block" size={20} />
-                </div>
-                <div className="flex flex-col items-center">
-                    <PackageCheck className="mr-1 inline-block" size={20} />
-                </div>
-                <div className="flex flex-col items-center">
-                    <PackageCheck className="mr-1 inline-block" size={20} />
-                </div>
-                <div className="flex flex-col items-center">
-                    <PackageCheck className="mr-1 inline-block" size={20} />
-                </div>
+              <div></div> {/* Empty cell for date column */}
+              <div className="flex flex-col items-center">
+                <Sun className="mr-1 inline-block" size={20} />
+              </div>
+              <div className="flex flex-col items-center">
+                <Utensils className="mr-1 inline-block" size={20} />
+              </div>
+              <div className="flex flex-col items-center">
+                <Moon className="mr-1 inline-block" size={20} />
+              </div>
 
               {weekDates.map(date => (
                 <React.Fragment key={formatDate(date)}>
@@ -426,30 +417,6 @@ const MealCheckin = () => {
                   >
                     {getMealStatusIcon(date, 'dinner', mealAttendance[formatDate(date)]?.dinner)}
                   </div>
-
-                    {/* Breakfast Packed */}
-                    <div
-                        className="flex items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
-                        onClick={() => handleMealTimeBoxClick(date, 'breakfastPacked')}
-                    >
-                        {getMealStatusIcon(date, 'breakfastPacked', mealAttendance[formatDate(date)]?.breakfastPacked)}
-                    </div>
-
-                    {/* Lunch Packed */}
-                    <div
-                        className="flex items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
-                        onClick={() => handleMealTimeBoxClick(date, 'lunchPacked')}
-                    >
-                        {getMealStatusIcon(date, 'lunchPacked', mealAttendance[formatDate(date)]?.lunchPacked)}
-                    </div>
-
-                    {/* Dinner Packed */}
-                    <div
-                        className="flex items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
-                        onClick={() => handleMealTimeBoxClick(date, 'dinnerPacked')}
-                    >
-                        {getMealStatusIcon(date, 'dinnerPacked', mealAttendance[formatDate(date)]?.dinnerPacked)}
-                    </div>
                 </React.Fragment>
               ))}
             </div>
