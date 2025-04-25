@@ -8,7 +8,6 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -152,17 +151,17 @@ const DailyReportPage = () => {
                       <TableBody>
                         <TableRow>
                           <TableCell>Breakfast</TableCell>
-                          <TableCell>{Math.abs(attendanceForSelectedDate.breakfast)}</TableCell>
+                          <TableCell>{Math.abs(attendanceForSelectedDate.breakfast) - (attendanceForSelectedDate.breakfast < 0 ? Math.abs(attendanceForSelectedDate.breakfast) : 0)}</TableCell>
                           <TableCell>{attendanceForSelectedDate.breakfast < 0 ? Math.abs(attendanceForSelectedDate.breakfast) : 0}</TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell>Lunch</TableCell>
-                          <TableCell>{Math.abs(attendanceForSelectedDate.lunch)}</TableCell>
+                          <TableCell>{Math.abs(attendanceForSelectedDate.lunch) - (attendanceForSelectedDate.lunch < 0 ? Math.abs(attendanceForSelectedDate.lunch) : 0)}</TableCell>
                           <TableCell>{attendanceForSelectedDate.lunch < 0 ? Math.abs(attendanceForSelectedDate.lunch) : 0}</TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell>Dinner</TableCell>
-                          <TableCell>{Math.abs(attendanceForSelectedDate.dinner)}</TableCell>
+                          <TableCell>{Math.abs(attendanceForSelectedDate.dinner) - (attendanceForSelectedDate.dinner < 0 ? Math.abs(attendanceForSelectedDate.dinner) : 0)}</TableCell>
                           <TableCell>{attendanceForSelectedDate.dinner < 0 ? Math.abs(attendanceForSelectedDate.dinner) : 0}</TableCell>
                         </TableRow>
                       </TableBody>
