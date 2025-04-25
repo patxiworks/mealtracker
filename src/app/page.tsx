@@ -205,10 +205,13 @@ const MealCheckin = () => {
   ) || weekOptions[0];
 
 
-  if (!username) {
-    if (isRouteInitialized) {
+  useEffect(() => {
+    if (!username && isRouteInitialized) {
       router.push('/sign-in');
     }
+  }, [username, router, isRouteInitialized]);
+
+  if (!username) {
     return null;
   }
 
