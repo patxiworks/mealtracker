@@ -15,9 +15,9 @@ import {
 } from '@/lib/firebase/db';
 import {useToast} from '@/hooks/use-toast';
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select';
-import { db } from "@/lib/firebase/firebase";
-import { doc, getDoc } from "firebase/firestore";
-import { Input } from "@/components/ui/input";
+import {db} from '@/lib/firebase/firebase';
+import {doc, getDoc} from 'firebase/firestore';
+import {Input} from '@/components/ui/input';
 
 const formatDate = (date: Date): string => {
   return format(date, 'MMM dd, yyyy');
@@ -37,14 +37,16 @@ const MealCheckin = () => {
   const [mealAttendance, setMealAttendance] = useState<
     Record<string, MealAttendanceState>
   >({});
-  const [selectedWeekStart, setSelectedWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 0 }));
+  const [selectedWeekStart, setSelectedWeekStart] = useState<Date>(
+    startOfWeek(new Date(), {weekStartsOn: 0})
+  );
   const weekDates = getWeekDates(selectedWeekStart);
   const {toast} = useToast();
-    const [diet, setDiet] = useState<string | null>(null);
-    const [preloadedUsers, setPreloadedUsers] = useState<{ name: string; diet: string }[]>([]);
-    const [centreCode, setCentreCode] = useState<string | null>(null);
-    const [isValidCentreCode, setIsValidCentreCode] = useState<boolean>(false);
-    const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
+  const [diet, setDiet] = useState<string | null>(null);
+  const [preloadedUsers, setPreloadedUsers] = useState<{name: string; diet: string}[]>([]);
+  const [centreCode, setCentreCode] = useState<string | null>(null);
+  const [isValidCentreCode, setIsValidCentreCode] = useState<boolean>(false);
+  const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
 
   useEffect(() => {
     // Load username from localStorage on component mount
@@ -52,10 +54,10 @@ const MealCheckin = () => {
     if (storedUsername) {
       setUsername(storedUsername);
     }
-      const storedDiet = localStorage.getItem('diet');
-      if (storedDiet) {
-          setDiet(storedDiet);
-      }
+    const storedDiet = localStorage.getItem('diet');
+    if (storedDiet) {
+      setDiet(storedDiet);
+    }
   }, []);
 
   useEffect(() => {
@@ -94,9 +96,9 @@ const MealCheckin = () => {
   const handleSignOut = () => {
     setUsername(null);
     localStorage.removeItem('username');
-      localStorage.removeItem('diet');
+    localStorage.removeItem('diet');
     setMealAttendance({}); // Clear local state on sign-out
-      setDiet(null);
+    setDiet(null);
   };
 
   function getWeekDates(startDate: Date): Date[] {
@@ -149,11 +151,11 @@ const MealCheckin = () => {
   const getMealStatusIcon = (date: Date, meal: string, status: MealStatus) => {
     let icon = null;
     if (status === 'present') {
-      icon = <Check className="h-5 w-5 text-green-500" />;
+      icon = <Check className="h-6 w-6 text-green-500 font-bold" />;
     } else if (status === 'absent') {
-      icon = <X className="h-5 w-5 text-red-500" />;
+      icon = <X className="h-6 w-6 text-red-500 font-bold" />;
     } else if (status === 'packed') {
-      icon = <PackageCheck className="h-5 w-5 text-blue-500" />;
+      icon = <PackageCheck className="h-6 w-6 text-blue-500 font-bold" />;
     }
     return icon;
   };
@@ -174,91 +176,93 @@ const MealCheckin = () => {
     updateMealAttendance(date, meal, newStatus);
   };
 
-    const handleWeekChange = (weekStartDate: Date) => {
-        setSelectedWeekStart(weekStartDate);
+  const handleWeekChange = (weekStartDate: Date) => {
+    setSelectedWeekStart(weekStartDate);
+  };
+
+  useEffect(() => {
+    // Load preloaded users from Firebase
+    const fetchUsers = async () => {
+      try {
+        const docRef = doc(db, 'centres', 'vi');
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const users = (data.users || []) as {name: string; diet: string}[];
+          setPreloadedUsers(users);
+        } else {
+          console.log('No such document!');
+          setPreloadedUsers([]);
+        }
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        setPreloadedUsers([]);
+      }
     };
 
-    useEffect(() => {
-        // Load preloaded users from Firebase
-        const fetchUsers = async () => {
-            try {
-                const docRef = doc(db, "centres", "vi");
-                const docSnap = await getDoc(docRef);
+    fetchUsers();
+  }, []);
 
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    const users = (data.users || []) as { name: string; diet: string }[];
-                    setPreloadedUsers(users);
-                } else {
-                    console.log("No such document!");
-                    setPreloadedUsers([]);
-                }
-            } catch (error) {
-                console.error("Error fetching users:", error);
-                setPreloadedUsers([]);
-            }
-        };
+  const handleSignInWithPreload = async (user: {name: string; diet: string}) => {
+    if (!isValidCentreCode) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a valid centre code.',
+      });
+      return;
+    }
 
-        fetchUsers();
-    }, []);
+    setUsername(user.name);
+    localStorage.setItem('username', user.name);
+    localStorage.setItem('diet', user.diet);
+    setDiet(user.diet);
 
-    const handleSignInWithPreload = async (user: { name: string; diet: string }) => {
-        if (!isValidCentreCode) {
-            toast({
-                title: 'Error',
-                description: 'Please enter a valid centre code.',
-            });
-            return;
-        }
+    try {
+      const initialAttendance = weekDates.reduce((acc, date) => {
+        acc[formatDate(date)] = {breakfast: null, lunch: null, dinner: null};
+        return acc;
+      }, {} as Record<string, MealAttendanceState>);
 
-        setUsername(user.name);
-        localStorage.setItem('username', user.name);
-        localStorage.setItem('diet', user.diet);
-        setDiet(user.diet);
+      await createUserMealAttendance(user.name, initialAttendance, user.diet || null);
+      setMealAttendance(initialAttendance);
+    } catch (error: any) {
+      console.error('Error creating user meal attendance:', error);
+      toast({
+        title: 'Error',
+        description: `Failed to create meal attendance. ${
+          error.message || 'Please check your connection.'
+        }`,
+      });
+    }
+  };
 
+  useEffect(() => {
+    const verifyCentreCode = async () => {
+      if (centreCode) {
         try {
-            const initialAttendance = weekDates.reduce((acc, date) => {
-                acc[formatDate(date)] = { breakfast: null, lunch: null, dinner: null };
-                return acc;
-            }, {} as Record<string, MealAttendanceState>);
+          const docRef = doc(db, 'centres', 'vi');
+          const docSnap = await getDoc(docRef);
 
-            await createUserMealAttendance(user.name, initialAttendance, user.diet || null);
-            setMealAttendance(initialAttendance);
-        } catch (error: any) {
-            console.error('Error creating user meal attendance:', error);
-            toast({
-                title: 'Error',
-                description: `Failed to create meal attendance. ${error.message || 'Please check your connection.'}`,
-            });
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            const correctCode = data.code;
+            setIsValidCentreCode(centreCode === correctCode);
+          } else {
+            console.log('No such document!');
+            setIsValidCentreCode(false);
+          }
+        } catch (error) {
+          console.error('Error fetching centre code:', error);
+          setIsValidCentreCode(false);
         }
+      } else {
+        setIsValidCentreCode(false);
+      }
     };
 
-    useEffect(() => {
-        const verifyCentreCode = async () => {
-            if (centreCode) {
-                try {
-                    const docRef = doc(db, "centres", "vi");
-                    const docSnap = await getDoc(docRef);
-
-                    if (docSnap.exists()) {
-                        const data = docSnap.data();
-                        const correctCode = data.code;
-                        setIsValidCentreCode(centreCode === correctCode);
-                    } else {
-                        console.log("No such document!");
-                        setIsValidCentreCode(false);
-                    }
-                } catch (error) {
-                    console.error("Error fetching centre code:", error);
-                    setIsValidCentreCode(false);
-                }
-            } else {
-                setIsValidCentreCode(false);
-            }
-        };
-
-        verifyCentreCode();
-    }, [centreCode]);
+    verifyCentreCode();
+  }, [centreCode]);
 
   if (!username) {
     return (
@@ -271,9 +275,11 @@ const MealCheckin = () => {
             {preloadedUsers.length > 0 && (
               <div className="grid gap-2">
                 <label htmlFor="preloaded-users">Choose User:</label>
-                <Select onValueChange={(value) => {
-                  setSelectedUsername(value);
-                }}>
+                <Select
+                  onValueChange={value => {
+                    setSelectedUsername(value);
+                  }}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a preloaded user" />
                   </SelectTrigger>
@@ -293,32 +299,38 @@ const MealCheckin = () => {
                 id="centre-code"
                 placeholder="Enter centre code"
                 type="password"
-                onChange={(e) => setCentreCode(e.target.value)}
+                onChange={e => setCentreCode(e.target.value)}
               />
               {!isValidCentreCode && centreCode && (
                 <p className="text-red-500 text-sm">Invalid centre code</p>
               )}
             </div>
-              <Button disabled={!isValidCentreCode || !selectedUsername} onClick={() => {
-                  const selectedUser = preloadedUsers.find(u => u.name === selectedUsername);
-                  if (selectedUser) {
-                      handleSignInWithPreload(selectedUser);
-                  } else {
-                      toast({
-                          title: 'Error',
-                          description: 'Please select a user from the dropdown.',
-                      });
-                  }
-              }}>Sign In</Button>
+            <Button
+              disabled={!isValidCentreCode || !selectedUsername}
+              onClick={() => {
+                const selectedUser = preloadedUsers.find(u => u.name === selectedUsername);
+                if (selectedUser) {
+                  handleSignInWithPreload(selectedUser);
+                } else {
+                  toast({
+                    title: 'Error',
+                    description: 'Please select a user from the dropdown.',
+                  });
+                }
+              }}
+            >
+              Sign In
+            </Button>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-  const weekOptions = Array.from({ length: 4 }, (_, i) => { // Show current week and next 3 weeks
+  const weekOptions = Array.from({length: 4}, (_, i) => {
+    // Show current week and next 3 weeks
     const weekStart = addWeeks(new Date(), i);
-    const start = startOfWeek(weekStart, { weekStartsOn: 0 });
+    const start = startOfWeek(weekStart, {weekStartsOn: 0});
     const end = addDays(start, 6);
     return {
       start,
@@ -345,64 +357,105 @@ const MealCheckin = () => {
         <CardContent className="grid gap-4">
           {/* Meal Check-in Section */}
           <section className="grid gap-2">
-              <div className="flex items-center justify-between">
-                  <h4 className="text-xl font-semibold">Mark your attendance to meals</h4>
-                  <Select onValueChange={(value) => handleWeekChange(new Date(value))}>
-                      <SelectTrigger className="w-[280px]">
-                          <SelectValue placeholder={format(selectedWeekStart, 'MMM dd, yyyy')}/>
-                      </SelectTrigger>
-                      <SelectContent>
-                          {weekOptions.map((week) => (
-                              <SelectItem key={week.start} value={week.start.toISOString()}>
-                                  {week.label}
-                              </SelectItem>
-                          ))}
-                      </SelectContent>
-                  </Select>
-              </div>
+            <div className="flex items-center justify-between">
+              <h4 className="text-xl font-semibold">Mark your attendance to meals</h4>
+              <Select onValueChange={value => handleWeekChange(new Date(value))}>
+                <SelectTrigger className="w-[280px]">
+                  <SelectValue placeholder={format(selectedWeekStart, 'MMM dd, yyyy')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {weekOptions.map(week => (
+                    <SelectItem key={week.start} value={week.start.toISOString()}>
+                      {week.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Separator />
-            {weekDates.map(date => (
-              <div key={formatDate(date)} className="mb-4">
-                <h5 className="text-lg font-semibold">{format(date, 'EEEE, MMM dd, yyyy')}</h5>
-                <div className="grid grid-flow-col gap-4">
+
+            <div className="grid grid-cols-1 sm:grid-cols-7 gap-4">
+              {/* Header Row for Meal Icons */}
+              <div></div> {/* Empty cell for date column */}
+              <div className="flex flex-col items-center">
+                <Sun className="mr-1 inline-block" size={20} />
+                Breakfast
+              </div>
+              <div className="flex flex-col items-center">
+                <Utensils className="mr-1 inline-block" size={20} />
+                Lunch
+              </div>
+              <div className="flex flex-col items-center">
+                <Moon className="mr-1 inline-block" size={20} />
+                Dinner
+              </div>
+                <div className="flex flex-col items-center">
+                    <PackageCheck className="mr-1 inline-block" size={20} />
+                    Breakfast Packed
+                </div>
+                <div className="flex flex-col items-center">
+                    <PackageCheck className="mr-1 inline-block" size={20} />
+                    Lunch Packed
+                </div>
+                <div className="flex flex-col items-center">
+                    <PackageCheck className="mr-1 inline-block" size={20} />
+                    Dinner Packed
+                </div>
+
+              {weekDates.map(date => (
+                <React.Fragment key={formatDate(date)}>
+                  <div className="text-lg font-semibold">{format(date, 'EEEE, MMM dd, yyyy')}</div>
+
                   {/* Breakfast */}
                   <div
-                    className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary w-32 hover:bg-accent cursor-pointer"
+                    className="flex items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
                     onClick={() => handleMealTimeBoxClick(date, 'breakfast')}
                   >
-                    <label htmlFor={`breakfast-${formatDate(date)}`} className="mb-1 text-center">
-                      <Sun className="mr-1 inline-block" size={20} />
-                      Breakfast:
-                    </label>
-                    <div>{getMealStatusIcon(date, 'breakfast', mealAttendance[formatDate(date)]?.breakfast)}</div>
+                    {getMealStatusIcon(date, 'breakfast', mealAttendance[formatDate(date)]?.breakfast)}
                   </div>
 
                   {/* Lunch */}
                   <div
-                    className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary w-32 hover:bg-accent cursor-pointer"
+                    className="flex items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
                     onClick={() => handleMealTimeBoxClick(date, 'lunch')}
                   >
-                    <label htmlFor={`lunch-${formatDate(date)}`} className="mb-1 text-center">
-                      <Utensils className="mr-1 inline-block" size={20} />
-                      Lunch:
-                    </label>
-                    <div>{getMealStatusIcon(date, 'lunch', mealAttendance[formatDate(date)]?.lunch)}</div>
+                    {getMealStatusIcon(date, 'lunch', mealAttendance[formatDate(date)]?.lunch)}
                   </div>
 
                   {/* Dinner */}
                   <div
-                    className="flex flex-col items-center justify-center p-4 rounded-lg bg-secondary w-32 hover:bg-accent cursor-pointer"
+                    className="flex items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
                     onClick={() => handleMealTimeBoxClick(date, 'dinner')}
                   >
-                    <label htmlFor={`dinner-${formatDate(date)}`} className="mb-1 text-center">
-                      <Moon className="mr-1 inline-block" size={20} />
-                      Dinner:
-                    </label>
-                    <div>{getMealStatusIcon(date, 'dinner', mealAttendance[formatDate(date)]?.dinner)}</div>
+                    {getMealStatusIcon(date, 'dinner', mealAttendance[formatDate(date)]?.dinner)}
                   </div>
-                </div>
-              </div>
-            ))}
+
+                    {/* Breakfast Packed */}
+                    <div
+                        className="flex items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
+                        onClick={() => handleMealTimeBoxClick(date, 'breakfastPacked')}
+                    >
+                        {getMealStatusIcon(date, 'breakfastPacked', mealAttendance[formatDate(date)]?.breakfastPacked)}
+                    </div>
+
+                    {/* Lunch Packed */}
+                    <div
+                        className="flex items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
+                        onClick={() => handleMealTimeBoxClick(date, 'lunchPacked')}
+                    >
+                        {getMealStatusIcon(date, 'lunchPacked', mealAttendance[formatDate(date)]?.lunchPacked)}
+                    </div>
+
+                    {/* Dinner Packed */}
+                    <div
+                        className="flex items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
+                        onClick={() => handleMealTimeBoxClick(date, 'dinnerPacked')}
+                    >
+                        {getMealStatusIcon(date, 'dinnerPacked', mealAttendance[formatDate(date)]?.dinnerPacked)}
+                    </div>
+                </React.Fragment>
+              ))}
+            </div>
           </section>
         </CardContent>
       </Card>
