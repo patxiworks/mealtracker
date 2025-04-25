@@ -267,18 +267,6 @@ const MealCheckin = () => {
             <CardTitle className="text-2xl">Sign In</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
-            <div className="grid gap-2">
-              <label htmlFor="centre-code">Centre Code:</label>
-              <Input
-                id="centre-code"
-                placeholder="Enter centre code"
-                type="password"
-                onChange={(e) => setCentreCode(e.target.value)}
-              />
-              {!isValidCentreCode && centreCode && (
-                <p className="text-red-500 text-sm">Invalid centre code</p>
-              )}
-            </div>
             {preloadedUsers.length > 0 && (
               <div className="grid gap-2">
                 <label htmlFor="preloaded-users">Choose User:</label>
@@ -301,6 +289,24 @@ const MealCheckin = () => {
                 </Select>
               </div>
             )}
+            <div className="grid gap-2">
+              <label htmlFor="centre-code">Centre Code:</label>
+              <Input
+                id="centre-code"
+                placeholder="Enter centre code"
+                type="password"
+                onChange={(e) => setCentreCode(e.target.value)}
+              />
+              {!isValidCentreCode && centreCode && (
+                <p className="text-red-500 text-sm">Invalid centre code</p>
+              )}
+            </div>
+              <Button disabled={!isValidCentreCode && centreCode !== null} onClick={() => {
+                  const selectedUser = preloadedUsers.find(u => u.name === username);
+                  if (selectedUser) {
+                      handleSignInWithPreload(selectedUser);
+                  }
+              }}>Sign In</Button>
           </CardContent>
         </Card>
       </div>
