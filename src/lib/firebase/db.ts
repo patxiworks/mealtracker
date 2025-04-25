@@ -82,9 +82,13 @@ export const getDailyReportData = async (date: string) => {
     let breakfastPresentCount = 0;
     let lunchPresentCount = 0;
     let dinnerPresentCount = 0;
+    let breakfastPackedCount = 0;
+    let lunchPackedCount = 0;
+    let dinnerPackedCount = 0;
 
     // Aggregate diet counts
     const dietCounts: { [diet: string]: { breakfast: number; lunch: number; dinner: number } } = {};
+    const dietCountsPacked: { [diet: string]: { breakfastPacked: number; lunchPacked: number; dinnerPacked: number } } = {};
 
     snapshot.forEach((doc) => {
       const userData = doc.data();
@@ -95,15 +99,23 @@ export const getDailyReportData = async (date: string) => {
       if (dailyAttendance.breakfast === 'present') breakfastPresentCount++;
       if (dailyAttendance.lunch === 'present') lunchPresentCount++;
       if (dailyAttendance.dinner === 'present') dinnerPresentCount++;
+      if (dailyAttendance.breakfastPacked === 'packed') breakfastPackedCount++;
+      if (dailyAttendance.lunchPacked === 'packed') lunchPackedCount++;
+      if (dailyAttendance.dinnerPacked === 'packed') dinnerPackedCount++;
 
       // Track diet counts
       if (diet) {
         if (!dietCounts[diet]) {
           dietCounts[diet] = { breakfast: 0, lunch: 0, dinner: 0 };
+          dietCountsPacked[diet] = { breakfastPacked: 0, lunchPacked: 0, dinnerPacked: 0 };
         }
         if (dailyAttendance.breakfast === 'present') dietCounts[diet].breakfast++;
         if (dailyAttendance.lunch === 'present') dietCounts[diet].lunch++;
         if (dailyAttendance.dinner === 'present') dietCounts[diet].dinner++;
+
+        if (dailyAttendance.breakfastPacked === 'packed') dietCountsPacked[diet].breakfastPacked++;
+        if (dailyAttendance.lunchPacked === 'packed') dietCountsPacked[diet].lunchPacked++;
+        if (dailyAttendance.dinnerPacked === 'packed') dietCountsPacked[diet].dinnerPacked++;
       }
     });
 
@@ -112,12 +124,12 @@ export const getDailyReportData = async (date: string) => {
         breakfast: breakfastPresentCount,
         lunch: lunchPresentCount,
         dinner: dinnerPresentCount,
-        breakfastPacked: 0,
-        lunchPacked: 0,
-        dinnerPacked: 0,
+        breakfastPacked: breakfastPackedCount,
+        lunchPacked: lunchPackedCount,
+        dinnerPacked: dinnerPackedCount,
       },
       dietCounts: dietCounts,
-      dietCountsPacked: {},
+      dietCountsPacked: dietCountsPacked,
     };
   } catch (error) {
     console.error('Error getting daily report data:', error);
