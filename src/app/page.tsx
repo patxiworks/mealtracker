@@ -33,6 +33,7 @@ interface MealAttendanceState {
   breakfastPacked: MealStatus;
   lunchPacked: MealStatus;
   dinnerPacked: MealStatus;
+  dinnerPacked: MealStatus;
 }
 
 const MealCheckin = () => {
@@ -80,7 +81,8 @@ const MealCheckin = () => {
               return acc;
             }, {} as Record<string, MealAttendanceState>);
 
-            await createUserMealAttendance(username, initialAttendance, diet || null);
+            // Default the centre code to "vi"
+            await createUserMealAttendance(username, initialAttendance, diet || null, 'vi');
             setMealAttendance(initialAttendance);
           }
         } catch (error: any) {
@@ -239,7 +241,7 @@ const MealCheckin = () => {
         return acc;
       }, {} as Record<string, MealAttendanceState>);
 
-      await createUserMealAttendance(user.name, initialAttendance, user.diet || null);
+      await createUserMealAttendance(user.name, initialAttendance, user.diet || null, user.centre);
       setMealAttendance(initialAttendance);
     } catch (error: any) {
       console.error('Error creating user meal attendance:', error);
@@ -377,7 +379,6 @@ const MealCheckin = () => {
           {/* Meal Check-in Section */}
           <section className="grid gap-2">
             <div className="flex items-center justify-between">
-              {/*<h4 className="text-xl font-semibold">Mark your attendance to meals</h4>*/}
               <Select onValueChange={value => handleWeekChange(new Date(value))}>
                 <SelectTrigger className="w-[280px]">
                   <SelectValue placeholder={initialWeekOption.label} />
