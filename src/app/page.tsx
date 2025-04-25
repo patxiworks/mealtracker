@@ -17,6 +17,7 @@ import {useToast} from '@/hooks/use-toast';
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select';
 import { db } from "@/lib/firebase/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { Input } from "@/components/ui/input";
 
 const formatDate = (date: Date): string => {
   return format(date, 'MMM dd, yyyy');
@@ -41,6 +42,8 @@ const MealCheckin = () => {
   const {toast} = useToast();
     const [diet, setDiet] = useState<string | null>(null);
     const [preloadedUsers, setPreloadedUsers] = useState<{ name: string; diet: string }[]>([]);
+    const [centreCode, setCentreCode] = useState<string | null>(null);
+    const [isValidCentreCode, setIsValidCentreCode] = useState<boolean>(false);
 
   useEffect(() => {
     // Load username from localStorage on component mount
@@ -199,6 +202,14 @@ const MealCheckin = () => {
     }, []);
 
     const handleSignInWithPreload = async (user: { name: string; diet: string }) => {
+        if (!isValidCentreCode) {
+            toast({
+                title: 'Error',
+                description: 'Please enter a valid centre code.',
+            });
+            return;
+        }
+
         setUsername(user.name);
         localStorage.setItem('username', user.name);
         localStorage.setItem('diet', user.diet);
@@ -221,6 +232,33 @@ const MealCheckin = () => {
         }
     };
 
+    useEffect(() => {
+        const verifyCentreCode = async () => {
+            if (centreCode) {
+                try {
+                    const docRef = doc(db, "centres", "vi");
+                    const docSnap = await getDoc(docRef);
+
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        const correctCode = data.code;
+                        setIsValidCentreCode(centreCode === correctCode);
+                    } else {
+                        console.log("No such document!");
+                        setIsValidCentreCode(false);
+                    }
+                } catch (error) {
+                    console.error("Error fetching centre code:", error);
+                    setIsValidCentreCode(false);
+                }
+            } else {
+                setIsValidCentreCode(false);
+            }
+        };
+
+        verifyCentreCode();
+    }, [centreCode]);
+
   if (!username) {
     return (
       <div className="container mx-auto py-10">
@@ -229,6 +267,18 @@ const MealCheckin = () => {
             <CardTitle className="text-2xl">Sign In</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
+            <div className="grid gap-2">
+              <label htmlFor="centre-code">Centre Code:</label>
+              <Input
+                id="centre-code"
+                placeholder="Enter centre code"
+                type="password"
+                onChange={(e) => setCentreCode(e.target.value)}
+              />
+              {!isValidCentreCode && centreCode && (
+                <p className="text-red-500 text-sm">Invalid centre code</p>
+              )}
+            </div>
             {preloadedUsers.length > 0 && (
               <div className="grid gap-2">
                 <label htmlFor="preloaded-users">Choose User:</label>
