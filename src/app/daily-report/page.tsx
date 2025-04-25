@@ -63,13 +63,13 @@ const DailyReportPage = () => {
   const [dailyReport, setDailyReport] = useState<DailyReport>({});
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(today);
   const [loading, setLoading] = useState(true);
-    const [selectedCentre, setSelectedCentre] = useState<string | null>(null);
+  const [selectedCentre, setSelectedCentre] = useState<string | null>(null);
 
 
-    useEffect(() => {
-        const centre = localStorage.getItem('selectedCentre');
-        setSelectedCentre(centre);
-    }, []);
+  useEffect(() => {
+    const centre = localStorage.getItem('selectedCentre');
+    setSelectedCentre(centre);
+  }, []);
 
   // Load daily report data from Firebase
   useEffect(() => {
@@ -77,10 +77,10 @@ const DailyReportPage = () => {
       setLoading(true);
       try {
         const formattedDate = selectedDate ? formatDate(selectedDate) : formatDate(today);
-          const reportData = selectedCentre ? await getDailyReportData(formattedDate, selectedCentre) : {
-              attendance: { breakfast: 0, lunch: 0, dinner: 0 },
-              dietCounts: {},
-          };
+        const reportData = selectedCentre ? await getDailyReportData(formattedDate, selectedCentre) : {
+          attendance: { breakfast: 0, lunch: 0, dinner: 0 },
+          dietCounts: {},
+        };
         setDailyReport({ [formattedDate]: reportData });
       } catch (error: any) {
         console.error("Error fetching daily report:", error);
@@ -101,64 +101,20 @@ const DailyReportPage = () => {
   const attendanceForSelectedDate = reportForSelectedDate.attendance;
   const dietCounts = reportForSelectedDate.dietCounts;
 
-  // Function to calculate packed counts based on the "packed" status
-  const calculatePackedCounts = (dietCounts: DietCounts): DietCounts => {
-    const dietCountsPacked: DietCounts = {};
-
-    for (const diet in dietCounts) {
-      dietCountsPacked[diet] = {
-        breakfast: 0,
-        lunch: 0,
-        dinner: 0,
-      };
-
-      if (dietCounts[diet].breakfast === -1) {
-        dietCountsPacked[diet].breakfast++;
-      }
-      if (dietCounts[diet].lunch === -1) {
-        dietCountsPacked[diet].lunch++;
-      }
-      if (dietCounts[diet].dinner === -1) {
-        dietCountsPacked[diet].dinner++;
-      }
-    }
-
-    return dietCountsPacked;
-  };
-
-    const calculateDietPackedCounts = (dietCounts: DietCounts): DietCounts => {
-        const dietCountsPacked: DietCounts = {};
-
-        for (const diet in dietCounts) {
-            dietCountsPacked[diet] = {
-                breakfast: 0,
-                lunch: 0,
-                dinner: 0,
-            };
-
-            if (dietCounts[diet].breakfast < 0) {
-                dietCountsPacked[diet].breakfast = Math.abs(dietCounts[diet].breakfast);
-            }
-            if (dietCounts[diet].lunch < 0) {
-                dietCountsPacked[diet].lunch = Math.abs(dietCounts[diet].lunch);
-            }
-            if (dietCounts[diet].dinner < 0) {
-                dietCountsPacked[diet].dinner = Math.abs(dietCounts[diet].dinner);
-            }
-        }
-
-        return dietCountsPacked;
-    };
-
-
-  const dietCountsPacked = calculateDietPackedCounts(dietCounts);
-
 
   const chartData = [
     { name: "Breakfast", value: attendanceForSelectedDate.breakfast },
     { name: "Lunch", value: attendanceForSelectedDate.lunch },
     { name: "Dinner", value: attendanceForSelectedDate.dinner },
   ];
+
+  const countPacked = (attendance: AttendanceData): number => {
+    let count = 0;
+    if (attendance.breakfast < 0) count++;
+    if (attendance.lunch < 0) count++;
+    if (attendance.dinner < 0) count++;
+    return count;
+  };
 
   return (
     <div className="container mx-auto py-10">
@@ -224,20 +180,24 @@ const DailyReportPage = () => {
                         <TableRow>
                           <TableHead className="w-[100px]">Meal</TableHead>
                           <TableHead>Present</TableHead>
+                          <TableHead>Packed</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         <TableRow>
                           <TableCell>Breakfast</TableCell>
-                          <TableCell>{attendanceForSelectedDate.breakfast}</TableCell>
+                          <TableCell>{Math.abs(attendanceForSelectedDate.breakfast)}</TableCell>
+                          <TableCell>{attendanceForSelectedDate.breakfast < 0 ? 1 : 0}</TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell>Lunch</TableCell>
-                          <TableCell>{attendanceForSelectedDate.lunch}</TableCell>
+                          <TableCell>{Math.abs(attendanceForSelectedDate.lunch)}</TableCell>
+                          <TableCell>{attendanceForSelectedDate.lunch < 0 ? 1 : 0}</TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell>Dinner</TableCell>
-                          <TableCell>{attendanceForSelectedDate.dinner}</TableCell>
+                          <TableCell>{Math.abs(attendanceForSelectedDate.dinner)}</TableCell>
+                          <TableCell>{attendanceForSelectedDate.dinner < 0 ? 1 : 0}</TableCell>
                         </TableRow>
                       </TableBody>
                     </Table>
@@ -271,7 +231,7 @@ const DailyReportPage = () => {
                   </CardContent>
                 </Card>
 
-                  {/* Diet Label Counts (Packed) */}
+                {/* Diet Label Counts (Packed) */}
                 <Card>
                   <CardContent>
                     <Table>
@@ -285,12 +245,12 @@ const DailyReportPage = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {Object.entries(dietCountsPacked).map(([diet, counts]) => (
+                        {Object.entries(dietCounts).map(([diet, counts]) => (
                           <TableRow key={diet}>
                             <TableCell>{diet}</TableCell>
-                            <TableCell>{counts.breakfast}</TableCell>
-                            <TableCell>{counts.lunch}</TableCell>
-                            <TableCell>{counts.dinner}</TableCell>
+                            <TableCell>{counts.breakfast < 0 ? Math.abs(counts.breakfast) : 0}</TableCell>
+                            <TableCell>{counts.lunch < 0 ? Math.abs(counts.lunch) : 0}</TableCell>
+                            <TableCell>{counts.dinner < 0 ? Math.abs(counts.dinner) : 0}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
