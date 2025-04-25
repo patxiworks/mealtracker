@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import React, {useState, useEffect} from 'react';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
@@ -46,7 +46,9 @@ const MealCheckin = () => {
   const weekDates = getWeekDates(selectedWeekStart);
   const {toast} = useToast();
   const [diet, setDiet] = useState<string | null>(null);
-  const [preloadedUsers, setPreloadedUsers] = useState<{name: string; diet: string}[]>([]);
+  const [preloadedUsers, setPreloadedUsers] = useState<
+    {name: string; diet: string; centre: string}[]
+  >([]);
   const [centreCode, setCentreCode] = useState<string | null>(null);
   const [isValidCentreCode, setIsValidCentreCode] = useState<boolean>(false);
   const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
@@ -193,7 +195,13 @@ const MealCheckin = () => {
         if (docSnap.exists()) {
           const data = docSnap.data();
           const users = (data.users || []) as {name: string; diet: string}[];
-          setPreloadedUsers(users);
+          // Fetch the centre for each user
+          const usersWithCentre = await Promise.all(
+            users.map(async user => {
+              return {...user, centre: 'vi'}; // Assuming the centre is 'vi' for all users in this document.  Can modify as needed.
+            })
+          );
+          setPreloadedUsers(usersWithCentre as {name: string; diet: string; centre: string}[]);
         } else {
           console.log('No such document!');
           setPreloadedUsers([]);
@@ -207,7 +215,11 @@ const MealCheckin = () => {
     fetchUsers();
   }, []);
 
-  const handleSignInWithPreload = async (user: {name: string; diet: string}) => {
+  const handleSignInWithPreload = async (user: {
+    name: string;
+    diet: string;
+    centre: string;
+  }) => {
     if (!isValidCentreCode) {
       toast({
         title: 'Error',
@@ -381,7 +393,7 @@ const MealCheckin = () => {
             </div>
             <Separator />
 
-            <div className="grid grid-cols-4 gap-4 my-8">
+            <div className="grid grid-cols-3 gap-4 my-8">
               {/* Header Row for Meal Icons */}
               <div></div> {/* Empty cell for date column */}
               <div className="flex flex-col items-center">

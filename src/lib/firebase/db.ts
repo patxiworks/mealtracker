@@ -22,13 +22,15 @@ interface MealAttendanceState {
 export const createUserMealAttendance = async (
   username: string,
   initialAttendance: Record<string, MealAttendanceState>,
-  diet?: string // Optional diet label
+  diet: string | null, // Optional diet label
+  centre: string // Add centre as a required field
 ) => {
   try {
     const userDocRef = doc(db, USERS_COLLECTION, username);
     await setDoc(userDocRef, {
       mealAttendance: initialAttendance,
       diet: diet || null, // Store the diet or null if not provided
+      centre: centre, // Store the centre
     });
     console.log('User meal attendance created successfully');
   } catch (error) {
@@ -48,6 +50,7 @@ export const getUserMealAttendance = async (username: string) => {
       return {
         mealAttendance: data.mealAttendance as Record<string, MealAttendanceState>,
         diet: data.diet as string | null, // Also return the diet
+        centre: data.centre as string, // Also return the centre
       };
     } else {
       return null; // User data not found
