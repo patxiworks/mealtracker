@@ -38,6 +38,8 @@ const MealCheckin = () => {
   const [selectedWeekStart, setSelectedWeekStart] = useState<Date>(startOfWeek(new Date(), { weekStartsOn: 0 }));
   const weekDates = getWeekDates(selectedWeekStart);
   const {toast} = useToast();
+    const [diet, setDiet] = useState<string | null>(null);
+    const [inputDiet, setInputDiet] = useState('');
 
   useEffect(() => {
     // Load username from localStorage on component mount
@@ -79,17 +81,35 @@ const MealCheckin = () => {
     loadMealAttendance();
   }, [username, weekDates, toast]);
 
-  const handleSignIn = () => {
-    if (inputUsername.trim() !== '') {
-      setUsername(inputUsername);
-      localStorage.setItem('username', inputUsername);
-    }
-  };
+    const handleSignIn = async () => {
+        if (inputUsername.trim() !== '') {
+            setUsername(inputUsername);
+            localStorage.setItem('username', inputUsername);
+
+            // Ensure the diet is also stored alongside the user
+            try {
+                const initialAttendance = weekDates.reduce((acc, date) => {
+                    acc[formatDate(date)] = { breakfast: null, lunch: null, dinner: null };
+                    return acc;
+                }, {} as Record<string, MealAttendanceState>);
+
+                await createUserMealAttendance(inputUsername, initialAttendance, inputDiet); // Pass the diet to createUserMealAttendance
+                setMealAttendance(initialAttendance);
+            } catch (error: any) {
+                console.error('Error creating user meal attendance:', error);
+                toast({
+                    title: 'Error',
+                    description: `Failed to create meal attendance. ${error.message || 'Please check your connection.'}`,
+                });
+            }
+        }
+    };
 
   const handleSignOut = () => {
     setUsername(null);
     localStorage.removeItem('username');
     setMealAttendance({}); // Clear local state on sign-out
+      setDiet(null);
   };
 
   function getWeekDates(startDate: Date): Date[] {
@@ -189,6 +209,16 @@ const MealCheckin = () => {
                 onChange={e => setInputUsername(e.target.value)}
               />
             </div>
+              <div className="grid gap-2">
+                  <label htmlFor="diet">Diet Label:</label>
+                  <input
+                      id="diet"
+                      placeholder="Enter your diet label (D1, D2, D3, etc.)"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      value={inputDiet}
+                      onChange={e => setInputDiet(e.target.value)}
+                  />
+              </div>
             <Button onClick={handleSignIn}>Sign In</Button>
           </CardContent>
         </Card>
@@ -226,7 +256,7 @@ const MealCheckin = () => {
           {/* Meal Check-in Section */}
           <section className="grid gap-2">
               <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold">Weekly Meal Check-in</h2>
+                  <h4 className="text-xl font-semibold">Mark your attendance to meals</h4>
                   <Select onValueChange={(value) => handleWeekChange(new Date(value))}>
                       <SelectTrigger className="w-[280px]">
                           <SelectValue placeholder={format(selectedWeekStart, 'MMM dd, yyyy')}/>
@@ -243,7 +273,7 @@ const MealCheckin = () => {
             <Separator />
             {weekDates.map(date => (
               <div key={formatDate(date)} className="mb-4">
-                <h3 className="text-lg font-semibold">{format(date, 'EEEE, MMM dd, yyyy')}</h3>
+                <h5 className="text-lg font-semibold">{format(date, 'EEEE, MMM dd, yyyy')}</h5>
                 <div className="grid grid-flow-row md:grid-cols-3 gap-4">
                   {/* Breakfast */}
                   <div

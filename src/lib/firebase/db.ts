@@ -18,12 +18,14 @@ interface MealAttendanceState {
 // Function to create user meal attendance data
 export const createUserMealAttendance = async (
   username: string,
-  initialAttendance: Record<string, MealAttendanceState>
+  initialAttendance: Record<string, MealAttendanceState>,
+  diet?: string // Optional diet label
 ) => {
   try {
     const userDocRef = doc(db, USERS_COLLECTION, username);
     await setDoc(userDocRef, {
       mealAttendance: initialAttendance,
+      diet: diet || null, // Store the diet or null if not provided
     });
     console.log('User meal attendance created successfully');
   } catch (error) {
@@ -39,7 +41,11 @@ export const getUserMealAttendance = async (username: string) => {
     const docSnapshot = await getDoc(userDocRef);
 
     if (docSnapshot.exists()) {
-      return docSnapshot.data().mealAttendance as Record<string, MealAttendanceState>;
+      const data = docSnapshot.data();
+      return {
+        mealAttendance: data.mealAttendance as Record<string, MealAttendanceState>,
+        diet: data.diet as string | null, // Also return the diet
+      };
     } else {
       return null; // User data not found
     }
@@ -77,10 +83,14 @@ export const getDailyReportData = async (date: string) => {
       let lunchPackedCount = 0;
       let dinnerPackedCount = 0;
 
+    // Aggregate diet counts
+    const dietCounts: { [diet: string]: { breakfast: number; lunch: number; dinner: number } } = {};
+
     snapshot.forEach((doc) => {
       const userData = doc.data();
       const mealAttendance = userData.mealAttendance || {};
       const dailyAttendance: MealAttendanceState = mealAttendance[date] || { breakfast: null, lunch: null, dinner: null };
+      const diet = userData.diet as string | null;
 
       if (dailyAttendance.breakfast === 'present') breakfastPresentCount++;
       if (dailyAttendance.lunch === 'present') lunchPresentCount++;
@@ -89,15 +99,28 @@ export const getDailyReportData = async (date: string) => {
         if (dailyAttendance.breakfast === 'packed') breakfastPackedCount++;
         if (dailyAttendance.lunch === 'packed') lunchPackedCount++;
         if (dailyAttendance.dinner === 'packed') dinnerPackedCount++;
+
+      // Track diet counts
+      if (diet) {
+        if (!dietCounts[diet]) {
+          dietCounts[diet] = { breakfast: 0, lunch: 0, dinner: 0 };
+        }
+        if (dailyAttendance.breakfast === 'present') dietCounts[diet].breakfast++;
+        if (dailyAttendance.lunch === 'present') dietCounts[diet].lunch++;
+        if (dailyAttendance.dinner === 'present') dietCounts[diet].dinner++;
+      }
     });
 
     return {
-      breakfast: breakfastPresentCount,
-      lunch: lunchPresentCount,
-      dinner: dinnerPresentCount,
-        breakfastPacked: breakfastPackedCount,
-        lunchPacked: lunchPackedCount,
-        dinnerPacked: dinnerPackedCount,
+      attendance: {
+        breakfast: breakfastPresentCount,
+        lunch: lunchPresentCount,
+        dinner: dinnerPresentCount,
+          breakfastPacked: breakfastPackedCount,
+          lunchPacked: lunchPackedCount,
+          dinnerPacked: dinnerPackedCount,
+      },
+      dietCounts: dietCounts,
     };
   } catch (error) {
     console.error('Error getting daily report data:', error);

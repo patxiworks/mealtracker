@@ -40,8 +40,19 @@ interface AttendanceData {
     dinnerPacked: number;
 }
 
+interface DietCounts {
+  [diet: string]: {
+    breakfast: number;
+    lunch: number;
+    dinner: number;
+  };
+}
+
 interface DailyReport {
-  [date: string]: AttendanceData;
+  [date: string]: {
+    attendance: AttendanceData;
+    dietCounts: DietCounts;
+  };
 }
 
 const today = new Date();
@@ -80,7 +91,12 @@ const DailyReportPage = () => {
   }, [selectedDate]);
 
   const formattedDate = selectedDate ? formatDate(selectedDate) : formatDate(today);
-  const attendanceForSelectedDate = dailyReport[formattedDate] || { breakfast: 0, lunch: 0, dinner: 0, breakfastPacked: 0, lunchPacked: 0, dinnerPacked: 0 };
+  const reportForSelectedDate = dailyReport[formattedDate] || {
+    attendance: { breakfast: 0, lunch: 0, dinner: 0, breakfastPacked: 0, lunchPacked: 0, dinnerPacked: 0 },
+    dietCounts: {},
+  };
+  const attendanceForSelectedDate = reportForSelectedDate.attendance;
+  const dietCounts = reportForSelectedDate.dietCounts;
 
   const chartData = [
     { name: "Breakfast", value: attendanceForSelectedDate.breakfast },
@@ -174,6 +190,33 @@ const DailyReportPage = () => {
                           <TableCell>{attendanceForSelectedDate.dinner}</TableCell>
                             <TableCell>{attendanceForSelectedDate.dinnerPacked}</TableCell>
                         </TableRow>
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+
+                {/* Diet Label Counts */}
+                <Card>
+                  <CardContent>
+                    <Table>
+                      <TableCaption>Dietary Attendance</TableCaption>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Diet</TableHead>
+                          <TableHead>Breakfast</TableHead>
+                          <TableHead>Lunch</TableHead>
+                          <TableHead>Dinner</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {Object.entries(dietCounts).map(([diet, counts]) => (
+                          <TableRow key={diet}>
+                            <TableCell>{diet}</TableCell>
+                            <TableCell>{counts.breakfast}</TableCell>
+                            <TableCell>{counts.lunch}</TableCell>
+                            <TableCell>{counts.dinner}</TableCell>
+                          </TableRow>
+                        ))}
                       </TableBody>
                     </Table>
                   </CardContent>
