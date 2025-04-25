@@ -44,6 +44,7 @@ const MealCheckin = () => {
     const [preloadedUsers, setPreloadedUsers] = useState<{ name: string; diet: string }[]>([]);
     const [centreCode, setCentreCode] = useState<string | null>(null);
     const [isValidCentreCode, setIsValidCentreCode] = useState<boolean>(false);
+    const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
 
   useEffect(() => {
     // Load username from localStorage on component mount
@@ -271,10 +272,7 @@ const MealCheckin = () => {
               <div className="grid gap-2">
                 <label htmlFor="preloaded-users">Choose User:</label>
                 <Select onValueChange={(value) => {
-                  const selectedUser = preloadedUsers.find(u => u.name === value);
-                  if (selectedUser) {
-                    handleSignInWithPreload(selectedUser);
-                  }
+                  setSelectedUsername(value);
                 }}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a preloaded user" />
@@ -301,10 +299,15 @@ const MealCheckin = () => {
                 <p className="text-red-500 text-sm">Invalid centre code</p>
               )}
             </div>
-              <Button disabled={!isValidCentreCode && centreCode !== null} onClick={() => {
-                  const selectedUser = preloadedUsers.find(u => u.name === username);
+              <Button disabled={!isValidCentreCode || !selectedUsername} onClick={() => {
+                  const selectedUser = preloadedUsers.find(u => u.name === selectedUsername);
                   if (selectedUser) {
                       handleSignInWithPreload(selectedUser);
+                  } else {
+                      toast({
+                          title: 'Error',
+                          description: 'Please select a user from the dropdown.',
+                      });
                   }
               }}>Sign In</Button>
           </CardContent>
