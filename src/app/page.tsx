@@ -247,7 +247,7 @@ const MealCheckin = () => {
               </div>
               <Separator />
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-4 gap-4">
                 {/* Header Row for Meal Icons */}
                 <div></div> {/* Empty cell for date column */}
                 <div className="flex flex-col items-center">
@@ -262,37 +262,38 @@ const MealCheckin = () => {
 
                 {weekDates.map(date => (
                   <React.Fragment key={formatDate(date)}>
-                    <div>
-                      <div className="font-semibold">{format(date, 'EEEE')}</div>
-                      <div className="text-sm">
-                        {format(date, 'MMM dd, yyyy')}
-                      </div>
+                  {/*<div className="text-lg font-semibold">{format(date, 'EEEE, MMM dd, yyyy')}</div>*/}
+                  <div>
+                    <div className="font-semibold">{format(date, 'EEEE')}</div>
+                    <div className="text-sm">
+                      {format(date, 'MMM dd, yyyy')}
                     </div>
+                  </div>
 
-                    {/* Breakfast */}
-                    <div
-                      className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
-                      onClick={() => handleMealTimeBoxClick(date, 'breakfast')}
-                    >
-                      {getMealStatusIcon(date, 'breakfast', mealAttendance[formatDate(date)]?.breakfast)}
-                    </div>
+                  {/* Breakfast */}
+                  <div
+                    className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
+                    onClick={() => handleMealTimeBoxClick(date, 'breakfast')}
+                  >
+                    {getMealStatusIcon(date, 'breakfast', mealAttendance[formatDate(date)]?.breakfast)}
+                  </div>
 
-                    {/* Lunch */}
-                    <div
-                      className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
-                      onClick={() => handleMealTimeBoxClick(date, 'lunch')}
-                    >
-                      {getMealStatusIcon(date, 'lunch', mealAttendance[formatDate(date)]?.lunch)}
-                    </div>
+                  {/* Lunch */}
+                  <div
+                    className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
+                    onClick={() => handleMealTimeBoxClick(date, 'lunch')}
+                  >
+                    {getMealStatusIcon(date, 'lunch', mealAttendance[formatDate(date)]?.lunch)}
+                  </div>
 
-                    {/* Dinner */}
-                    <div
-                      className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
-                      onClick={() => handleMealTimeBoxClick(date, 'dinner')}
-                    >
-                      {getMealStatusIcon(date, 'dinner', mealAttendance[formatDate(date)]?.dinner)}
-                    </div>
-                  </React.Fragment>
+                  {/* Dinner */}
+                  <div
+                    className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
+                    onClick={() => handleMealTimeBoxClick(date, 'dinner')}
+                  >
+                    {getMealStatusIcon(date, 'dinner', mealAttendance[formatDate(date)]?.dinner)}
+                  </div>
+                </React.Fragment>
                 ))}
               </div>
             </section>
