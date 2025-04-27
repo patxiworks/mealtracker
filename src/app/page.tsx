@@ -18,14 +18,19 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-// Format date as "MMM dd, yyyy" for database keys
+// Format date as "MMM dd, yyyy" for database keys and general storage
 const formatDateForKey = (date: Date): string => {
   return format(date, 'MMM dd, yyyy');
 };
 
-// Format date as "MMM dd" for display
-const formatDateForDisplay = (date: Date): string => {
+// Format date as "MMM dd" for display in the grid
+const formatDateForGridDisplay = (date: Date): string => {
   return format(date, 'MMM dd');
+};
+
+// Format date as "MMM dd, yyyy" for the week dropdown label
+const formatDateForWeekDropdownLabel = (date: Date): string => {
+    return format(date, 'MMM dd, yyyy');
 };
 
 // Format day of the week
@@ -109,7 +114,7 @@ const MealCheckin = () => {
     };
 
     loadMealAttendance();
-  }, [username, weekDates, toast, diet]);
+  }, [username, weekDates, toast, diet]); // Removed initialWeekOption dependency
 
   const handleSignOut = () => {
     setUsername(null);
@@ -155,7 +160,7 @@ const MealCheckin = () => {
       await updateUserMealAttendance(username, updatedAttendance);
       toast({
         title: 'Success',
-        description: `Attendance updated for ${meal} on ${formatDateForDisplay(date)}.`,
+        description: `Attendance updated for ${meal} on ${formatDateForGridDisplay(date)}.`,
       });
     } catch (error: any) {
       console.error('Error updating meal attendance:', error);
@@ -190,7 +195,7 @@ const MealCheckin = () => {
     } else if (currentStatus === 'absent') {
       newStatus = 'packed';
     } else {
-      newStatus = null;
+      newStatus = null; // Cycle back to null from 'packed'
     }
     updateMealAttendance(date, meal, newStatus);
   };
@@ -199,21 +204,26 @@ const MealCheckin = () => {
     setSelectedWeekStart(weekStartDate);
   };
 
-  const weekOptions = Array.from({ length: 4 }, (_, i) => {
-    // Show current week and next 3 weeks
-    const weekStart = addWeeks(new Date(), i);
-    const start = startOfWeek(weekStart, { weekStartsOn: 0 });
-    const end = addDays(start, 6);
-    return {
-      start,
-      label: `${formatDateForDisplay(start)} - ${formatDateForDisplay(end)}`, // Use display format
-    };
-  });
+  // Generate week options on the fly
+  const weekOptions = React.useMemo(() => {
+    return Array.from({ length: 4 }, (_, i) => {
+      // Show current week and next 3 weeks
+      const weekStart = startOfWeek(addWeeks(new Date(), i), { weekStartsOn: 0 });
+      const end = addDays(weekStart, 6);
+      return {
+        start: weekStart,
+        // Use the new format for the label
+        label: `${formatDateForWeekDropdownLabel(weekStart)} - ${formatDateForWeekDropdownLabel(end)}`,
+      };
+    });
+  }, []); // Dependency array is empty as it calculates based on current date
 
-  const initialWeekOption = weekOptions.find(week =>
-    format(week.start, 'yyyy-MM-dd') === format(selectedWeekStart, 'yyyy-MM-dd')
-  ) || weekOptions[0];
-
+  // Find the initial week option based on the selectedWeekStart
+  const initialWeekOption = React.useMemo(() => {
+    return weekOptions.find(week =>
+      format(week.start, 'yyyy-MM-dd') === format(selectedWeekStart, 'yyyy-MM-dd')
+    ) || weekOptions[0]; // Default to the first option if not found
+  }, [selectedWeekStart, weekOptions]); // Depend on selectedWeekStart and the generated options
 
   useEffect(() => {
     if (!username && isRouteInitialized) {
@@ -246,8 +256,8 @@ const MealCheckin = () => {
             {/* Meal Check-in Section */}
             <section className="grid gap-2">
               <div className="flex items-center justify-between">
-                <Select onValueChange={value => handleWeekChange(new Date(value))}>
-                  <SelectTrigger className="w-[280px]">
+                <Select onValueChange={value => handleWeekChange(new Date(value))} value={initialWeekOption.start.toISOString()}>
+                  <SelectTrigger className="w-[350px]">
                     <SelectValue placeholder={initialWeekOption.label} />
                   </SelectTrigger>
                   <SelectContent>
@@ -278,8 +288,8 @@ const MealCheckin = () => {
                   <React.Fragment key={formatDateForKey(date)}>
                   <div>
                     <div className="font-semibold">{formatDayOfWeek(date)}</div>
-                    <div className="text-sm">
-                      {formatDateForDisplay(date)}
+                    <div className="text-sm text-muted-foreground">
+                      {formatDateForGridDisplay(date)}
                     </div>
                   </div>
 
