@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { format, startOfWeek, addDays, addWeeks } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Sun, Utensils, Moon, PackageCheck, X, Check } from 'lucide-react';
+import { CalendarCheck2, NotepadText, LogOut, Sun, Utensils, Moon, PackageCheck, X, Check } from 'lucide-react';
 import Link from 'next/link';
 import {
   createUserMealAttendance,
@@ -237,27 +237,33 @@ const MealCheckin = () => {
 
   return (
 
-      <div className="container mx-auto py-10">
+      <div className="container mx-auto py-0">
         <Card className="w-full max-w-4xl mx-auto">
-          <CardHeader className="pb-2">
+          <CardHeader className="pt-2 pb-2 bg-[#4864c3]">
             <div className="flex justify-between items-center">
-              <CardTitle className="text-2xl">Weekly Mealtime Tracker</CardTitle>
+              <CardTitle className="text-2xl">
+                <CalendarCheck2 className="inline-block" size={30} />
+                <p className="inline-block ml-2 mt-2 leading-none">MealTrack</p>
+              </CardTitle>
               <div className="flex gap-4 items-center">
                 <Link href="/daily-report">
-                  <Button variant="secondary">View Daily Report</Button>
+                  <Button variant="secondary">
+                    <NotepadText size={20} />
+                  </Button>
                 </Link>
                 <Button variant="outline" onClick={handleSignOut}>
-                  Sign Out ({username})
+                  <LogOut size={20} />
                 </Button>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="grid gap-4">
+          <CardContent className="grid gap-4 pt-2">
             {/* Meal Check-in Section */}
             <section className="grid gap-2">
               <div className="flex items-center justify-between">
+                <h4 className="text-sm text-muted-foreground">Welcome, {username}</h4>
                 <Select onValueChange={value => handleWeekChange(new Date(value))} value={initialWeekOption.start.toISOString()}>
-                  <SelectTrigger className="w-[350px]">
+                  <SelectTrigger className="w-auto pr-4">
                     <SelectValue placeholder={initialWeekOption.label} />
                   </SelectTrigger>
                   <SelectContent>
