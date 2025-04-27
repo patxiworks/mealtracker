@@ -1,10 +1,11 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -12,21 +13,21 @@ import {
   Table,
   TableHeader,
   TableBody,
-  TableFooter,
   TableHead,
   TableRow,
   TableCell,
   TableCaption,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import { getDailyReportData } from "@/lib/firebase/db";
 import { CalendarIcon } from "lucide-react";
 
+// Interfaces from db.ts (or common types file)
+type MealStatus = 'present' | 'absent' | 'packed' | null;
 interface AttendanceData {
   breakfast: number;
   lunch: number;
   dinner: number;
 }
-
 interface DietCounts {
   [diet: string]: {
     breakfast: number;
@@ -34,14 +35,30 @@ interface DietCounts {
     dinner: number;
   };
 }
-
-interface DailyReport {
-  [date: string]: {
-    attendance: AttendanceData;
-    dietCountsPresent: DietCounts;
-    dietCountsPacked: DietCounts;
-  };
+interface DailyReportData {
+  attendance: AttendanceData;
+  dietCountsPresent: DietCounts;
+  dietCountsPacked: DietCounts;
 }
+interface DailyReport {
+  [date: string]: DailyReportData;
+}
+
+// Interfaces for Summary View
+interface MealSpecificReport {
+  present: number;
+  packed: number;
+  dietCountsPresent: { [diet: string]: number };
+  dietCountsPacked: { [diet: string]: number };
+  date: string;
+}
+
+interface SummaryReportData {
+  lunchNextDay: MealSpecificReport;
+  dinnerNextDay: MealSpecificReport;
+  breakfastDayAfter: MealSpecificReport;
+}
+
 
 const today = new Date();
 
@@ -49,12 +66,93 @@ const formatDate = (date: Date): string => {
   return format(date, "MMM dd, yyyy");
 };
 
+// Helper function/component to render a meal's summary report section
+const RenderMealSummarySection = ({ title, data }: { title: string; data: MealSpecificReport }) => (
+  <Card className="mt-4">
+    <CardHeader className="pb-2">
+      <CardTitle className="text-lg">{title} - {data.date}</CardTitle>
+    </CardHeader>
+    <CardContent className="grid gap-4">
+      <Card>
+        <CardContent>
+          <Table>
+            <TableCaption>Meal Attendance</TableCaption>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Present</TableHead>
+                <TableHead>Packed</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell>{data.present}</TableCell>
+                <TableCell>{data.packed}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Diet Label Counts (Present) */}
+      {Object.keys(data.dietCountsPresent).length > 0 && (
+        <Card>
+          <CardContent>
+            <Table>
+              <TableCaption>Dietary Attendance (Present)</TableCaption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Diet</TableHead>
+                  <TableHead>Count</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Object.entries(data.dietCountsPresent).map(([diet, count]) => (
+                  <TableRow key={diet}>
+                    <TableCell>{diet}</TableCell>
+                    <TableCell>{count}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Diet Label Counts (Packed) */}
+      {Object.keys(data.dietCountsPacked).length > 0 && (
+        <Card>
+          <CardContent>
+            <Table>
+              <TableCaption>Dietary Attendance (Packed)</TableCaption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Diet</TableHead>
+                  <TableHead>Count</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Object.entries(data.dietCountsPacked).map(([diet, count]) => (
+                  <TableRow key={diet}>
+                    <TableCell>{diet}</TableCell>
+                    <TableCell>{count}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+    </CardContent>
+  </Card>
+);
+
 const DailyReportPage = () => {
   const [dailyReport, setDailyReport] = useState<DailyReport>({});
+  const [summaryReport, setSummaryReport] = useState<SummaryReportData | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(today);
   const [loading, setLoading] = useState(true);
   const [selectedCentre, setSelectedCentre] = useState<string | null>(null);
-
+  const [viewMode, setViewMode] = useState<'daily' | 'summary'>('daily'); // State to toggle view
 
   useEffect(() => {
     const centre = localStorage.getItem('selectedCentre');
@@ -64,25 +162,93 @@ const DailyReportPage = () => {
   // Load daily report data from Firebase
   useEffect(() => {
     const fetchDailyReport = async () => {
+      if (!selectedDate || !selectedCentre) return;
       setLoading(true);
       try {
-        const formattedDate = selectedDate ? formatDate(selectedDate) : formatDate(today);
-        const reportData = selectedCentre ? await getDailyReportData(formattedDate, selectedCentre) : {
-          attendance: { breakfast: 0, lunch: 0, dinner: 0 },
-          dietCountsPresent: {},
-          dietCountsPacked: {}
-        };
+        const formattedDate = formatDate(selectedDate);
+        const reportData = await getDailyReportData(formattedDate, selectedCentre);
         setDailyReport({ [formattedDate]: reportData });
       } catch (error: any) {
         console.error("Error fetching daily report:", error);
-        // Optionally set an error state to display a message to the user
+        // Optionally set an error state
       } finally {
         setLoading(false);
       }
     };
 
-    fetchDailyReport();
-  }, [selectedDate, selectedCentre]);
+    if (viewMode === 'daily') {
+      fetchDailyReport();
+      setSummaryReport(null); // Clear summary report when switching to daily view
+    }
+  }, [selectedDate, selectedCentre, viewMode]);
+
+  // Fetch data for summary view
+  useEffect(() => {
+    const fetchSummaryReport = async () => {
+      if (!selectedDate || !selectedCentre) return;
+      setLoading(true);
+      setDailyReport({}); // Clear daily report when switching to summary view
+      try {
+        const nextDay = addDays(selectedDate, 1);
+        const dayAfter = addDays(selectedDate, 2);
+
+        const formattedNextDay = formatDate(nextDay);
+        const formattedDayAfter = formatDate(dayAfter);
+
+        const [reportNextDay, reportDayAfter] = await Promise.all([
+          getDailyReportData(formattedNextDay, selectedCentre),
+          getDailyReportData(formattedDayAfter, selectedCentre)
+        ]);
+
+        const extractMealData = (report: DailyReportData, meal: keyof AttendanceData, date: Date): MealSpecificReport => {
+          const presentCount = Math.max(0, report.attendance[meal] ?? 0); // Total count including packed initially
+          const packedCount = Math.max(0, (report.attendance[meal] < 0 ? Math.abs(report.attendance[meal]) : 0));
+
+          const dietCountsPresent: { [diet: string]: number } = {};
+          Object.entries(report.dietCountsPresent).forEach(([diet, counts]) => {
+            if (counts[meal] > 0) {
+              dietCountsPresent[diet] = counts[meal];
+            }
+          });
+
+          const dietCountsPacked: { [diet: string]: number } = {};
+          Object.entries(report.dietCountsPacked).forEach(([diet, counts]) => {
+            if (counts[meal] > 0) {
+              dietCountsPacked[diet] = counts[meal];
+            }
+          });
+
+
+          return {
+            present: presentCount - packedCount, // Correct present count
+            packed: packedCount,
+            dietCountsPresent,
+            dietCountsPacked,
+            date: formatDate(date),
+          };
+        };
+
+
+        setSummaryReport({
+          lunchNextDay: extractMealData(reportNextDay, 'lunch', nextDay),
+          dinnerNextDay: extractMealData(reportNextDay, 'dinner', nextDay),
+          breakfastDayAfter: extractMealData(reportDayAfter, 'breakfast', dayAfter),
+        });
+
+      } catch (error: any) {
+        console.error("Error fetching summary report:", error);
+        setSummaryReport(null); // Reset on error
+        // Optionally set an error state
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (viewMode === 'summary') {
+      fetchSummaryReport();
+    }
+  }, [selectedDate, selectedCentre, viewMode]);
+
 
   const formattedDate = selectedDate ? formatDate(selectedDate) : formatDate(today);
   const reportForSelectedDate = dailyReport[formattedDate] || {
@@ -94,48 +260,62 @@ const DailyReportPage = () => {
   const dietCountsPresent = reportForSelectedDate.dietCountsPresent;
   const dietCountsPacked = reportForSelectedDate.dietCountsPacked;
 
-
   return (
     <div className="container mx-auto py-10">
       <Card className="w-full max-w-4xl mx-auto">
         <CardHeader className="pb-2">
-          <CardTitle className="text-2xl">Daily Meal Attendance Report</CardTitle>
+          <CardTitle className="text-2xl">Meal Attendance Report</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
           <section className="grid gap-2">
-            <h2 className="text-xl font-semibold">Select Date</h2>
+            <div className="flex items-center gap-4">
+              <h2 className="text-xl font-semibold">Select Date</h2>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-[240px] justify-start text-left font-normal",
+                      !selectedDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedDate ? format(selectedDate, "MMM dd, yyyy") : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    // Allow selecting future dates for summary view
+                    // disabled={(date) => date > today}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <Button
+                variant={viewMode === 'summary' ? 'default' : 'secondary'}
+                onClick={() => setViewMode('summary')}
+              >
+                Summary
+              </Button>
+               <Button
+                variant={viewMode === 'daily' ? 'default' : 'secondary'}
+                onClick={() => setViewMode('daily')}
+                 >
+                Daily View
+              </Button>
+            </div>
             <Separator />
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn(
-                    "w-[240px] justify-start text-left font-normal",
-                    !selectedDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, "MMM dd, yyyy") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  disabled={(date) => date > today}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            <Separator />
-            <h3 className="text-lg font-semibold">
-              Attendance for {formattedDate}
-            </h3>
+
             {loading ? (
               <div>Loading...</div>
-            ) : (
+            ) : viewMode === 'daily' ? (
               <>
+                <h3 className="text-lg font-semibold">
+                  Attendance for {formattedDate}
+                </h3>
                 <Card>
                   <CardContent>
                     <Table>
@@ -152,17 +332,17 @@ const DailyReportPage = () => {
                       <TableBody>
                         <TableRow>
                           <TableCell>Breakfast</TableCell>
-                          <TableCell>{Math.abs(attendanceForSelectedDate.breakfast) - (attendanceForSelectedDate.breakfast < 0 ? Math.abs(attendanceForSelectedDate.breakfast) : 0)}</TableCell>
+                          <TableCell>{Math.max(0, attendanceForSelectedDate.breakfast ?? 0) - (attendanceForSelectedDate.breakfast < 0 ? Math.abs(attendanceForSelectedDate.breakfast) : 0)}</TableCell>
                           <TableCell>{attendanceForSelectedDate.breakfast < 0 ? Math.abs(attendanceForSelectedDate.breakfast) : 0}</TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell>Lunch</TableCell>
-                          <TableCell>{Math.abs(attendanceForSelectedDate.lunch) - (attendanceForSelectedDate.lunch < 0 ? Math.abs(attendanceForSelectedDate.lunch) : 0)}</TableCell>
+                          <TableCell>{Math.max(0, attendanceForSelectedDate.lunch ?? 0) - (attendanceForSelectedDate.lunch < 0 ? Math.abs(attendanceForSelectedDate.lunch) : 0)}</TableCell>
                           <TableCell>{attendanceForSelectedDate.lunch < 0 ? Math.abs(attendanceForSelectedDate.lunch) : 0}</TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell>Dinner</TableCell>
-                          <TableCell>{Math.abs(attendanceForSelectedDate.dinner) - (attendanceForSelectedDate.dinner < 0 ? Math.abs(attendanceForSelectedDate.dinner) : 0)}</TableCell>
+                          <TableCell>{Math.max(0, attendanceForSelectedDate.dinner ?? 0) - (attendanceForSelectedDate.dinner < 0 ? Math.abs(attendanceForSelectedDate.dinner) : 0)}</TableCell>
                           <TableCell>{attendanceForSelectedDate.dinner < 0 ? Math.abs(attendanceForSelectedDate.dinner) : 0}</TableCell>
                         </TableRow>
                       </TableBody>
@@ -171,59 +351,76 @@ const DailyReportPage = () => {
                 </Card>
 
                 {/* Diet Label Counts (Present) */}
-                <Card>
-                  <CardContent>
-                    <Table>
-                      <TableCaption>Dietary Attendance (Present)</TableCaption>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Diet</TableHead>
-                          <TableHead>Breakfast</TableHead>
-                          <TableHead>Lunch</TableHead>
-                          <TableHead>Dinner</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {Object.entries(dietCountsPresent).map(([diet, counts]) => (
-                          <TableRow key={diet}>
-                            <TableCell>{diet}</TableCell>
-                            <TableCell>{Math.abs(counts.breakfast)}</TableCell>
-                            <TableCell>{Math.abs(counts.lunch)}</TableCell>
-                            <TableCell>{Math.abs(counts.dinner)}</TableCell>
+                {Object.keys(dietCountsPresent).length > 0 && (
+                  <Card>
+                    <CardContent>
+                      <Table>
+                        <TableCaption>Dietary Attendance (Present)</TableCaption>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Diet</TableHead>
+                            <TableHead>Breakfast</TableHead>
+                            <TableHead>Lunch</TableHead>
+                            <TableHead>Dinner</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
+                        </TableHeader>
+                        <TableBody>
+                          {Object.entries(dietCountsPresent).map(([diet, counts]) => (
+                            <TableRow key={diet}>
+                              <TableCell>{diet}</TableCell>
+                              <TableCell>{Math.max(0, counts.breakfast ?? 0)}</TableCell>
+                              <TableCell>{Math.max(0, counts.lunch ?? 0)}</TableCell>
+                              <TableCell>{Math.max(0, counts.dinner ?? 0)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                )}
+
 
                 {/* Diet Label Counts (Packed) */}
-                <Card>
-                  <CardContent>
-                    <Table>
-                      <TableCaption>Dietary Attendance (Packed)</TableCaption>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Diet</TableHead>
-                          <TableHead>Breakfast</TableHead>
-                          <TableHead>Lunch</TableHead>
-                          <TableHead>Dinner</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {Object.entries(dietCountsPacked).map(([diet, counts]) => (
-                          <TableRow key={diet}>
-                            <TableCell>{diet}</TableCell>
-                            <TableCell>{Math.abs(counts.breakfast)}</TableCell>
-                            <TableCell>{Math.abs(counts.lunch)}</TableCell>
-                            <TableCell>{Math.abs(counts.dinner)}</TableCell>
+                 {Object.keys(dietCountsPacked).length > 0 && (
+                  <Card>
+                    <CardContent>
+                      <Table>
+                        <TableCaption>Dietary Attendance (Packed)</TableCaption>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Diet</TableHead>
+                            <TableHead>Breakfast</TableHead>
+                            <TableHead>Lunch</TableHead>
+                            <TableHead>Dinner</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
+                        </TableHeader>
+                        <TableBody>
+                          {Object.entries(dietCountsPacked).map(([diet, counts]) => (
+                            <TableRow key={diet}>
+                              <TableCell>{diet}</TableCell>
+                              <TableCell>{Math.max(0, counts.breakfast ?? 0)}</TableCell>
+                              <TableCell>{Math.max(0, counts.lunch ?? 0)}</TableCell>
+                              <TableCell>{Math.max(0, counts.dinner ?? 0)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                 )}
+
               </>
+            ) : viewMode === 'summary' && summaryReport ? (
+                <>
+                    <h3 className="text-lg font-semibold">
+                    Summary Report (Based on {formattedDate})
+                    </h3>
+                     <RenderMealSummarySection title="Lunch (Next Day)" data={summaryReport.lunchNextDay} />
+                     <RenderMealSummarySection title="Dinner (Next Day)" data={summaryReport.dinnerNextDay} />
+                     <RenderMealSummarySection title="Breakfast (Day After)" data={summaryReport.breakfastDayAfter} />
+                </>
+            ) : (
+                 <div>No summary data available for the selected date or an error occurred.</div>
             )}
           </section>
         </CardContent>
@@ -233,3 +430,5 @@ const DailyReportPage = () => {
 };
 
 export default DailyReportPage;
+        
+    
