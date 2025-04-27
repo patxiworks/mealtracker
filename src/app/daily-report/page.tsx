@@ -74,9 +74,12 @@ const RenderMealSummarySection = ({ title, data }: { title: string; data: MealSp
     </CardHeader>
     <CardContent className="grid gap-4">
       <Card>
-        <CardContent>
+        <CardHeader className="pb-1 pt-4">
+           <CardTitle className="text-base font-semibold">Meal Attendance</CardTitle>
+         </CardHeader>
+        <CardContent className="p-4 pt-0">
           <Table>
-            <TableCaption>Meal Attendance</TableCaption>
+            {/* <TableCaption>Meal Attendance</TableCaption> */}
             <TableHeader>
               <TableRow>
                 <TableHead>Present</TableHead>
@@ -96,9 +99,12 @@ const RenderMealSummarySection = ({ title, data }: { title: string; data: MealSp
       {/* Diet Label Counts (Present) */}
       {Object.keys(data.dietCountsPresent).length > 0 && (
         <Card>
-          <CardContent>
+           <CardHeader className="pb-1 pt-4">
+            <CardTitle className="text-base font-semibold">Dietary Attendance (Present)</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
             <Table>
-              <TableCaption>Dietary Attendance (Present)</TableCaption>
+              {/* <TableCaption>Dietary Attendance (Present)</TableCaption> */}
               <TableHeader>
                 <TableRow>
                   <TableHead>Diet</TableHead>
@@ -121,9 +127,12 @@ const RenderMealSummarySection = ({ title, data }: { title: string; data: MealSp
       {/* Diet Label Counts (Packed) */}
       {Object.keys(data.dietCountsPacked).length > 0 && (
         <Card>
-          <CardContent>
+          <CardHeader className="pb-1 pt-4">
+            <CardTitle className="text-base font-semibold">Dietary Attendance (Packed)</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
             <Table>
-              <TableCaption>Dietary Attendance (Packed)</TableCaption>
+              {/* <TableCaption>Dietary Attendance (Packed)</TableCaption> */}
               <TableHeader>
                 <TableRow>
                   <TableHead>Diet</TableHead>
@@ -200,27 +209,29 @@ const DailyReportPage = () => {
           getDailyReportData(formattedDayAfter, selectedCentre)
         ]);
 
+        // Helper function to extract specific meal data from a full daily report
         const extractMealData = (report: DailyReportData, meal: keyof AttendanceData, date: Date): MealSpecificReport => {
-          const presentCount = Math.max(0, report.attendance[meal] ?? 0); // Total count including packed initially
-          const packedCount = Math.max(0, (report.attendance[meal] < 0 ? Math.abs(report.attendance[meal]) : 0));
+            const totalCount = report.attendance[meal] ?? 0; // This raw count includes present and subtracts packed implicitly from db layer logic
+            const packedCount = Object.values(report.dietCountsPacked).reduce((sum, dietCounts) => sum + (dietCounts[meal] ?? 0), 0);
+            const presentCount = totalCount + packedCount; // Recalculate present count based on total and packed
 
-          const dietCountsPresent: { [diet: string]: number } = {};
-          Object.entries(report.dietCountsPresent).forEach(([diet, counts]) => {
-            if (counts[meal] > 0) {
-              dietCountsPresent[diet] = counts[meal];
-            }
-          });
+            const dietCountsPresent: { [diet: string]: number } = {};
+            Object.entries(report.dietCountsPresent).forEach(([diet, counts]) => {
+                if (counts[meal] > 0) {
+                dietCountsPresent[diet] = counts[meal];
+                }
+            });
 
-          const dietCountsPacked: { [diet: string]: number } = {};
-          Object.entries(report.dietCountsPacked).forEach(([diet, counts]) => {
-            if (counts[meal] > 0) {
-              dietCountsPacked[diet] = counts[meal];
-            }
-          });
+            const dietCountsPacked: { [diet: string]: number } = {};
+            Object.entries(report.dietCountsPacked).forEach(([diet, counts]) => {
+                if (counts[meal] > 0) {
+                dietCountsPacked[diet] = counts[meal];
+                }
+            });
 
 
           return {
-            present: presentCount - packedCount, // Correct present count
+            present: presentCount,
             packed: packedCount,
             dietCountsPresent,
             dietCountsPacked,
@@ -260,6 +271,18 @@ const DailyReportPage = () => {
   const dietCountsPresent = reportForSelectedDate.dietCountsPresent;
   const dietCountsPacked = reportForSelectedDate.dietCountsPacked;
 
+  // Helper function to calculate packed count for a specific meal in daily view
+  const getPackedCount = (meal: keyof AttendanceData) => {
+    return Object.values(dietCountsPacked).reduce((sum, counts) => sum + (counts[meal] || 0), 0);
+  };
+
+  // Helper function to calculate present count for a specific meal in daily view
+  const getPresentCount = (meal: keyof AttendanceData) => {
+      const total = attendanceForSelectedDate[meal] ?? 0;
+      const packed = getPackedCount(meal);
+      return total + packed; // Present = Total (from db which is present - packed) + Packed
+  };
+
   return (
     <div className="container mx-auto py-10">
       <Card className="w-full max-w-4xl mx-auto">
@@ -268,7 +291,7 @@ const DailyReportPage = () => {
         </CardHeader>
         <CardContent className="grid gap-4">
           <section className="grid gap-2">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               <h2 className="text-xl font-semibold">Select Date</h2>
               <Popover>
                 <PopoverTrigger asChild>
@@ -294,18 +317,20 @@ const DailyReportPage = () => {
                   />
                 </PopoverContent>
               </Popover>
-              <Button
-                variant={viewMode === 'summary' ? 'default' : 'secondary'}
-                onClick={() => setViewMode('summary')}
-              >
-                Summary
-              </Button>
-               <Button
-                variant={viewMode === 'daily' ? 'default' : 'secondary'}
-                onClick={() => setViewMode('daily')}
-                 >
-                Daily View
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                    variant={viewMode === 'daily' ? 'default' : 'secondary'}
+                    onClick={() => setViewMode('daily')}
+                    >
+                    Daily View
+                </Button>
+                <Button
+                    variant={viewMode === 'summary' ? 'default' : 'secondary'}
+                    onClick={() => setViewMode('summary')}
+                >
+                    Summary
+                </Button>
+              </div>
             </div>
             <Separator />
 
@@ -313,15 +338,18 @@ const DailyReportPage = () => {
               <div>Loading...</div>
             ) : viewMode === 'daily' ? (
               <>
-                <h3 className="text-lg font-semibold">
+                <h3 className="text-lg font-semibold mt-4">
                   Attendance for {formattedDate}
                 </h3>
                 <Card>
-                  <CardContent>
+                  <CardHeader className="pb-1 pt-4">
+                    <CardTitle className="text-base font-semibold">Meal Attendance</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
                     <Table>
-                      <TableCaption>
+                      {/* <TableCaption>
                         Meal attendance data for {formattedDate}
-                      </TableCaption>
+                      </TableCaption> */}
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-[100px]">Meal</TableHead>
@@ -332,18 +360,18 @@ const DailyReportPage = () => {
                       <TableBody>
                         <TableRow>
                           <TableCell>Breakfast</TableCell>
-                          <TableCell>{Math.max(0, attendanceForSelectedDate.breakfast ?? 0) - (attendanceForSelectedDate.breakfast < 0 ? Math.abs(attendanceForSelectedDate.breakfast) : 0)}</TableCell>
-                          <TableCell>{attendanceForSelectedDate.breakfast < 0 ? Math.abs(attendanceForSelectedDate.breakfast) : 0}</TableCell>
+                           <TableCell>{getPresentCount('breakfast')}</TableCell>
+                           <TableCell>{getPackedCount('breakfast')}</TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell>Lunch</TableCell>
-                          <TableCell>{Math.max(0, attendanceForSelectedDate.lunch ?? 0) - (attendanceForSelectedDate.lunch < 0 ? Math.abs(attendanceForSelectedDate.lunch) : 0)}</TableCell>
-                          <TableCell>{attendanceForSelectedDate.lunch < 0 ? Math.abs(attendanceForSelectedDate.lunch) : 0}</TableCell>
+                           <TableCell>{getPresentCount('lunch')}</TableCell>
+                           <TableCell>{getPackedCount('lunch')}</TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell>Dinner</TableCell>
-                          <TableCell>{Math.max(0, attendanceForSelectedDate.dinner ?? 0) - (attendanceForSelectedDate.dinner < 0 ? Math.abs(attendanceForSelectedDate.dinner) : 0)}</TableCell>
-                          <TableCell>{attendanceForSelectedDate.dinner < 0 ? Math.abs(attendanceForSelectedDate.dinner) : 0}</TableCell>
+                           <TableCell>{getPresentCount('dinner')}</TableCell>
+                           <TableCell>{getPackedCount('dinner')}</TableCell>
                         </TableRow>
                       </TableBody>
                     </Table>
@@ -352,10 +380,13 @@ const DailyReportPage = () => {
 
                 {/* Diet Label Counts (Present) */}
                 {Object.keys(dietCountsPresent).length > 0 && (
-                  <Card>
-                    <CardContent>
+                  <Card className="mt-4">
+                     <CardHeader className="pb-1 pt-4">
+                        <CardTitle className="text-base font-semibold">Dietary Attendance (Present)</CardTitle>
+                      </CardHeader>
+                    <CardContent className="p-4 pt-0">
                       <Table>
-                        <TableCaption>Dietary Attendance (Present)</TableCaption>
+                        {/* <TableCaption>Dietary Attendance (Present)</TableCaption> */}
                         <TableHeader>
                           <TableRow>
                             <TableHead>Diet</TableHead>
@@ -382,10 +413,13 @@ const DailyReportPage = () => {
 
                 {/* Diet Label Counts (Packed) */}
                  {Object.keys(dietCountsPacked).length > 0 && (
-                  <Card>
-                    <CardContent>
+                  <Card className="mt-4">
+                     <CardHeader className="pb-1 pt-4">
+                        <CardTitle className="text-base font-semibold">Dietary Attendance (Packed)</CardTitle>
+                      </CardHeader>
+                    <CardContent className="p-4 pt-0">
                       <Table>
-                        <TableCaption>Dietary Attendance (Packed)</TableCaption>
+                        {/* <TableCaption>Dietary Attendance (Packed)</TableCaption> */}
                         <TableHeader>
                           <TableRow>
                             <TableHead>Diet</TableHead>
@@ -412,7 +446,7 @@ const DailyReportPage = () => {
               </>
             ) : viewMode === 'summary' && summaryReport ? (
                 <>
-                    <h3 className="text-lg font-semibold">
+                    <h3 className="text-lg font-semibold mt-4">
                     Summary Report (Based on {formattedDate})
                     </h3>
                      <RenderMealSummarySection title="Lunch (Next Day)" data={summaryReport.lunchNextDay} />
@@ -420,7 +454,7 @@ const DailyReportPage = () => {
                      <RenderMealSummarySection title="Breakfast (Day After)" data={summaryReport.breakfastDayAfter} />
                 </>
             ) : (
-                 <div>No summary data available for the selected date or an error occurred.</div>
+                 <div className="mt-4">No summary data available for the selected date or an error occurred.</div>
             )}
           </section>
         </CardContent>
@@ -431,4 +465,6 @@ const DailyReportPage = () => {
 
 export default DailyReportPage;
         
+    
+
     
