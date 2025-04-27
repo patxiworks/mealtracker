@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -17,8 +18,19 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-const formatDate = (date: Date): string => {
+// Format date as "MMM dd, yyyy" for database keys
+const formatDateForKey = (date: Date): string => {
   return format(date, 'MMM dd, yyyy');
+};
+
+// Format date as "MMM dd" for display
+const formatDateForDisplay = (date: Date): string => {
+  return format(date, 'MMM dd');
+};
+
+// Format day of the week
+const formatDayOfWeek = (date: Date): string => {
+  return format(date, 'EEEE');
 };
 
 // Define the meal status type
@@ -76,12 +88,13 @@ const MealCheckin = () => {
           } else {
             // If no data exists for the user, initialize it in the database
             const initialAttendance = weekDates.reduce((acc, date) => {
-              acc[formatDate(date)] = { breakfast: null, lunch: null, dinner: null };
+              acc[formatDateForKey(date)] = { breakfast: null, lunch: null, dinner: null };
               return acc;
             }, {} as Record<string, MealAttendanceState>);
 
             // Default the centre code to "vi"
-            await createUserMealAttendance(username, initialAttendance, diet || null, 'vi');
+            const selectedCentre = localStorage.getItem('selectedCentre') || 'vi'; // Fallback centre
+            await createUserMealAttendance(username, initialAttendance, diet || null, selectedCentre);
             setMealAttendance(initialAttendance);
           }
         } catch (error: any) {
@@ -102,6 +115,7 @@ const MealCheckin = () => {
     setUsername(null);
     localStorage.removeItem('username');
     localStorage.removeItem('diet');
+    localStorage.removeItem('selectedCentre'); // Clear selected centre as well
     setMealAttendance({}); // Clear local state on sign-out
     setDiet(null);
     router.push('/select-centre'); // Redirect to centre selection page
@@ -129,10 +143,10 @@ const MealCheckin = () => {
       return;
     }
 
-    const dateKey = formatDate(date);
+    const dateKey = formatDateForKey(date);
     const updatedAttendance = {
       ...mealAttendance,
-      [dateKey]: { ...(mealAttendance[dateKey] || {}), [meal]: status },
+      [dateKey]: { ...(mealAttendance[dateKey] || { breakfast: null, lunch: null, dinner: null }), [meal]: status },
     };
 
     setMealAttendance(updatedAttendance);
@@ -141,7 +155,7 @@ const MealCheckin = () => {
       await updateUserMealAttendance(username, updatedAttendance);
       toast({
         title: 'Success',
-        description: `Attendance updated for ${meal} on ${dateKey}.`,
+        description: `Attendance updated for ${meal} on ${formatDateForDisplay(date)}.`,
       });
     } catch (error: any) {
       console.error('Error updating meal attendance:', error);
@@ -166,8 +180,8 @@ const MealCheckin = () => {
   };
 
   const handleMealTimeBoxClick = (date: Date, meal: string) => {
-    const dateKey = formatDate(date);
-    const currentStatus = mealAttendance[dateKey]?.[meal];
+    const dateKey = formatDateForKey(date);
+    const currentStatus = mealAttendance[dateKey]?.[meal as keyof MealAttendanceState];
     let newStatus: MealStatus = null;
     if (currentStatus === null) {
       newStatus = 'present';
@@ -192,7 +206,7 @@ const MealCheckin = () => {
     const end = addDays(start, 6);
     return {
       start,
-      label: `${format(start, 'MMM dd, yyyy')} - ${format(end, 'MMM dd, yyyy')}`,
+      label: `${formatDateForDisplay(start)} - ${formatDateForDisplay(end)}`, // Use display format
     };
   });
 
@@ -212,7 +226,7 @@ const MealCheckin = () => {
   }
 
   return (
-    
+
       <div className="container mx-auto py-10">
         <Card className="w-full max-w-4xl mx-auto">
           <CardHeader className="pb-2">
@@ -238,7 +252,7 @@ const MealCheckin = () => {
                   </SelectTrigger>
                   <SelectContent>
                     {weekOptions.map(week => (
-                      <SelectItem key={week.start} value={week.start.toISOString()}>
+                      <SelectItem key={week.start.toISOString()} value={week.start.toISOString()}>
                         {week.label}
                       </SelectItem>
                     ))}
@@ -247,7 +261,7 @@ const MealCheckin = () => {
               </div>
               <Separator />
 
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-4 gap-4 mt-4"> {/* Added mt-4 for margin */}
                 {/* Header Row for Meal Icons */}
                 <div></div> {/* Empty cell for date column */}
                 <div className="flex flex-col items-center">
@@ -261,12 +275,11 @@ const MealCheckin = () => {
                 </div>
 
                 {weekDates.map(date => (
-                  <React.Fragment key={formatDate(date)}>
-                  {/*<div className="text-lg font-semibold">{format(date, 'EEEE, MMM dd, yyyy')}</div>*/}
+                  <React.Fragment key={formatDateForKey(date)}>
                   <div>
-                    <div className="font-semibold">{format(date, 'EEEE')}</div>
+                    <div className="font-semibold">{formatDayOfWeek(date)}</div>
                     <div className="text-sm">
-                      {format(date, 'MMM dd, yyyy')}
+                      {formatDateForDisplay(date)}
                     </div>
                   </div>
 
@@ -275,7 +288,7 @@ const MealCheckin = () => {
                     className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
                     onClick={() => handleMealTimeBoxClick(date, 'breakfast')}
                   >
-                    {getMealStatusIcon(date, 'breakfast', mealAttendance[formatDate(date)]?.breakfast)}
+                    {getMealStatusIcon(date, 'breakfast', mealAttendance[formatDateForKey(date)]?.breakfast)}
                   </div>
 
                   {/* Lunch */}
@@ -283,7 +296,7 @@ const MealCheckin = () => {
                     className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
                     onClick={() => handleMealTimeBoxClick(date, 'lunch')}
                   >
-                    {getMealStatusIcon(date, 'lunch', mealAttendance[formatDate(date)]?.lunch)}
+                    {getMealStatusIcon(date, 'lunch', mealAttendance[formatDateForKey(date)]?.lunch)}
                   </div>
 
                   {/* Dinner */}
@@ -291,7 +304,7 @@ const MealCheckin = () => {
                     className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
                     onClick={() => handleMealTimeBoxClick(date, 'dinner')}
                   >
-                    {getMealStatusIcon(date, 'dinner', mealAttendance[formatDate(date)]?.dinner)}
+                    {getMealStatusIcon(date, 'dinner', mealAttendance[formatDateForKey(date)]?.dinner)}
                   </div>
                 </React.Fragment>
                 ))}
@@ -300,8 +313,9 @@ const MealCheckin = () => {
           </CardContent>
         </Card>
       </div>
-    
+
   );
 };
 
 export default MealCheckin;
+

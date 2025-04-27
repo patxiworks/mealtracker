@@ -65,9 +65,16 @@ interface SummaryViewData {
 
 const today = new Date();
 
-const formatDate = (date: Date): string => {
+// Format date as "MMM dd" (e.g., "Apr 28") for report display
+const formatReportDate = (date: Date): string => {
+  return format(date, "MMM dd");
+};
+
+// Format date as "MMM dd, yyyy" for the date picker display
+const formatPickerDate = (date: Date): string => {
   return format(date, "MMM dd, yyyy");
 };
+
 
 // --- Helper Functions to Merge User Lists and Calculate Counts ---
 const mergeMealAttendanceDetail = (...details: MealAttendanceDetail[]): MealAttendanceDetail => {
@@ -111,12 +118,16 @@ const CountWithPopover = ({ detail }: { detail: MealAttendanceDetail }) => {
           {detail.count}
         </span>
       </PopoverTrigger>
-      <PopoverContent className="w-auto">
-        <ul className="list-disc list-inside text-sm">
-          {detail.users.map(user => (
-            <li key={user}>{user}</li>
-          ))}
-        </ul>
+      <PopoverContent className="w-auto p-2">
+        {detail.users.length > 0 ? (
+          <ul className="list-none text-sm space-y-1 max-h-48 overflow-y-auto">
+            {detail.users.map(user => (
+              <li key={user}>{user}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">No users</p>
+        )}
       </PopoverContent>
     </Popover>
   );
@@ -142,8 +153,8 @@ const DailyReportPage = () => {
       if (!selectedDate || !selectedCentre) return;
       setLoading(true);
       try {
-        const formattedDate = formatDate(selectedDate);
-        const reportData = await getDailyReportData(formattedDate, selectedCentre);
+        const formattedDateForDb = format(selectedDate, "MMM dd, yyyy"); // Use full date for DB query
+        const reportData = await getDailyReportData(formattedDateForDb, selectedCentre);
         setDailyReport(reportData);
       } catch (error: any) {
         console.error("Error fetching daily report:", error);
@@ -170,37 +181,41 @@ const DailyReportPage = () => {
         const nextDay = addDays(selectedDate, 1);
         const dayAfter = addDays(selectedDate, 2);
 
-        const formattedNextDay = formatDate(nextDay);
-        const formattedDayAfter = formatDate(dayAfter);
+        const formattedNextDayForDb = format(nextDay, "MMM dd, yyyy"); // Use full date for DB query
+        const formattedDayAfterForDb = format(dayAfter, "MMM dd, yyyy"); // Use full date for DB query
 
         const [reportNextDay, reportDayAfter] = await Promise.all([
-          getDailyReportData(formattedNextDay, selectedCentre),
-          getDailyReportData(formattedDayAfter, selectedCentre)
+          getDailyReportData(formattedNextDayForDb, selectedCentre),
+          getDailyReportData(formattedDayAfterForDb, selectedCentre)
         ]);
+
+        // Format dates for display (MMM dd)
+        const formattedNextDayForDisplay = formatReportDate(nextDay);
+        const formattedDayAfterForDisplay = formatReportDate(dayAfter);
 
         const processedSummaryData: SummaryViewData = {
             mealAttendance: {
                 lunchNextDay: {
                     present: reportNextDay.attendancePresent.lunch,
                     packed: reportNextDay.attendancePacked.lunch,
-                    date: formattedNextDay,
+                    date: formattedNextDayForDisplay, // Use display format
                 },
                 dinnerNextDay: {
                     present: reportNextDay.attendancePresent.dinner,
                     packed: reportNextDay.attendancePacked.dinner,
-                    date: formattedNextDay,
+                    date: formattedNextDayForDisplay, // Use display format
                 },
                 breakfastDayAfter: {
                     present: reportDayAfter.attendancePresent.breakfast,
                     packed: reportDayAfter.attendancePacked.breakfast,
-                    date: formattedDayAfter,
+                    date: formattedDayAfterForDisplay, // Use display format
                 }
             },
             dietCountsPresent: {}, // Initialize
             dietCountsPacked: {}, // Initialize
-            dates: {
-                nextDay: formattedNextDay,
-                dayAfter: formattedDayAfter,
+            dates: { // Store display dates
+                nextDay: formattedNextDayForDisplay,
+                dayAfter: formattedDayAfterForDisplay,
             }
         };
 
@@ -246,7 +261,7 @@ const DailyReportPage = () => {
   }, [selectedDate, selectedCentre, viewMode]);
 
 
-  const formattedDate = selectedDate ? formatDate(selectedDate) : formatDate(today);
+  const formattedReportDisplayDate = selectedDate ? formatReportDate(selectedDate) : formatReportDate(today);
 
   return (
     <div className="container mx-auto py-10">
@@ -268,7 +283,7 @@ const DailyReportPage = () => {
                     )}
                 >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? format(selectedDate, "MMM dd, yyyy") : <span>Pick a date</span>}
+                    {selectedDate ? formatPickerDate(selectedDate) : <span>Pick a date</span>}
                 </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -302,7 +317,7 @@ const DailyReportPage = () => {
             ) : viewMode === 'daily' ? (
             <>
                 <h3 className="text-lg font-semibold mt-4">
-                Daily Report for {formattedDate}
+                Daily Report for {formattedReportDisplayDate}
                 </h3>
                 {/* Daily Meal Attendance Table */}
                 <Card>
@@ -409,7 +424,7 @@ const DailyReportPage = () => {
             ) : viewMode === 'summary' && summaryReport ? (
                 <>
                     <h3 className="text-lg font-semibold mt-4">
-                    Summary Report (Based on {formattedDate})
+                    Summary Report (Based on {formattedReportDisplayDate})
                     </h3>
 
                     {/* Summary Meal Attendance Table */}
@@ -429,19 +444,19 @@ const DailyReportPage = () => {
                             </TableHeader>
                             <TableBody>
                                 <TableRow>
-                                <TableCell>Lunch (Next Day)</TableCell>
+                                <TableCell>Lunch</TableCell>
                                 <TableCell>{summaryReport.dates.nextDay}</TableCell>
                                 <TableCell><CountWithPopover detail={summaryReport.mealAttendance.lunchNextDay.present} /></TableCell>
                                 <TableCell><CountWithPopover detail={summaryReport.mealAttendance.lunchNextDay.packed} /></TableCell>
                                 </TableRow>
                                 <TableRow>
-                                <TableCell>Dinner (Next Day)</TableCell>
+                                <TableCell>Dinner</TableCell>
                                 <TableCell>{summaryReport.dates.nextDay}</TableCell>
                                     <TableCell><CountWithPopover detail={summaryReport.mealAttendance.dinnerNextDay.present} /></TableCell>
                                 <TableCell><CountWithPopover detail={summaryReport.mealAttendance.dinnerNextDay.packed} /></TableCell>
                                 </TableRow>
                                 <TableRow>
-                                <TableCell>Breakfast (Day After)</TableCell>
+                                <TableCell>Breakfast</TableCell>
                                 <TableCell>{summaryReport.dates.dayAfter}</TableCell>
                                 <TableCell><CountWithPopover detail={summaryReport.mealAttendance.breakfastDayAfter.present} /></TableCell>
                                 <TableCell><CountWithPopover detail={summaryReport.mealAttendance.breakfastDayAfter.packed} /></TableCell>
