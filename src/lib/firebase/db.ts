@@ -15,6 +15,45 @@ interface MealAttendanceState {
   dinner: MealStatus;
 }
 
+// Interface for user data stored in Firestore
+interface UserData {
+    mealAttendance: Record<string, MealAttendanceState>;
+    diet: string | null;
+    centre: string;
+}
+
+// Interface for detailed attendance count including users
+export interface MealAttendanceDetail {
+    count: number;
+    users: string[];
+}
+
+// Interface for detailed diet counts including users
+export interface DietCountsDetail {
+    [diet: string]: {
+        breakfast: MealAttendanceDetail;
+        lunch: MealAttendanceDetail;
+        dinner: MealAttendanceDetail;
+    };
+}
+
+// Interface for the detailed daily report data structure
+export interface DailyReportDataWithUsers {
+    attendancePresent: {
+        breakfast: MealAttendanceDetail;
+        lunch: MealAttendanceDetail;
+        dinner: MealAttendanceDetail;
+    };
+    attendancePacked: {
+        breakfast: MealAttendanceDetail;
+        lunch: MealAttendanceDetail;
+        dinner: MealAttendanceDetail;
+    };
+    dietCountsPresent: DietCountsDetail;
+    dietCountsPacked: DietCountsDetail;
+}
+
+
 // Function to create user meal attendance data
 export const createUserMealAttendance = async (
   username: string,
@@ -24,30 +63,47 @@ export const createUserMealAttendance = async (
 ) => {
   try {
     const userDocRef = doc(db, USERS_COLLECTION, username);
-    await setDoc(userDocRef, {
-      mealAttendance: initialAttendance,
-      diet: diet || null, // Store the diet or null if not provided
-      centre: centre, // Store the centre
-    });
-    console.log('User meal attendance created successfully');
+    const docSnap = await getDoc(userDocRef);
+
+    if (!docSnap.exists()) {
+        // Only create if the user doesn't exist
+        await setDoc(userDocRef, {
+          mealAttendance: initialAttendance,
+          diet: diet || null, // Store the diet or null if not provided
+          centre: centre, // Store the centre
+        });
+        console.log('User meal attendance created successfully');
+    } else {
+        // Optionally update if user exists, or just log
+        console.log('User already exists, skipping creation.');
+         // Update existing user's diet and centre if needed
+        await updateDoc(userDocRef, {
+            diet: diet || null,
+            centre: centre,
+            // mealAttendance: initialAttendance, // Decide if you want to overwrite attendance on sign-in
+        });
+        console.log('User diet and centre updated.');
+    }
+
+
   } catch (error) {
-    console.error('Error creating user meal attendance:', error);
+    console.error('Error creating/updating user meal attendance:', error);
     throw error;
   }
 };
 
 // Function to get user meal attendance data
-export const getUserMealAttendance = async (username: string) => {
+export const getUserMealAttendance = async (username: string): Promise<UserData | null> => {
   try {
     const userDocRef = doc(db, USERS_COLLECTION, username);
     const docSnapshot = await getDoc(userDocRef);
 
     if (docSnapshot.exists()) {
-      const data = docSnapshot.data();
+      const data = docSnapshot.data() as UserData; // Cast to UserData
       return {
-        mealAttendance: data.mealAttendance as Record<string, MealAttendanceState>,
-        diet: data.diet as string | null, // Also return the diet
-        centre: data.centre as string, // Also return the centre
+        mealAttendance: data.mealAttendance || {}, // Ensure mealAttendance exists
+        diet: data.diet || null, // Also return the diet
+        centre: data.centre || '', // Also return the centre
       };
     } else {
       return null; // User data not found
@@ -65,84 +121,148 @@ export const updateUserMealAttendance = async (
 ) => {
   try {
     const userDocRef = doc(db, USERS_COLLECTION, username);
-    await updateDoc(userDocRef, {
-      mealAttendance: updatedAttendance,
-    });
-    console.log('User meal attendance updated successfully');
+    // Ensure the document exists before updating just the mealAttendance
+    const docSnap = await getDoc(userDocRef);
+    if (docSnap.exists()) {
+        await updateDoc(userDocRef, {
+        mealAttendance: updatedAttendance,
+        });
+        console.log('User meal attendance updated successfully');
+    } else {
+        console.log(`User ${username} not found, cannot update attendance.`);
+        // Optionally, create the user here if needed, but current flow handles creation on sign-in
+    }
   } catch (error) {
     console.error('Error updating user meal attendance:', error);
     throw error;
   }
 };
 
-// Function to get daily report data
-export const getDailyReportData = async (date: string, centre: string) => {
+
+// Helper to initialize MealAttendanceDetail
+const initMealAttendanceDetail = (): MealAttendanceDetail => ({ count: 0, users: [] });
+
+// Helper to initialize DietCountsDetail structure
+const initDietCountsDetail = (): DietCountsDetail => ({});
+
+// Function to get daily report data with user lists
+export const getDailyReportData = async (date: string, centre: string): Promise<DailyReportDataWithUsers> => {
   try {
     const q = query(collection(db, USERS_COLLECTION), where("centre", "==", centre));
     const snapshot = await getDocs(q);
 
-    let breakfastPresentCount = 0;
-    let lunchPresentCount = 0;
-    let dinnerPresentCount = 0;
-
-    // Aggregate diet counts for present meals
-    const dietCountsPresent: { [diet: string]: { breakfast: number; lunch: number; dinner: number } } = {};
-
-    // Aggregate diet counts for packed meals
-    const dietCountsPacked: { [diet: string]: { breakfast: number; lunch: number; dinner: number } } = {};
+    const reportData: DailyReportDataWithUsers = {
+        attendancePresent: {
+            breakfast: initMealAttendanceDetail(),
+            lunch: initMealAttendanceDetail(),
+            dinner: initMealAttendanceDetail(),
+        },
+        attendancePacked: {
+            breakfast: initMealAttendanceDetail(),
+            lunch: initMealAttendanceDetail(),
+            dinner: initMealAttendanceDetail(),
+        },
+        dietCountsPresent: initDietCountsDetail(),
+        dietCountsPacked: initDietCountsDetail(),
+    };
 
 
     snapshot.forEach((doc) => {
-      const userData = doc.data();
+      const username = doc.id; // Get username from doc id
+      const userData = doc.data() as UserData;
       const mealAttendance = userData.mealAttendance || {};
       const dailyAttendance: MealAttendanceState = mealAttendance[date] || { breakfast: null, lunch: null, dinner: null };
       const diet = userData.diet as string | null;
 
-      // Handle present meals
-      if (dailyAttendance.breakfast === 'present') breakfastPresentCount++;
-      if (dailyAttendance.lunch === 'present') lunchPresentCount++;
-      if (dailyAttendance.dinner === 'present') dinnerPresentCount++;
-
-      // Track diet counts for present meals
-      if (diet) {
-        if (!dietCountsPresent[diet]) {
-          dietCountsPresent[diet] = { breakfast: 0, lunch: 0, dinner: 0 };
-        }
-
-        if (dailyAttendance.breakfast === 'present') dietCountsPresent[diet].breakfast++;
-        if (dailyAttendance.lunch === 'present') dietCountsPresent[diet].lunch++;
-        if (dailyAttendance.dinner === 'present') dietCountsPresent[diet].dinner++;
+      // --- Process Breakfast ---
+      if (dailyAttendance.breakfast === 'present') {
+          reportData.attendancePresent.breakfast.users.push(username);
+          if (diet) {
+              if (!reportData.dietCountsPresent[diet]) reportData.dietCountsPresent[diet] = { breakfast: initMealAttendanceDetail(), lunch: initMealAttendanceDetail(), dinner: initMealAttendanceDetail() };
+              reportData.dietCountsPresent[diet].breakfast.users.push(username);
+          }
+      } else if (dailyAttendance.breakfast === 'packed') {
+          reportData.attendancePacked.breakfast.users.push(username);
+           if (diet) {
+              if (!reportData.dietCountsPacked[diet]) reportData.dietCountsPacked[diet] = { breakfast: initMealAttendanceDetail(), lunch: initMealAttendanceDetail(), dinner: initMealAttendanceDetail() };
+              reportData.dietCountsPacked[diet].breakfast.users.push(username);
+          }
       }
 
-      // Handle packed meals
-      if (dailyAttendance.breakfast === 'packed') breakfastPresentCount--;
-      if (dailyAttendance.lunch === 'packed') lunchPresentCount--;
-      if (dailyAttendance.dinner === 'packed') dinnerPresentCount--;
-
-      // Track diet counts for packed meals
-      if (diet) {
-        if (!dietCountsPacked[diet]) {
-          dietCountsPacked[diet] = { breakfast: 0, lunch: 0, dinner: 0 };
-        }
-
-        if (dailyAttendance.breakfast === 'packed') dietCountsPacked[diet].breakfast++;
-        if (dailyAttendance.lunch === 'packed') dietCountsPacked[diet].lunch++;
-        if (dailyAttendance.dinner === 'packed') dietCountsPacked[diet].dinner++;
+      // --- Process Lunch ---
+      if (dailyAttendance.lunch === 'present') {
+          reportData.attendancePresent.lunch.users.push(username);
+           if (diet) {
+              if (!reportData.dietCountsPresent[diet]) reportData.dietCountsPresent[diet] = { breakfast: initMealAttendanceDetail(), lunch: initMealAttendanceDetail(), dinner: initMealAttendanceDetail() };
+              reportData.dietCountsPresent[diet].lunch.users.push(username);
+          }
+      } else if (dailyAttendance.lunch === 'packed') {
+          reportData.attendancePacked.lunch.users.push(username);
+           if (diet) {
+              if (!reportData.dietCountsPacked[diet]) reportData.dietCountsPacked[diet] = { breakfast: initMealAttendanceDetail(), lunch: initMealAttendanceDetail(), dinner: initMealAttendanceDetail() };
+              reportData.dietCountsPacked[diet].lunch.users.push(username);
+          }
       }
 
+      // --- Process Dinner ---
+      if (dailyAttendance.dinner === 'present') {
+          reportData.attendancePresent.dinner.users.push(username);
+           if (diet) {
+              if (!reportData.dietCountsPresent[diet]) reportData.dietCountsPresent[diet] = { breakfast: initMealAttendanceDetail(), lunch: initMealAttendanceDetail(), dinner: initMealAttendanceDetail() };
+              reportData.dietCountsPresent[diet].dinner.users.push(username);
+          }
+      } else if (dailyAttendance.dinner === 'packed') {
+          reportData.attendancePacked.dinner.users.push(username);
+           if (diet) {
+              if (!reportData.dietCountsPacked[diet]) reportData.dietCountsPacked[diet] = { breakfast: initMealAttendanceDetail(), lunch: initMealAttendanceDetail(), dinner: initMealAttendanceDetail() };
+              reportData.dietCountsPacked[diet].dinner.users.push(username);
+          }
+      }
     });
 
-    return {
-      attendance: {
-        breakfast: breakfastPresentCount,
-        lunch: lunchPresentCount,
-        dinner: dinnerPresentCount,
-      },
-      dietCountsPresent: dietCountsPresent,
-      dietCountsPacked: dietCountsPacked,
+    // --- Calculate counts from user list lengths ---
+    const calculateCounts = (detail: MealAttendanceDetail) => {
+        detail.count = detail.users.length;
     };
+
+    calculateCounts(reportData.attendancePresent.breakfast);
+    calculateCounts(reportData.attendancePresent.lunch);
+    calculateCounts(reportData.attendancePresent.dinner);
+
+    calculateCounts(reportData.attendancePacked.breakfast);
+    calculateCounts(reportData.attendancePacked.lunch);
+    calculateCounts(reportData.attendancePacked.dinner);
+
+    Object.values(reportData.dietCountsPresent).forEach(dietMeals => {
+        calculateCounts(dietMeals.breakfast);
+        calculateCounts(dietMeals.lunch);
+        calculateCounts(dietMeals.dinner);
+    });
+     Object.values(reportData.dietCountsPacked).forEach(dietMeals => {
+        calculateCounts(dietMeals.breakfast);
+        calculateCounts(dietMeals.lunch);
+        calculateCounts(dietMeals.dinner);
+    });
+
+
+    return reportData;
   } catch (error) {
-    console.error('Error getting daily report data:', error);
-    throw error;
+    console.error('Error getting detailed daily report data:', error);
+    // Return an empty structure on error
+    return {
+        attendancePresent: {
+            breakfast: initMealAttendanceDetail(),
+            lunch: initMealAttendanceDetail(),
+            dinner: initMealAttendanceDetail(),
+        },
+        attendancePacked: {
+            breakfast: initMealAttendanceDetail(),
+            lunch: initMealAttendanceDetail(),
+            dinner: initMealAttendanceDetail(),
+        },
+        dietCountsPresent: initDietCountsDetail(),
+        dietCountsPacked: initDietCountsDetail(),
+    };
+    // throw error; // Or rethrow if you want the caller to handle it
   }
 };
