@@ -60,31 +60,36 @@ const MealCheckin = () => {
   const [diet, setDiet] = useState<string | null>(null);
   const router = useRouter();
   const [isRouteInitialized, setIsRouteInitialized] = useState(false);
+  const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({}); // Track loading state per meal box
 
   useEffect(() => {
     // Check if a centre is selected
     const selectedCentre = localStorage.getItem('selectedCentre');
     if (!selectedCentre) {
       router.push('/select-centre'); // Redirect to centre selection page
+    } else {
+      // Only set route initialized if centre exists
+      setIsRouteInitialized(true);
     }
-    setIsRouteInitialized(true);
-  }, [router]);
+  }, [router]); // Only depends on router
 
   useEffect(() => {
     // Load username from localStorage on component mount
     const storedUsername = localStorage.getItem('username');
     if (storedUsername) {
       setUsername(storedUsername);
+    } else if (isRouteInitialized) { // Redirect only if route is initialized and no username
+        router.push('/sign-in');
     }
     const storedDiet = localStorage.getItem('diet');
     if (storedDiet) {
       setDiet(storedDiet);
     }
-  }, []);
+  }, [isRouteInitialized, router]); // Depend on isRouteInitialized
 
   useEffect(() => {
     const loadMealAttendance = async () => {
-      if (username) {
+      if (username && isRouteInitialized) { // Ensure route is initialized and username exists
         try {
           const userData = await getUserMealAttendance(username);
           if (userData) {
@@ -97,10 +102,15 @@ const MealCheckin = () => {
               return acc;
             }, {} as Record<string, MealAttendanceState>);
 
-            // Default the centre code to "vi"
-            const selectedCentre = localStorage.getItem('selectedCentre') || 'vi'; // Fallback centre
-            await createUserMealAttendance(username, initialAttendance, diet || null, selectedCentre);
-            setMealAttendance(initialAttendance);
+            const selectedCentre = localStorage.getItem('selectedCentre'); // Should exist due to earlier check
+            if (selectedCentre) {
+              await createUserMealAttendance(username, initialAttendance, diet || null, selectedCentre);
+              setMealAttendance(initialAttendance);
+            } else {
+              console.error("Selected centre missing, cannot create user attendance.");
+              toast({ title: 'Error', description: 'Centre information missing.' });
+              // Maybe redirect back to centre selection?
+            }
           }
         } catch (error: any) {
           console.error('Error loading meal attendance:', error);
@@ -108,13 +118,14 @@ const MealCheckin = () => {
             title: 'Error',
             description: `Failed to load meal attendance. ${error.message || 'Please check your connection.'
               }`,
+              variant: 'destructive',
           });
         }
       }
     };
 
     loadMealAttendance();
-  }, [username, weekDates, toast, diet]); // Removed initialWeekOption dependency
+  }, [username, weekDates, toast, diet, isRouteInitialized]); // Add isRouteInitialized dependency
 
   const handleSignOut = () => {
     setUsername(null);
@@ -135,42 +146,59 @@ const MealCheckin = () => {
     return dates;
   }
 
-  const updateMealAttendance = async (
-    date: Date,
-    meal: string,
-    status: MealStatus
-  ) => {
-    if (!username) {
-      toast({
-        title: 'Error',
-        description: 'Please sign in to update meal attendance.',
-      });
-      return;
-    }
+  // Async function to handle the database update and subsequent state change
+  const updateMealAttendanceInDb = async (updateData: {
+    date: Date;
+    meal: string;
+    status: MealStatus;
+    dateKey: string;
+    username: string;
+    mealBoxKey: string; // Unique key for the meal box being updated
+  }) => {
+    const { date, meal, status, dateKey, username, mealBoxKey } = updateData;
 
-    const dateKey = formatDateForKey(date);
-    const updatedAttendance = {
+    // Indicate loading for this specific meal box
+    setIsUpdating(prev => ({ ...prev, [mealBoxKey]: true }));
+
+    // Calculate the state *as it would be after the update*
+    // This object will be used both for the DB update and the local state update if successful
+    const attendanceForDbUpdate = {
       ...mealAttendance,
-      [dateKey]: { ...(mealAttendance[dateKey] || { breakfast: null, lunch: null, dinner: null }), [meal]: status },
+      [dateKey]: {
+        ...(mealAttendance[dateKey] || { breakfast: null, lunch: null, dinner: null }),
+        [meal]: status
+      },
     };
 
-    setMealAttendance(updatedAttendance);
-
     try {
-      await updateUserMealAttendance(username, updatedAttendance);
-      toast({
-        title: 'Success',
-        description: `Attendance updated for ${meal} on ${formatDateForGridDisplay(date)}.`,
-      });
+        // --- Step 1: Update Firestore ---
+        await updateUserMealAttendance(username, attendanceForDbUpdate);
+
+        // --- Step 2: Update local state ONLY if Firestore update succeeded ---
+        setMealAttendance(attendanceForDbUpdate);
+
+        // --- Step 3: Show success toast (optional, can be annoying) ---
+        // toast({
+        //     title: 'Success',
+        //     description: `Attendance updated for ${meal} on ${formatDateForGridDisplay(date)}.`,
+        //     duration: 2000, // Shorter duration for success
+        // });
     } catch (error: any) {
-      console.error('Error updating meal attendance:', error);
-      toast({
-        title: 'Error',
-        description: `Failed to update attendance. ${error.message || 'Please try again later.'
-          }`,
-      });
+        console.error('Error updating meal attendance:', error);
+        // --- Step 4: Show error toast if Firestore update failed ---
+        // Local state remains unchanged because setMealAttendance was not called
+        toast({
+            title: 'Error',
+            description: `Failed to update attendance. ${error.message || 'Please try again later.'}`,
+            variant: 'destructive',
+        });
+        // No state rollback needed because we didn't update it optimistically
+    } finally {
+        // --- Step 5: Stop loading indicator regardless of success/failure ---
+        setIsUpdating(prev => ({ ...prev, [mealBoxKey]: false }));
     }
   };
+
 
   const getMealStatusIcon = (date: Date, meal: string, status: MealStatus) => {
     let icon = null;
@@ -185,7 +213,23 @@ const MealCheckin = () => {
   };
 
   const handleMealTimeBoxClick = (date: Date, meal: string) => {
+    if (!username) {
+      toast({
+        title: 'Error',
+        description: 'Please sign in to update meal attendance.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const dateKey = formatDateForKey(date);
+    const mealBoxKey = `${dateKey}-${meal}`; // Unique identifier for the box
+
+    // Prevent clicking if already updating
+    if (isUpdating[mealBoxKey]) {
+        return;
+    }
+
     const currentStatus = mealAttendance[dateKey]?.[meal as keyof MealAttendanceState];
     let newStatus: MealStatus = null;
     if (currentStatus === null) {
@@ -194,10 +238,14 @@ const MealCheckin = () => {
       newStatus = 'absent';
     } else if (currentStatus === 'absent') {
       newStatus = 'packed';
-    } else {
-      newStatus = null; // Cycle back to null from 'packed'
+    } else { // currentStatus === 'packed'
+      newStatus = null; // Cycle back to null
     }
-    updateMealAttendance(date, meal, newStatus);
+
+    // Call the async update function
+    updateMealAttendanceInDb({ date, meal, status: newStatus, dateKey, username, mealBoxKey });
+    // **Crucially, do NOT call setMealAttendance here anymore.**
+    // It will be called inside updateMealAttendanceInDb *after* the DB is updated.
   };
 
   const handleWeekChange = (weekStartDate: Date) => {
@@ -225,14 +273,9 @@ const MealCheckin = () => {
     ) || weekOptions[0]; // Default to the first option if not found
   }, [selectedWeekStart, weekOptions]); // Depend on selectedWeekStart and the generated options
 
-  useEffect(() => {
-    if (!username && isRouteInitialized) {
-      router.push('/sign-in');
-    }
-  }, [username, router, isRouteInitialized]);
 
-  if (!username) {
-    return null;
+  if (!username && isRouteInitialized) { // Render loading or nothing until initialization and user check is done
+      return null; // Or a loading spinner
   }
 
   return (
@@ -257,9 +300,9 @@ const MealCheckin = () => {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="grid gap-4 pt-2">
+          <CardContent className="grid gap-4 px-4 pb-6 sm:p-6 py-4">
             {/* Meal Check-in Section */}
-            <section className="grid gap-2">
+            <section className="grid gap-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm text-muted-foreground">Welcome, {username}</h4>
                 <Select onValueChange={value => handleWeekChange(new Date(value))} value={initialWeekOption.start.toISOString()}>
@@ -290,40 +333,61 @@ const MealCheckin = () => {
                   <Moon className="mr-1 inline-block" size={20} />
                 </div>
 
-                {weekDates.map(date => (
-                  <React.Fragment key={formatDateForKey(date)}>
-                  <div>
-                    <div className="font-semibold">{formatDayOfWeek(date)}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {formatDateForGridDisplay(date)}
-                    </div>
-                  </div>
+                {weekDates.map(date => {
+                   const dateKey = formatDateForKey(date);
+                   return (
+                    <React.Fragment key={dateKey}>
+                      <div>
+                        <div className="font-semibold">{formatDayOfWeek(date)}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {formatDateForGridDisplay(date)}
+                        </div>
+                      </div>
 
-                  {/* Breakfast */}
-                  <div
-                    className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
-                    onClick={() => handleMealTimeBoxClick(date, 'breakfast')}
-                  >
-                    {getMealStatusIcon(date, 'breakfast', mealAttendance[formatDateForKey(date)]?.breakfast)}
-                  </div>
+                      {/* Breakfast */}
+                      <div
+                        className={cn(
+                          "flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer",
+                          isUpdating[`${dateKey}-breakfast`] && "opacity-50 cursor-not-allowed" // Add loading style
+                        )}
+                        onClick={() => handleMealTimeBoxClick(date, 'breakfast')}
+                      >
+                        {isUpdating[`${dateKey}-breakfast`]
+                          ? <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div> // Simple spinner
+                          : getMealStatusIcon(date, 'breakfast', mealAttendance[dateKey]?.breakfast)
+                        }
+                      </div>
 
-                  {/* Lunch */}
-                  <div
-                    className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
-                    onClick={() => handleMealTimeBoxClick(date, 'lunch')}
-                  >
-                    {getMealStatusIcon(date, 'lunch', mealAttendance[formatDateForKey(date)]?.lunch)}
-                  </div>
+                      {/* Lunch */}
+                      <div
+                        className={cn(
+                          "flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer",
+                          isUpdating[`${dateKey}-lunch`] && "opacity-50 cursor-not-allowed"
+                        )}
+                        onClick={() => handleMealTimeBoxClick(date, 'lunch')}
+                      >
+                        {isUpdating[`${dateKey}-lunch`]
+                          ? <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>
+                          : getMealStatusIcon(date, 'lunch', mealAttendance[dateKey]?.lunch)
+                        }
+                      </div>
 
-                  {/* Dinner */}
-                  <div
-                    className="flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer"
-                    onClick={() => handleMealTimeBoxClick(date, 'dinner')}
-                  >
-                    {getMealStatusIcon(date, 'dinner', mealAttendance[formatDateForKey(date)]?.dinner)}
-                  </div>
-                </React.Fragment>
-                ))}
+                      {/* Dinner */}
+                      <div
+                        className={cn(
+                          "flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer",
+                          isUpdating[`${dateKey}-dinner`] && "opacity-50 cursor-not-allowed"
+                        )}
+                        onClick={() => handleMealTimeBoxClick(date, 'dinner')}
+                      >
+                        {isUpdating[`${dateKey}-dinner`]
+                          ? <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>
+                          : getMealStatusIcon(date, 'dinner', mealAttendance[dateKey]?.dinner)
+                        }
+                      </div>
+                    </React.Fragment>
+                   );
+                })}
               </div>
             </section>
           </CardContent>
@@ -334,4 +398,3 @@ const MealCheckin = () => {
 };
 
 export default MealCheckin;
-
