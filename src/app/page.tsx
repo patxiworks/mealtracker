@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { format, startOfWeek, addDays, addWeeks } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { CalendarCheck2, NotepadText, LogOut, Sun, Utensils, Moon, PackageCheck, X, Check } from 'lucide-react';
+import { CalendarCheck2, NotepadText, LogOut, Sun, Utensils, Moon, PackageCheck, X, Check, Loader2 } from 'lucide-react'; // Added Loader2
 import Link from 'next/link';
 import {
   createUserMealAttendance,
@@ -61,6 +61,7 @@ const MealCheckin = () => {
   const router = useRouter();
   const [isRouteInitialized, setIsRouteInitialized] = useState(false);
   const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({}); // Track loading state per meal box
+  const [isLoading, setIsLoading] = useState(true); // Add loading state for initial data fetch
 
   useEffect(() => {
     // Check if a centre is selected
@@ -90,6 +91,7 @@ const MealCheckin = () => {
   useEffect(() => {
     const loadMealAttendance = async () => {
       if (username && isRouteInitialized) { // Ensure route is initialized and username exists
+        setIsLoading(true); // Start loading before fetching
         try {
           const userData = await getUserMealAttendance(username);
           if (userData) {
@@ -120,7 +122,12 @@ const MealCheckin = () => {
               }`,
               variant: 'destructive',
           });
+        } finally {
+          setIsLoading(false); // Stop loading after fetch/initialization/error
         }
+      } else if (!username && isRouteInitialized) {
+        // If no username but route initialized (meaning redirected to sign-in), stop loading
+        setIsLoading(false);
       }
     };
 
@@ -209,6 +216,11 @@ const MealCheckin = () => {
     } else if (status === 'packed') {
       icon = <PackageCheck className="h-6 w-6 text-blue-500 font-bold" />;
     }
+    // Render an empty space or a default placeholder if status is null
+    // This ensures the box has consistent dimensions and click target
+    else {
+        icon = <div className="h-6 w-6"></div>; // Placeholder for consistent size
+    }
     return icon;
   };
 
@@ -242,10 +254,21 @@ const MealCheckin = () => {
       newStatus = null; // Cycle back to null
     }
 
-    // Call the async update function
+    // Optimistically update UI state first
+    // This makes the UI feel instantly responsive
+    setMealAttendance(prev => ({
+        ...prev,
+        [dateKey]: {
+            ...(prev[dateKey] || { breakfast: null, lunch: null, dinner: null }),
+            [meal]: newStatus
+        }
+    }));
+
+    // Call the async update function in the background
     updateMealAttendanceInDb({ date, meal, status: newStatus, dateKey, username, mealBoxKey });
     // **Crucially, do NOT call setMealAttendance here anymore.**
     // It will be called inside updateMealAttendanceInDb *after* the DB is updated.
+    // Removed the call to setMealAttendance here to prevent flicker. The optimistic update handles the immediate UI change.
   };
 
   const handleWeekChange = (weekStartDate: Date) => {
@@ -274,37 +297,47 @@ const MealCheckin = () => {
   }, [selectedWeekStart, weekOptions]); // Depend on selectedWeekStart and the generated options
 
 
-  if (!username && isRouteInitialized) { // Render loading or nothing until initialization and user check is done
-      return null; // Or a loading spinner
+  // Render loading state or redirect check
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-10 flex justify-center items-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
-  return (
+  // If route initialized but no username (means redirected to sign-in), render nothing here
+   if (!username && isRouteInitialized) {
+      return null; // Or a redirect message, but usually null is fine as redirect handles it
+   }
 
+  // Render the main component content only when not loading and user is available
+  return (
       <div className="container mx-auto py-0">
         <Card className="w-full max-w-4xl mx-auto">
-          <CardHeader className="pt-2 pb-2 bg-[#4864c3]">
+          <CardHeader className="px-4 py-4 sm:px-6 bg-[#4864c3]">
             <div className="flex justify-between items-center">
-              <CardTitle className="text-2xl">
+              <CardTitle className="flex gap-1 text-2xl text-[#c6cfec]">
                 <CalendarCheck2 className="inline-block" size={30} />
-                <p className="inline-block ml-2 mt-2 leading-none">MealTrack</p>
+                <span className="">MealTrack</span>
               </CardTitle>
               <div className="flex gap-4 items-center">
                 <Link href="/daily-report">
-                  <Button variant="secondary">
-                    <NotepadText size={20} />
+                  <Button variant="secondary" className="px-2 h-8">
+                    <NotepadText size={10} />
                   </Button>
                 </Link>
-                <Button variant="outline" onClick={handleSignOut}>
-                  <LogOut size={20} />
+                <Button variant="outline" onClick={handleSignOut} className="px-2 h-8">
+                  <LogOut size={10} />
                 </Button>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="grid gap-4 px-4 pb-6 sm:p-6 py-4">
+          <CardContent className="grid gap-4 px-4 pb-16 sm:p-6 pt-4">
             {/* Meal Check-in Section */}
             <section className="grid gap-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm text-muted-foreground">Welcome, {username}</h4>
+                <h4 className="text-sm text-muted-foreground">Welcome, {username?.split(" ")[0]}</h4>
                 <Select onValueChange={value => handleWeekChange(new Date(value))} value={initialWeekOption.start.toISOString()}>
                   <SelectTrigger className="w-auto pr-4">
                     <SelectValue placeholder={initialWeekOption.label} />
@@ -353,7 +386,7 @@ const MealCheckin = () => {
                         onClick={() => handleMealTimeBoxClick(date, 'breakfast')}
                       >
                         {isUpdating[`${dateKey}-breakfast`]
-                          ? <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div> // Simple spinner
+                          ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> // Use Loader2 for consistency
                           : getMealStatusIcon(date, 'breakfast', mealAttendance[dateKey]?.breakfast)
                         }
                       </div>
@@ -367,7 +400,7 @@ const MealCheckin = () => {
                         onClick={() => handleMealTimeBoxClick(date, 'lunch')}
                       >
                         {isUpdating[`${dateKey}-lunch`]
-                          ? <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>
+                          ? <Loader2 className="h-6 w-6 animate-spin text-primary" />
                           : getMealStatusIcon(date, 'lunch', mealAttendance[dateKey]?.lunch)
                         }
                       </div>
@@ -381,7 +414,7 @@ const MealCheckin = () => {
                         onClick={() => handleMealTimeBoxClick(date, 'dinner')}
                       >
                         {isUpdating[`${dateKey}-dinner`]
-                          ? <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>
+                          ? <Loader2 className="h-6 w-6 animate-spin text-primary" />
                           : getMealStatusIcon(date, 'dinner', mealAttendance[dateKey]?.dinner)
                         }
                       </div>

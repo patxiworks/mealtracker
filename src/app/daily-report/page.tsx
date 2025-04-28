@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -9,6 +10,7 @@ import { format, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+import Link from 'next/link';
 import {
   Table,
   TableHeader,
@@ -19,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { getDailyReportData } from "@/lib/firebase/db";
 import type { DailyReportDataWithUsers, MealAttendanceDetail, DietCountsDetail } from "@/lib/firebase/db";
-import { CalendarIcon } from "lucide-react";
+import { CalendarCheck2, CalendarIcon, HomeIcon, Loader2 } from "lucide-react"; // Added Loader2
 
 
 // Helper to initialize MealAttendanceDetail
@@ -264,21 +266,33 @@ const DailyReportPage = () => {
   const formattedReportDisplayDate = selectedDate ? formatReportDate(selectedDate) : formatReportDate(today);
 
   return (
-    <div className="container mx-auto py-10">
-    <Card className="w-full max-w-4xl mx-auto">
-        <CardHeader className="pb-2">
-        <CardTitle className="text-2xl">Meal Attendance Report</CardTitle>
+    <div className="container mx-auto pb-10">
+      <Card className="w-full max-w-4xl mx-auto">
+        <CardHeader className="px-4 py-4 sm:px-4 bg-[#4864c3]">
+          <div className="flex justify-between items-center">
+            <CardTitle className="flex gap-1 text-2xl text-[#c6cfec]">
+              <CalendarCheck2 className="inline-block" size={30} />
+              <span className="">MealTrack Report</span>
+            </CardTitle>
+            <div className="flex gap-4 items-center">
+              <Link href="/">
+                <Button variant="secondary" className="px-2 h-8">
+                  <HomeIcon size={10} />
+                </Button>
+              </Link>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent className="grid gap-4">
-        <section className="grid gap-2">
-            <div className="flex items-center gap-4 flex-wrap">
-            <h2 className="text-xl font-semibold">Select Base Date</h2>
+        <CardContent className="grid gap-4 px-4">
+        <section className="grid gap-2 pt-4">
+          <div className="flex justify-between items-center gap-4 flex-wrap ">
+            {/*<h2 className="text-xl font-semibold">Select Base Date</h2>*/}
             <Popover>
                 <PopoverTrigger asChild>
                 <Button
                     variant={"outline"}
                     className={cn(
-                    "w-[240px] justify-start text-left font-normal",
+                    "w-[150px] justify-start text-left font-normal",
                     !selectedDate && "text-muted-foreground"
                     )}
                 >
@@ -313,7 +327,9 @@ const DailyReportPage = () => {
             <Separator />
 
             {loading ? (
-            <div>Loading...</div>
+                <div className="flex justify-center items-center py-10">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
             ) : viewMode === 'daily' ? (
             <>
                 <h3 className="text-lg font-semibold mt-4">
