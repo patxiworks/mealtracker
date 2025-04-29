@@ -18,9 +18,9 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
-import { getDailyReportData, getUserAttendanceForDate, getDietsData } from "@/lib/firebase/db"; // Added getDietsData
-import type { DailyReportDataWithUsers, MealAttendanceDetail, DietCountsDetail, MealAttendanceState, DietInfo } from "@/lib/firebase/db"; // Added MealAttendanceState, DietInfo
-import { CalendarCheck2, CalendarIcon, HomeIcon, Loader2, Sun, Utensils, Moon, PackageCheck, X, Check, NotebookText } from "lucide-react"; // Added Loader2, Sun, Utensils, Moon, PackageCheck, X, Check, NotebookText
+import { getDailyReportData, getUserAttendanceForDate, getDietsData, getUsersBirthdays } from "@/lib/firebase/db"; // Added getDietsData, getUsersBirthdays
+import type { DailyReportDataWithUsers, MealAttendanceDetail, DietCountsDetail, MealAttendanceState, DietInfo, BirthdayInfo } from "@/lib/firebase/db"; // Added MealAttendanceState, DietInfo, BirthdayInfo
+import { CalendarCheck2, CalendarIcon, HomeIcon, Loader2, Sun, Utensils, Moon, PackageCheck, X, Check, NotebookText, Cake } from "lucide-react"; // Added Loader2, Sun, Utensils, Moon, PackageCheck, X, Check, NotebookText, Cake
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Define the meal status type locally for getMealStatusIcon if needed, or rely on import
@@ -132,10 +132,11 @@ const DailyReportPage = () => {
   const [summaryReport, setSummaryReport] = useState<SummaryViewData | null>(null);
   const [userAttendanceReport, setUserAttendanceReport] = useState<UserDailyAttendance | null>(null);
   const [dietsData, setDietsData] = useState<DietInfo[]>([]); // State for diets data
+  const [birthdaysData, setBirthdaysData] = useState<BirthdayInfo[]>([]); // State for birthdays data
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(today);
   const [loading, setLoading] = useState(true);
   const [selectedCentre, setSelectedCentre] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'daily' | 'summary' | 'user' | 'diets'>('daily'); // State to control view: added 'user', 'diets'
+  const [viewMode, setViewMode] = useState<'daily' | 'summary' | 'user' | 'diets' | 'birthdays'>('daily'); // State to control view: added 'user', 'diets', 'birthdays'
 
 
   useEffect(() => {
@@ -151,6 +152,7 @@ const DailyReportPage = () => {
       setUserAttendanceReport(null); // Clear user report when fetching daily
       setSummaryReport(null); // Clear summary report when fetching daily
       setDietsData([]); // Clear diets data
+      setBirthdaysData([]); // Clear birthdays data
       try {
         const formattedDateForDb = format(selectedDate, "MMM dd, yyyy"); // Use full date for DB query
 
@@ -188,6 +190,7 @@ const DailyReportPage = () => {
       setDailyReport(emptyReport); // Clear daily report when switching to summary view
       setUserAttendanceReport(null); // Clear user report when switching to summary view
       setDietsData([]); // Clear diets data
+       setBirthdaysData([]); // Clear birthdays data
       try {
         const nextDay = addDays(selectedDate, 1);
         const dayAfter = addDays(selectedDate, 2);
@@ -282,6 +285,7 @@ const DailyReportPage = () => {
           setDailyReport(emptyReport); // Clear other views
           setSummaryReport(null);
           setUserAttendanceReport(null);
+          setBirthdaysData([]); // Clear birthdays data
           try {
               const data = await getDietsData();
               setDietsData(data);
@@ -298,6 +302,32 @@ const DailyReportPage = () => {
           fetchDiets();
       }
   }, [viewMode]);
+
+  // Fetch data for birthdays view
+  useEffect(() => {
+      const fetchBirthdays = async () => {
+          if (!selectedCentre) return;
+          setLoading(true);
+          setDailyReport(emptyReport); // Clear other views
+          setSummaryReport(null);
+          setUserAttendanceReport(null);
+          setDietsData([]);
+          try {
+              const data = await getUsersBirthdays(selectedCentre);
+              setBirthdaysData(data);
+          } catch (error) {
+              console.error("Error fetching birthdays data:", error);
+              setBirthdaysData([]);
+              // Optionally set an error state
+          } finally {
+              setLoading(false);
+          }
+      };
+
+      if (viewMode === 'birthdays') {
+          fetchBirthdays();
+      }
+  }, [viewMode, selectedCentre]); // Added selectedCentre dependency
 
 
   const formattedReportDisplayDate = selectedDate ? formatReportDate(selectedDate) : formatReportDate(today);
@@ -324,43 +354,61 @@ const DailyReportPage = () => {
         <CardContent className="grid gap-4 px-4">
         <section className="grid gap-2 pt-4">
           <div className="flex justify-between items-center gap-4 flex-wrap ">
-            {/* Date Picker (Only show if not in 'diets' view) */}
-            {viewMode !== 'diets' && (
-                <Popover>
-                    <PopoverTrigger asChild>
-                    <Button
-                        variant={"outline"}
-                        className={cn(
-                        "w-[150px] justify-start text-left font-normal",
-                        !selectedDate && "text-muted-foreground"
-                        )}
-                    >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {selectedDate ? formatPickerDate(selectedDate) : <span>Pick a date</span>}
-                    </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={setSelectedDate}
-                        initialFocus
-                    />
-                    </PopoverContent>
-                </Popover>
+            {/* Date Picker (Show if not in 'diets' or 'birthdays' view) */}
+            {(viewMode !== 'diets' && viewMode !== 'birthdays') && (
+            <Popover>
+                <PopoverTrigger asChild>
+                <Button
+                    variant={"outline"}
+                    className={cn(
+                    "w-[150px] justify-start text-left font-normal",
+                    !selectedDate && "text-muted-foreground"
+                    )}
+                >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedDate ? formatPickerDate(selectedDate) : <span>Pick a date</span>}
+                </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    initialFocus
+                />
+                </PopoverContent>
+            </Popover>
             )}
             {/* Placeholder to keep alignment when date picker is hidden */}
-            {viewMode === 'diets' && <div className="w-[150px]"></div>}
+            {(viewMode === 'diets' || viewMode === 'birthdays') && <div className="w-[150px]"></div>}
+
+            <div className="flex gap-2">
+                <Button
+                    variant={viewMode === 'diets' ? 'default' : 'secondary'}
+                    onClick={() => setViewMode('diets')}
+                    >
+                    Diets
+                </Button>
+                <Button
+                    variant={viewMode === 'birthdays' ? 'default' : 'secondary'}
+                    onClick={() => setViewMode('birthdays')}
+                >
+                    Birthdays
+                </Button>
+            </div>
+
             </div>
             <Separator />
 
-            <Tabs defaultValue="daily" value={viewMode} onValueChange={(value) => setViewMode(value as 'daily' | 'summary' | 'user' | 'diets')} className="w-full pt-2">
-                <TabsList className="grid w-full grid-cols-4"> {/* Changed grid-cols-3 to grid-cols-4 */}
-                    <TabsTrigger value="daily">Daily View</TabsTrigger>
-                    <TabsTrigger value="summary">Summary</TabsTrigger>
-                    <TabsTrigger value="user">User View</TabsTrigger>
-                    <TabsTrigger value="diets">Diets</TabsTrigger> {/* Added Diets Tab */}
-                </TabsList>
+            <Tabs defaultValue="daily" value={viewMode} onValueChange={(value) => setViewMode(value as 'daily' | 'summary' | 'user' | 'diets' | 'birthdays')} className="w-full pt-2">
+                {/* Hide TabsList if on diets or birthdays view */}
+                 {(viewMode !== 'diets' && viewMode !== 'birthdays') && (
+                    <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="daily">Daily View</TabsTrigger>
+                        <TabsTrigger value="summary">Summary</TabsTrigger>
+                        <TabsTrigger value="user">User View</TabsTrigger>
+                    </TabsList>
+                 )}
 
                 {loading ? (
                     <div className="flex justify-center items-center py-10">
@@ -378,7 +426,7 @@ const DailyReportPage = () => {
                             <CardHeader className="pb-1 pt-4">
                                 <CardTitle className="text-base font-semibold">Meal Attendance</CardTitle>
                             </CardHeader>
-                            <CardContent className="p-4 pt-0">
+                            <CardContent className="px-2 sm:p-4 pt-0">
                                 <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -414,7 +462,7 @@ const DailyReportPage = () => {
                                 <CardHeader className="pb-1 pt-4">
                                     <CardTitle className="text-base font-semibold">Dietary Attendance (Present)</CardTitle>
                                 </CardHeader>
-                                <CardContent className="p-4 pt-0">
+                                <CardContent className="px-2 sm:p-4 pt-0">
                                 <Table>
                                     <TableHeader>
                                     <TableRow>
@@ -446,7 +494,7 @@ const DailyReportPage = () => {
                                 <CardHeader className="pb-1 pt-4">
                                     <CardTitle className="text-base font-semibold">Dietary Attendance (Packed)</CardTitle>
                                 </CardHeader>
-                                <CardContent className="p-4 pt-0">
+                                <CardContent className="px-2 sm:p-4 pt-0">
                                 <Table>
                                     <TableHeader>
                                     <TableRow>
@@ -488,7 +536,7 @@ const DailyReportPage = () => {
                                         <CardHeader className="pb-1 pt-4">
                                             <CardTitle className="text-base font-semibold">Meal Attendance Summary</CardTitle>
                                         </CardHeader>
-                                        <CardContent className="p-4 pt-0">
+                                        <CardContent className="px-2 sm:p-4 pt-0">
                                             <Table>
                                             <TableHeader>
                                                 <TableRow>
@@ -528,7 +576,7 @@ const DailyReportPage = () => {
                                         <CardHeader className="pb-1 pt-4">
                                             <CardTitle className="text-base font-semibold">Dietary Attendance Summary (Present)</CardTitle>
                                         </CardHeader>
-                                        <CardContent className="p-4 pt-0">
+                                        <CardContent className="px-2 sm:p-4 pt-0">
                                             <Table>
                                                 <TableHeader>
                                                 <TableRow>
@@ -559,7 +607,7 @@ const DailyReportPage = () => {
                                         <CardHeader className="pb-1 pt-4">
                                             <CardTitle className="text-base font-semibold">Dietary Attendance Summary (Packed)</CardTitle>
                                         </CardHeader>
-                                        <CardContent className="p-4 pt-0">
+                                        <CardContent className="px-2 sm:p-4 pt-0">
                                             <Table>
                                                 <TableHeader>
                                                 <TableRow>
@@ -599,7 +647,7 @@ const DailyReportPage = () => {
                              </h3>
                              {userAttendanceReport && Object.keys(userAttendanceReport).length > 0 ? (
                                 <Card className="mt-4">
-                                <CardContent className="p-4 pt-4">
+                                <CardContent className="px-2 sm:p-4 pt-4">
                                     <Table>
                                         <TableHeader>
                                         <TableRow>
@@ -634,7 +682,7 @@ const DailyReportPage = () => {
                              </h3>
                              {dietsData.length > 0 ? (
                                 <Card className="mt-4">
-                                <CardContent className="p-4 pt-4">
+                                <CardContent className="px-2 sm:p-4 pt-4">
                                     <Table>
                                         <TableHeader>
                                         <TableRow>
@@ -655,6 +703,37 @@ const DailyReportPage = () => {
                                 </Card>
                             ) : (
                                 <div className="mt-4 text-muted-foreground">No diet information available.</div>
+                            )}
+                        </TabsContent>
+
+                        {/* Birthdays View Content */}
+                        <TabsContent value="birthdays">
+                            <h3 className="text-lg font-semibold mt-4 flex items-center gap-2">
+                                <Cake size={20} /> User Birthdays ({selectedCentre})
+                            </h3>
+                            {birthdaysData.length > 0 ? (
+                                <Card className="mt-4">
+                                    <CardContent className="px-2 sm:p-4 pt-4">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead className="w-[80px]">Initials</TableHead>
+                                                    <TableHead>Birthday</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {birthdaysData.map((user, index) => (
+                                                    <TableRow key={`${user.initials}-${index}`}>
+                                                        <TableCell className="font-medium">{user.initials}</TableCell>
+                                                        <TableCell>{user.birthday}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
+                            ) : (
+                                <div className="mt-4 text-muted-foreground">No birthday information available for this centre.</div>
                             )}
                         </TabsContent>
                     </>
