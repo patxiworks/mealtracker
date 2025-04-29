@@ -355,7 +355,7 @@ const DailyReportPage = () => {
         <section className="grid gap-2 pt-4">
           <div className="flex justify-between items-center gap-4 flex-wrap ">
             {/* Date Picker (Show if not in 'diets' or 'birthdays' view) */}
-            {(viewMode !== 'diets' && viewMode !== 'birthdays') && (
+            {/*(viewMode !== 'diets' && viewMode !== 'birthdays') && (*/}
             <Popover>
                 <PopoverTrigger asChild>
                 <Button
@@ -378,9 +378,9 @@ const DailyReportPage = () => {
                 />
                 </PopoverContent>
             </Popover>
-            )}
+            {/*})}*/}
             {/* Placeholder to keep alignment when date picker is hidden */}
-            {(viewMode === 'diets' || viewMode === 'birthdays') && <div className="w-[150px]"></div>}
+            {/*(viewMode === 'diets' || viewMode === 'birthdays') && <div className="w-[150px]"></div>*/}
 
             <div className="flex gap-2">
                 <Button
@@ -402,13 +402,13 @@ const DailyReportPage = () => {
 
             <Tabs defaultValue="daily" value={viewMode} onValueChange={(value) => setViewMode(value as 'daily' | 'summary' | 'user' | 'diets' | 'birthdays')} className="w-full pt-2">
                 {/* Hide TabsList if on diets or birthdays view */}
-                 {(viewMode !== 'diets' && viewMode !== 'birthdays') && (
+                 {/*(viewMode !== 'diets' && viewMode !== 'birthdays') && (*/}
                     <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="daily">Daily View</TabsTrigger>
                         <TabsTrigger value="summary">Summary</TabsTrigger>
                         <TabsTrigger value="user">User View</TabsTrigger>
                     </TabsList>
-                 )}
+                 {/*})}*/}
 
                 {loading ? (
                     <div className="flex justify-center items-center py-10">
@@ -719,7 +719,7 @@ const DailyReportPage = () => {
                                                 <TableRow>
                                                     <TableHead className="w-[80px]">Initials</TableHead>
                                                     <TableHead>Birthday</TableHead>
-                                                    <TableHead className="w-[80px] text-center">Upcoming</TableHead> {/* Added Upcoming column */}
+                                                    <TableHead className="w-[80px] text-center">Upcoming</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
