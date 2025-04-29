@@ -6,10 +6,10 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 const USERS_COLLECTION = 'users';
 
 // Define the meal status type
-type MealStatus = 'present' | 'absent' | 'packed' | null;
+export type MealStatus = 'present' | 'absent' | 'packed' | null;
 
 // Define the meal attendance state
-interface MealAttendanceState {
+export interface MealAttendanceState {
   breakfast: MealStatus;
   lunch: MealStatus;
   dinner: MealStatus;
@@ -127,7 +127,7 @@ export const updateUserMealAttendance = async (
         await updateDoc(userDocRef, {
         mealAttendance: updatedAttendance,
         });
-        console.log('User meal attendance updated successfully');
+        // console.log('User meal attendance updated successfully'); // Commented out for less noise
     } else {
         console.log(`User ${username} not found, cannot update attendance.`);
         // Optionally, create the user here if needed, but current flow handles creation on sign-in
@@ -265,4 +265,28 @@ export const getDailyReportData = async (date: string, centre: string): Promise<
     };
     // throw error; // Or rethrow if you want the caller to handle it
   }
+};
+
+
+// Function to get individual user attendance for a specific date
+export const getUserAttendanceForDate = async (date: string, centre: string): Promise<Record<string, MealAttendanceState>> => {
+    try {
+        const q = query(collection(db, USERS_COLLECTION), where("centre", "==", centre));
+        const snapshot = await getDocs(q);
+
+        const userAttendance: Record<string, MealAttendanceState> = {};
+
+        snapshot.forEach((doc) => {
+            const username = doc.id;
+            const userData = doc.data() as UserData;
+            const mealAttendance = userData.mealAttendance || {};
+            const dailyAttendance: MealAttendanceState = mealAttendance[date] || { breakfast: null, lunch: null, dinner: null };
+            userAttendance[username] = dailyAttendance;
+        });
+
+        return userAttendance;
+    } catch (error) {
+        console.error('Error getting user attendance for date:', error);
+        return {}; // Return empty object on error
+    }
 };

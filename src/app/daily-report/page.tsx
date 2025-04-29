@@ -1,8 +1,7 @@
 
-
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
@@ -19,10 +18,13 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
-import { getDailyReportData } from "@/lib/firebase/db";
-import type { DailyReportDataWithUsers, MealAttendanceDetail, DietCountsDetail } from "@/lib/firebase/db";
-import { CalendarCheck2, CalendarIcon, HomeIcon, Loader2 } from "lucide-react"; // Added Loader2
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import Tabs components
+import { getDailyReportData, getUserAttendanceForDate } from "@/lib/firebase/db";
+import type { DailyReportDataWithUsers, MealAttendanceDetail, DietCountsDetail, MealAttendanceState } from "@/lib/firebase/db"; // Added MealAttendanceState
+import { CalendarCheck2, CalendarIcon, HomeIcon, Loader2, Sun, Utensils, Moon, PackageCheck, X, Check } from "lucide-react"; // Added Loader2, Sun, Utensils, Moon, PackageCheck, X, Check
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+// Define the meal status type locally for getMealStatusIcon if needed, or rely on import
+type MealStatus = 'present' | 'absent' | 'packed' | null;
 
 
 // Helper to initialize MealAttendanceDetail
@@ -46,7 +48,7 @@ const emptyReport: DailyReportDataWithUsers = {
   dietCountsPacked: initDietCountsDetail(),
 };
 
-// Interfaces for Summary View (Adjusted for detailed data)
+// Interface for Summary View (Adjusted for detailed data)
 interface SummaryMealAttendance {
     present: MealAttendanceDetail;
     packed: MealAttendanceDetail;
@@ -64,6 +66,11 @@ interface SummaryViewData {
         nextDay: string;
         dayAfter: string;
     }
+}
+
+// Interface for User Attendance View
+interface UserDailyAttendance {
+    [username: string]: MealAttendanceState;
 }
 
 const today = new Date();
@@ -106,43 +113,70 @@ const CountWithPopover = ({ detail }: { detail: MealAttendanceDetail }) => {
   );
 };
 
+// --- Icon Renderer for User View ---
+const getMealStatusIcon = (status: MealStatus) => {
+    if (status === 'present') {
+      return <Check className="h-5 w-5 text-green-500 font-bold" />;
+    } else if (status === 'absent') {
+      return <X className="h-5 w-5 text-red-500 font-bold" />;
+    } else if (status === 'packed') {
+      return <PackageCheck className="h-5 w-5 text-blue-500 font-bold" />;
+    }
+    // Render nothing or a placeholder for null/undefined
+    return <span className="h-5 w-5 inline-block"></span>; // Placeholder for alignment
+};
+
 
 const DailyReportPage = () => {
   const [dailyReport, setDailyReport] = useState<DailyReportDataWithUsers>(emptyReport);
   const [summaryReport, setSummaryReport] = useState<SummaryViewData | null>(null);
+  const [userAttendanceReport, setUserAttendanceReport] = useState<UserDailyAttendance | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(today);
   const [loading, setLoading] = useState(true);
   const [selectedCentre, setSelectedCentre] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'daily' | 'summary'>('daily'); // State to control view
+  const [viewMode, setViewMode] = useState<'daily' | 'summary' | 'user'>('daily'); // State to control view: added 'user'
+
 
   useEffect(() => {
     const centre = localStorage.getItem('selectedCentre');
     setSelectedCentre(centre);
   }, []);
 
-  // Load daily report data from Firebase
+  // Load daily/user report data from Firebase
   useEffect(() => {
-    const fetchDailyReport = async () => {
+    const fetchDailyAndUserData = async () => {
       if (!selectedDate || !selectedCentre) return;
       setLoading(true);
+      setUserAttendanceReport(null); // Clear user report when fetching daily
+      setSummaryReport(null); // Clear summary report when fetching daily
       try {
         const formattedDateForDb = format(selectedDate, "MMM dd, yyyy"); // Use full date for DB query
-        const reportData = await getDailyReportData(formattedDateForDb, selectedCentre);
+
+        // Fetch both aggregated daily report and individual user attendance
+        const [reportData, userAttendanceData] = await Promise.all([
+            getDailyReportData(formattedDateForDb, selectedCentre),
+            getUserAttendanceForDate(formattedDateForDb, selectedCentre)
+        ]);
+
         setDailyReport(reportData);
+        setUserAttendanceReport(userAttendanceData);
+
       } catch (error: any) {
-        console.error("Error fetching daily report:", error);
+        console.error("Error fetching daily and user report:", error);
         setDailyReport(emptyReport); // Reset on error
+        setUserAttendanceReport(null); // Reset on error
         // Optionally set an error state
       } finally {
         setLoading(false);
       }
     };
 
-    if (viewMode === 'daily') {
-      fetchDailyReport();
-      setSummaryReport(null); // Clear summary report when switching to daily view
+    // Fetch only when daily or user view is active
+    if (viewMode === 'daily' || viewMode === 'user') {
+      fetchDailyAndUserData();
     }
-  }, [selectedDate, selectedCentre, viewMode]);
+  }, [selectedDate, selectedCentre, viewMode]); // Rerun if viewMode changes to daily or user
+
 
   // Fetch data for summary view
   useEffect(() => {
@@ -150,6 +184,7 @@ const DailyReportPage = () => {
       if (!selectedDate || !selectedCentre) return;
       setLoading(true);
       setDailyReport(emptyReport); // Clear daily report when switching to summary view
+      setUserAttendanceReport(null); // Clear user report when switching to summary view
       try {
         const nextDay = addDays(selectedDate, 1);
         const dayAfter = addDays(selectedDate, 2);
@@ -246,6 +281,7 @@ const DailyReportPage = () => {
               <span className="">MealTrack Report</span>
             </CardTitle>
             <div className="flex gap-4 items-center">
+                <span className="text-sm text-[#c6cfec] font-medium">Centre: {selectedCentre || 'N/A'}</span>
               <Link href="/">
                 <Button variant="secondary" className="px-2 h-8">
                   <HomeIcon size={10} />
@@ -284,10 +320,11 @@ const DailyReportPage = () => {
             </div>
             <Separator />
 
-            <Tabs defaultValue="daily" value={viewMode} onValueChange={(value) => setViewMode(value as 'daily' | 'summary')} className="w-full pt-2">
-                <TabsList className="grid w-full grid-cols-2">
+            <Tabs defaultValue="daily" value={viewMode} onValueChange={(value) => setViewMode(value as 'daily' | 'summary' | 'user')} className="w-full pt-2">
+                <TabsList className="grid w-full grid-cols-3"> {/* Changed grid-cols-2 to grid-cols-3 */}
                     <TabsTrigger value="daily">Daily View</TabsTrigger>
                     <TabsTrigger value="summary">Summary</TabsTrigger>
+                    <TabsTrigger value="user">User View</TabsTrigger> {/* Added User View Tab */}
                 </TabsList>
 
                 {loading ? (
@@ -519,6 +556,41 @@ const DailyReportPage = () => {
                                 <div className="mt-4">No summary data available for the selected date range or an error occurred.</div>
                             )}
                         </TabsContent>
+
+                         {/* User View Content */}
+                        <TabsContent value="user">
+                             <h3 className="text-lg font-semibold mt-4">
+                                User Attendance for {formattedReportDisplayDate}
+                             </h3>
+                             {userAttendanceReport && Object.keys(userAttendanceReport).length > 0 ? (
+                                <Card className="mt-4">
+                                <CardContent className="p-4 pt-4">
+                                    <Table>
+                                        <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-[150px]">User</TableHead>
+                                            <TableHead className="text-center"><Sun size={18}/></TableHead>
+                                            <TableHead className="text-center"><Utensils size={18}/></TableHead>
+                                            <TableHead className="text-center"><Moon size={18}/></TableHead>
+                                        </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                        {Object.entries(userAttendanceReport).map(([username, attendance]) => (
+                                            <TableRow key={username}>
+                                                <TableCell className="font-medium">{username}</TableCell>
+                                                <TableCell className="text-center">{getMealStatusIcon(attendance.breakfast)}</TableCell>
+                                                <TableCell className="text-center">{getMealStatusIcon(attendance.lunch)}</TableCell>
+                                                <TableCell className="text-center">{getMealStatusIcon(attendance.dinner)}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                                </Card>
+                            ) : (
+                                <div className="mt-4 text-muted-foreground">No user attendance data available for this date.</div>
+                            )}
+                        </TabsContent>
                     </>
                 )}
             </Tabs>
@@ -530,5 +602,3 @@ const DailyReportPage = () => {
 };
 
 export default DailyReportPage;
-
-    
