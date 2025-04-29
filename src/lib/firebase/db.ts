@@ -4,6 +4,7 @@ import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 
 const USERS_COLLECTION = 'users';
+const DIETS_COLLECTION = 'diets'; // Added diets collection constant
 
 // Define the meal status type
 export type MealStatus = 'present' | 'absent' | 'packed' | null;
@@ -51,6 +52,13 @@ export interface DailyReportDataWithUsers {
     };
     dietCountsPresent: DietCountsDetail;
     dietCountsPacked: DietCountsDetail;
+}
+
+// Interface for Diet Information
+export interface DietInfo {
+    id: string; // Document ID (e.g., 'D1', 'D2')
+    name: string; // Diet name/label (e.g., 'Vegetarian', 'Gluten-Free') - might be same as id
+    description: string; // Description of the diet
 }
 
 
@@ -288,5 +296,20 @@ export const getUserAttendanceForDate = async (date: string, centre: string): Pr
     } catch (error) {
         console.error('Error getting user attendance for date:', error);
         return {}; // Return empty object on error
+    }
+};
+
+// Function to get diet descriptions
+export const getDietsData = async (): Promise<DietInfo[]> => {
+    try {
+        const dietsSnapshot = await getDocs(collection(db, DIETS_COLLECTION));
+        const dietsList: DietInfo[] = dietsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...(doc.data() as Omit<DietInfo, 'id'>), // Cast to the DietInfo structure (excluding id)
+        }));
+        return dietsList;
+    } catch (error) {
+        console.error('Error getting diets data:', error);
+        return []; // Return empty array on error
     }
 };

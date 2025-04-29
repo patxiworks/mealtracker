@@ -18,9 +18,9 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
-import { getDailyReportData, getUserAttendanceForDate } from "@/lib/firebase/db";
-import type { DailyReportDataWithUsers, MealAttendanceDetail, DietCountsDetail, MealAttendanceState } from "@/lib/firebase/db"; // Added MealAttendanceState
-import { CalendarCheck2, CalendarIcon, HomeIcon, Loader2, Sun, Utensils, Moon, PackageCheck, X, Check } from "lucide-react"; // Added Loader2, Sun, Utensils, Moon, PackageCheck, X, Check
+import { getDailyReportData, getUserAttendanceForDate, getDietsData } from "@/lib/firebase/db"; // Added getDietsData
+import type { DailyReportDataWithUsers, MealAttendanceDetail, DietCountsDetail, MealAttendanceState, DietInfo } from "@/lib/firebase/db"; // Added MealAttendanceState, DietInfo
+import { CalendarCheck2, CalendarIcon, HomeIcon, Loader2, Sun, Utensils, Moon, PackageCheck, X, Check, NotebookText } from "lucide-react"; // Added Loader2, Sun, Utensils, Moon, PackageCheck, X, Check, NotebookText
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Define the meal status type locally for getMealStatusIcon if needed, or rely on import
@@ -131,10 +131,11 @@ const DailyReportPage = () => {
   const [dailyReport, setDailyReport] = useState<DailyReportDataWithUsers>(emptyReport);
   const [summaryReport, setSummaryReport] = useState<SummaryViewData | null>(null);
   const [userAttendanceReport, setUserAttendanceReport] = useState<UserDailyAttendance | null>(null);
+  const [dietsData, setDietsData] = useState<DietInfo[]>([]); // State for diets data
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(today);
   const [loading, setLoading] = useState(true);
   const [selectedCentre, setSelectedCentre] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'daily' | 'summary' | 'user'>('daily'); // State to control view: added 'user'
+  const [viewMode, setViewMode] = useState<'daily' | 'summary' | 'user' | 'diets'>('daily'); // State to control view: added 'user', 'diets'
 
 
   useEffect(() => {
@@ -149,6 +150,7 @@ const DailyReportPage = () => {
       setLoading(true);
       setUserAttendanceReport(null); // Clear user report when fetching daily
       setSummaryReport(null); // Clear summary report when fetching daily
+      setDietsData([]); // Clear diets data
       try {
         const formattedDateForDb = format(selectedDate, "MMM dd, yyyy"); // Use full date for DB query
 
@@ -185,6 +187,7 @@ const DailyReportPage = () => {
       setLoading(true);
       setDailyReport(emptyReport); // Clear daily report when switching to summary view
       setUserAttendanceReport(null); // Clear user report when switching to summary view
+      setDietsData([]); // Clear diets data
       try {
         const nextDay = addDays(selectedDate, 1);
         const dayAfter = addDays(selectedDate, 2);
@@ -268,6 +271,30 @@ const DailyReportPage = () => {
     }
   }, [selectedDate, selectedCentre, viewMode]);
 
+  // Fetch data for diets view
+  useEffect(() => {
+      const fetchDiets = async () => {
+          setLoading(true);
+          setDailyReport(emptyReport); // Clear other views
+          setSummaryReport(null);
+          setUserAttendanceReport(null);
+          try {
+              const data = await getDietsData();
+              setDietsData(data);
+          } catch (error) {
+              console.error("Error fetching diets data:", error);
+              setDietsData([]);
+              // Optionally set an error state
+          } finally {
+              setLoading(false);
+          }
+      };
+
+      if (viewMode === 'diets') {
+          fetchDiets();
+      }
+  }, [viewMode]);
+
 
   const formattedReportDisplayDate = selectedDate ? formatReportDate(selectedDate) : formatReportDate(today);
 
@@ -293,38 +320,42 @@ const DailyReportPage = () => {
         <CardContent className="grid gap-4 px-4">
         <section className="grid gap-2 pt-4">
           <div className="flex justify-between items-center gap-4 flex-wrap ">
-            {/* Date Picker */}
-            <Popover>
-                <PopoverTrigger asChild>
-                <Button
-                    variant={"outline"}
-                    className={cn(
-                    "w-[150px] justify-start text-left font-normal",
-                    !selectedDate && "text-muted-foreground"
-                    )}
-                >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? formatPickerDate(selectedDate) : <span>Pick a date</span>}
-                </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    initialFocus
-                />
-                </PopoverContent>
-            </Popover>
-            {/* Remove old Buttons */}
+            {/* Date Picker (Only show if not in 'diets' view) */}
+            {viewMode !== 'diets' && (
+                <Popover>
+                    <PopoverTrigger asChild>
+                    <Button
+                        variant={"outline"}
+                        className={cn(
+                        "w-[150px] justify-start text-left font-normal",
+                        !selectedDate && "text-muted-foreground"
+                        )}
+                    >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? formatPickerDate(selectedDate) : <span>Pick a date</span>}
+                    </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        initialFocus
+                    />
+                    </PopoverContent>
+                </Popover>
+            )}
+            {/* Placeholder to keep alignment when date picker is hidden */}
+            {viewMode === 'diets' && <div className="w-[150px]"></div>}
             </div>
             <Separator />
 
-            <Tabs defaultValue="daily" value={viewMode} onValueChange={(value) => setViewMode(value as 'daily' | 'summary' | 'user')} className="w-full pt-2">
-                <TabsList className="grid w-full grid-cols-3"> {/* Changed grid-cols-2 to grid-cols-3 */}
+            <Tabs defaultValue="daily" value={viewMode} onValueChange={(value) => setViewMode(value as 'daily' | 'summary' | 'user' | 'diets')} className="w-full pt-2">
+                <TabsList className="grid w-full grid-cols-4"> {/* Changed grid-cols-3 to grid-cols-4 */}
                     <TabsTrigger value="daily">Daily View</TabsTrigger>
                     <TabsTrigger value="summary">Summary</TabsTrigger>
-                    <TabsTrigger value="user">User View</TabsTrigger> {/* Added User View Tab */}
+                    <TabsTrigger value="user">User View</TabsTrigger>
+                    <TabsTrigger value="diets">Diets</TabsTrigger> {/* Added Diets Tab */}
                 </TabsList>
 
                 {loading ? (
@@ -589,6 +620,37 @@ const DailyReportPage = () => {
                                 </Card>
                             ) : (
                                 <div className="mt-4 text-muted-foreground">No user attendance data available for this date.</div>
+                            )}
+                        </TabsContent>
+
+                        {/* Diets View Content */}
+                        <TabsContent value="diets">
+                             <h3 className="text-lg font-semibold mt-4 flex items-center gap-2">
+                                <NotebookText size={20}/> Diet Information
+                             </h3>
+                             {dietsData.length > 0 ? (
+                                <Card className="mt-4">
+                                <CardContent className="p-4 pt-4">
+                                    <Table>
+                                        <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-[100px]">Diet</TableHead>
+                                            <TableHead>Description</TableHead>
+                                        </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                        {dietsData.sort((a, b) => a.id.localeCompare(b.id)).map((diet) => ( // Sort by ID for consistency
+                                            <TableRow key={diet.id}>
+                                                <TableCell className="font-medium">{diet.name || diet.id}</TableCell> {/* Show name or ID */}
+                                                <TableCell>{diet.description}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                                </Card>
+                            ) : (
+                                <div className="mt-4 text-muted-foreground">No diet information available.</div>
                             )}
                         </TabsContent>
                     </>
