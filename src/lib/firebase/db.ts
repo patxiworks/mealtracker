@@ -22,7 +22,8 @@ interface UserData {
     mealAttendance: Record<string, MealAttendanceState>;
     diet: string | null;
     centre: string;
-    name: string; // Assuming name exists for initials
+    name: string; // Assuming name exists for various purposes
+    initials?: string; // Added initials field (optional for backward compatibility)
     birthday?: Timestamp | string; // Assuming birthday exists, could be Timestamp or string
 }
 
@@ -71,14 +72,6 @@ export interface BirthdayInfo {
     sortKey: string; // For sorting (e.g., "01-01" for Jan 1st)
 }
 
-// Helper to generate initials from a name
-const getInitials = (name: string): string => {
-  if (!name) return '';
-  const names = name.trim().split(' ');
-  if (names.length === 1) return names[0].substring(0, 2).toUpperCase();
-  return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
-};
-
 // Function to create user meal attendance data
 export const createUserMealAttendance = async (
   username: string,
@@ -98,18 +91,25 @@ export const createUserMealAttendance = async (
           diet: diet || null, // Store the diet or null if not provided
           centre: centre, // Store the centre
           name: username, // Assume username is the initial name
+          // initials: calculateInitials(username) // Optionally pre-calculate initials if needed elsewhere
           // birthday: null // Initialize birthday if needed
         });
         console.log('User meal attendance created successfully');
     } else {
         // Update existing user's diet and centre if needed
-        await updateDoc(userDocRef, {
-            diet: diet !== undefined ? diet : userData.diet || null,
-            centre: centre !== undefined ? centre : userData.centre || '',
-            name: username, // Keep name consistent or update as needed
-            // Don't overwrite existing mealAttendance unless explicitly intended
-        });
-        console.log('User diet and centre updated.');
+        // Only update fields that are explicitly provided or need initialization
+        const updateData: Partial<UserData> = {};
+        if (diet !== undefined) updateData.diet = diet;
+        if (centre !== undefined) updateData.centre = centre;
+        if (username !== undefined) updateData.name = username; // Update name if provided? Usually username is key
+        // Do not overwrite existing mealAttendance unless explicitly intended
+
+        if (Object.keys(updateData).length > 0) {
+            await updateDoc(userDocRef, updateData);
+            console.log('User data updated.');
+        } else {
+             console.log('No new data provided to update user.');
+        }
     }
 
 
@@ -132,6 +132,7 @@ export const getUserMealAttendance = async (username: string): Promise<UserData 
         diet: data.diet || null, // Also return the diet
         centre: data.centre || '', // Also return the centre
         name: data.name || username, // Return name, fallback to username
+        initials: data.initials, // Return initials
         birthday: data.birthday // Return birthday
       };
     } else {
@@ -345,8 +346,9 @@ export const getUsersBirthdays = async (centre: string): Promise<BirthdayInfo[]>
 
         snapshot.forEach((doc) => {
             const userData = doc.data() as UserData;
-            if (userData.name && userData.birthday) {
-                const initials = getInitials(userData.name);
+            // Use the 'initials' field directly, if it exists, along with birthday
+            if (userData.initials && userData.birthday) {
+                const initials = userData.initials; // Get initials directly from the field
                 let birthdayDate: Date | null = null;
 
                 // Handle both Timestamp and string date formats
@@ -357,11 +359,11 @@ export const getUsersBirthdays = async (centre: string): Promise<BirthdayInfo[]>
                         birthdayDate = new Date(userData.birthday);
                         // Basic validation if it's a string date
                         if (isNaN(birthdayDate.getTime())) {
-                            console.warn(`Invalid birthday string format for user ${userData.name}: ${userData.birthday}`);
+                            console.warn(`Invalid birthday string format for user ${userData.name || doc.id}: ${userData.birthday}`);
                             birthdayDate = null;
                         }
                     } catch (e) {
-                         console.warn(`Error parsing birthday string for user ${userData.name}: ${userData.birthday}`, e);
+                         console.warn(`Error parsing birthday string for user ${userData.name || doc.id}: ${userData.birthday}`, e);
                          birthdayDate = null;
                     }
                 }
@@ -375,6 +377,12 @@ export const getUsersBirthdays = async (centre: string): Promise<BirthdayInfo[]>
                         sortKey,
                     });
                 }
+            } else if (userData.birthday && !userData.initials) {
+                // Fallback or warning if initials field is missing but birthday exists
+                 console.warn(`User ${userData.name || doc.id} has birthday but missing 'initials' field.`);
+                // Optionally, you could try to calculate initials from 'name' here as a fallback
+                // const fallbackInitials = calculateInitials(userData.name); // Assuming calculateInitials exists
+                // if (fallbackInitials) { ... push with fallbackInitials ... }
             }
         });
 
