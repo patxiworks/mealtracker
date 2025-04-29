@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { format, startOfWeek, addDays, addWeeks } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { CalendarCheck2, NotepadText, LogOut, Sun, Utensils, Moon, PackageCheck, X, Check, Loader2 } from 'lucide-react'; // Added Loader2
+import { Loader2, CalendarCheck2, NotepadText, LogOut, Sun, Utensils, Moon, PackageCheck, X, Check } from 'lucide-react';
 import Link from 'next/link';
 import {
   createUserMealAttendance,
@@ -47,16 +47,6 @@ interface MealAttendanceState {
   dinner: MealStatus;
 }
 
-// Helper function to get week dates
-function getWeekDates(startDate: Date): Date[] {
-    const weekStart = startOfWeek(startDate, { weekStartsOn: 0 });
-    const dates: Date[] = [];
-    for (let i = 0; i < 7; i++) {
-        dates.push(addDays(weekStart, i));
-    }
-    return dates;
-}
-
 const MealCheckin = () => {
   const [username, setUsername] = useState<string | null>(null);
   const [mealAttendance, setMealAttendance] = useState<
@@ -65,13 +55,13 @@ const MealCheckin = () => {
   const [selectedWeekStart, setSelectedWeekStart] = useState<Date>(
     startOfWeek(new Date(), { weekStartsOn: 0 })
   );
-  const weekDates = getWeekDates(selectedWeekStart); // Calculate weekDates here
+  const weekDates = getWeekDates(selectedWeekStart);
   const { toast } = useToast();
   const [diet, setDiet] = useState<string | null>(null);
   const router = useRouter();
   const [isRouteInitialized, setIsRouteInitialized] = useState(false);
   const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({}); // Track loading state per meal box
-  const [isLoading, setIsLoading] = useState(true); // Add loading state for initial data fetch
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Check if a centre is selected
@@ -100,59 +90,44 @@ const MealCheckin = () => {
 
   useEffect(() => {
     const loadMealAttendance = async () => {
-        // Only proceed if route is initialized
-        if (!isRouteInitialized) {
-            // Still waiting for centre check or username load, don't start loading data yet
-            // isLoading remains true by default
-            return;
-        }
-
-        // If route is initialized, but no username, it means redirection happened or is happening
-        if (!username) {
-            setIsLoading(false); // Stop loading as we won't fetch data
-            return;
-        }
-
-        // If we have username and route is initialized, proceed to load data
-        setIsLoading(true); // Start loading before fetching
+      if (username && isRouteInitialized) { // Ensure route is initialized and username exists
         try {
-            const userData = await getUserMealAttendance(username);
-            if (userData) {
-                setMealAttendance(userData.mealAttendance);
-                setDiet(userData.diet || null); // Load diet from database
-            } else {
-                // If no data exists for the user, initialize it in the database
-                const initialAttendance = weekDates.reduce((acc, date) => {
-                acc[formatDateForKey(date)] = { breakfast: null, lunch: null, dinner: null };
-                return acc;
-                }, {} as Record<string, MealAttendanceState>);
+          const userData = await getUserMealAttendance(username);
+          if (userData) {
+            setMealAttendance(userData.mealAttendance);
+            setDiet(userData.diet || null); // Load diet from database
+            setLoading(false);
+          } else {
+            // If no data exists for the user, initialize it in the database
+            const initialAttendance = weekDates.reduce((acc, date) => {
+              acc[formatDateForKey(date)] = { breakfast: null, lunch: null, dinner: null };
+              return acc;
+            }, {} as Record<string, MealAttendanceState>);
 
-                const selectedCentre = localStorage.getItem('selectedCentre'); // Should exist due to earlier check
-                if (selectedCentre) {
-                    await createUserMealAttendance(username, initialAttendance, diet || null, selectedCentre);
-                    setMealAttendance(initialAttendance);
-                } else {
-                    console.error("Selected centre missing, cannot create user attendance.");
-                    toast({ title: 'Error', description: 'Centre information missing.' });
-                    // Maybe redirect back to centre selection?
-                }
+            const selectedCentre = localStorage.getItem('selectedCentre'); // Should exist due to earlier check
+            if (selectedCentre) {
+              await createUserMealAttendance(username, initialAttendance, diet || null, selectedCentre);
+              setMealAttendance(initialAttendance);
+            } else {
+              console.error("Selected centre missing, cannot create user attendance.");
+              toast({ title: 'Error', description: 'Centre information missing.' });
+              // Maybe redirect back to centre selection?
             }
+          }
         } catch (error: any) {
-            console.error('Error loading meal attendance:', error);
-            toast({
-                title: 'Error',
-                description: `Failed to load meal attendance. ${error.message || 'Please check your connection.'
-                }`,
-                variant: 'destructive',
-            });
-        } finally {
-            setIsLoading(false); // Stop loading after fetch/initialization/error
+          console.error('Error loading meal attendance:', error);
+          toast({
+            title: 'Error',
+            description: `Failed to load meal attendance. ${error.message || 'Please check your connection.'
+              }`,
+              variant: 'destructive',
+          });
         }
+      }
     };
 
     loadMealAttendance();
   }, [username, weekDates, toast, diet, isRouteInitialized]); // Add isRouteInitialized dependency
-
 
   const handleSignOut = () => {
     setUsername(null);
@@ -164,7 +139,14 @@ const MealCheckin = () => {
     router.push('/select-centre'); // Redirect to centre selection page
   };
 
-
+  function getWeekDates(startDate: Date): Date[] {
+    const weekStart = startOfWeek(startDate, { weekStartsOn: 0 });
+    const dates: Date[] = [];
+    for (let i = 0; i < 7; i++) {
+      dates.push(addDays(weekStart, i));
+    }
+    return dates;
+  }
 
   // Async function to handle the database update and subsequent state change
   const updateMealAttendanceInDb = async (updateData: {
@@ -195,8 +177,7 @@ const MealCheckin = () => {
         await updateUserMealAttendance(username, attendanceForDbUpdate);
 
         // --- Step 2: Update local state ONLY if Firestore update succeeded ---
-        // This is removed due to optimistic update handling it earlier
-        // setMealAttendance(attendanceForDbUpdate);
+        setMealAttendance(attendanceForDbUpdate);
 
         // --- Step 3: Show success toast (optional, can be annoying) ---
         // toast({
@@ -207,23 +188,7 @@ const MealCheckin = () => {
     } catch (error: any) {
         console.error('Error updating meal attendance:', error);
         // --- Step 4: Show error toast if Firestore update failed ---
-        // Rollback the optimistic UI update
-         setMealAttendance(prev => {
-             const originalStatus = prev[dateKey]?.[meal as keyof MealAttendanceState];
-             // Only rollback if the current status is the one we optimistically set
-             // This basic check might need refinement if multiple clicks happen quickly
-             if (prev[dateKey]?.[meal as keyof MealAttendanceState] === status) {
-                 return {
-                     ...prev,
-                     [dateKey]: {
-                         ...prev[dateKey],
-                         [meal]: originalStatus // Revert to the status *before* the optimistic update
-                     }
-                 };
-             }
-             return prev; // No change needed if status already changed again
-         });
-
+        // Local state remains unchanged because setMealAttendance was not called
         toast({
             title: 'Error',
             description: `Failed to update attendance. ${error.message || 'Please try again later.'}`,
@@ -246,15 +211,15 @@ const MealCheckin = () => {
     } else if (status === 'packed') {
       icon = <PackageCheck className="h-6 w-6 text-blue-500 font-bold" />;
     }
-    // Render an empty space or a default placeholder if status is null
-    // This ensures the box has consistent dimensions and click target
-    else {
-        icon = <div className="h-6 w-6"></div>; // Placeholder for consistent size
-    }
     return icon;
   };
 
   const handleMealTimeBoxClick = (date: Date, meal: string) => {
+    //console.log(date, new Date())
+    if (date < new Date()) {
+      return;
+    }
+
     if (!username) {
       toast({
         title: 'Error',
@@ -284,20 +249,10 @@ const MealCheckin = () => {
       newStatus = null; // Cycle back to null
     }
 
-    // Optimistically update UI state first
-    // This makes the UI feel instantly responsive
-    setMealAttendance(prev => ({
-        ...prev,
-        [dateKey]: {
-            ...(prev[dateKey] || { breakfast: null, lunch: null, dinner: null }),
-            [meal]: newStatus
-        }
-    }));
-
-    // Call the async update function in the background
+    // Call the async update function
     updateMealAttendanceInDb({ date, meal, status: newStatus, dateKey, username, mealBoxKey });
     // **Crucially, do NOT call setMealAttendance here anymore.**
-    // It will be called inside updateMealAttendanceInDb *after* the DB is updated (or rolled back on error).
+    // It will be called inside updateMealAttendanceInDb *after* the DB is updated.
   };
 
   const handleWeekChange = (weekStartDate: Date) => {
@@ -326,21 +281,10 @@ const MealCheckin = () => {
   }, [selectedWeekStart, weekOptions]); // Depend on selectedWeekStart and the generated options
 
 
-  // Render loading state or redirect check
-  if (isLoading || !isRouteInitialized) { // Show loader if isLoading OR if route not initialized yet
-    return (
-      <div className="container mx-auto py-10 flex justify-center items-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+  if (!username && isRouteInitialized) { // Render loading or nothing until initialization and user check is done
+      return null; // Or a loading spinner
   }
 
-  // If route initialized but no username (means redirected to sign-in), render nothing here
-   if (!username && isRouteInitialized) {
-      return null; // Or a redirect message, but usually null is fine as redirect handles it
-   }
-
-  // Render the main component content only when not loading and user is available
   return (
       <div className="container mx-auto py-0">
         <Card className="w-full max-w-4xl mx-auto">
@@ -364,6 +308,11 @@ const MealCheckin = () => {
           </CardHeader>
           <CardContent className="grid gap-4 px-4 pb-16 sm:p-6 pt-4">
             {/* Meal Check-in Section */}
+          {loading ? (
+            <div className="flex justify-center items-center py-10">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+            ) : (
             <section className="grid gap-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm text-muted-foreground">Welcome, {username?.split(" ")[0]}</h4>
@@ -415,7 +364,7 @@ const MealCheckin = () => {
                         onClick={() => handleMealTimeBoxClick(date, 'breakfast')}
                       >
                         {isUpdating[`${dateKey}-breakfast`]
-                          ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> // Use Loader2 for consistency
+                          ? <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div> // Simple spinner
                           : getMealStatusIcon(date, 'breakfast', mealAttendance[dateKey]?.breakfast)
                         }
                       </div>
@@ -429,7 +378,7 @@ const MealCheckin = () => {
                         onClick={() => handleMealTimeBoxClick(date, 'lunch')}
                       >
                         {isUpdating[`${dateKey}-lunch`]
-                          ? <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                          ? <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>
                           : getMealStatusIcon(date, 'lunch', mealAttendance[dateKey]?.lunch)
                         }
                       </div>
@@ -443,7 +392,7 @@ const MealCheckin = () => {
                         onClick={() => handleMealTimeBoxClick(date, 'dinner')}
                       >
                         {isUpdating[`${dateKey}-dinner`]
-                          ? <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                          ? <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>
                           : getMealStatusIcon(date, 'dinner', mealAttendance[dateKey]?.dinner)
                         }
                       </div>
@@ -452,10 +401,10 @@ const MealCheckin = () => {
                 })}
               </div>
             </section>
+            )}
           </CardContent>
         </Card>
-      </div>
-
+      </div>         
   );
 };
 

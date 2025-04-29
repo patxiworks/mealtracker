@@ -22,6 +22,7 @@ import {
 import { getDailyReportData } from "@/lib/firebase/db";
 import type { DailyReportDataWithUsers, MealAttendanceDetail, DietCountsDetail } from "@/lib/firebase/db";
 import { CalendarCheck2, CalendarIcon, HomeIcon, Loader2 } from "lucide-react"; // Added Loader2
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import Tabs components
 
 
 // Helper to initialize MealAttendanceDetail
@@ -78,36 +79,6 @@ const formatPickerDate = (date: Date): string => {
 };
 
 
-// --- Helper Functions to Merge User Lists and Calculate Counts ---
-const mergeMealAttendanceDetail = (...details: MealAttendanceDetail[]): MealAttendanceDetail => {
-    const users = new Set<string>();
-    details.forEach(detail => detail.users.forEach(user => users.add(user)));
-    const userList = Array.from(users);
-    return { count: userList.length, users: userList };
-};
-
-const mergeDietCountsDetail = (...dietCountsArr: DietCountsDetail[]): DietCountsDetail => {
-    const merged: DietCountsDetail = {};
-    const allDiets = new Set<string>();
-    dietCountsArr.forEach(dc => Object.keys(dc).forEach(diet => allDiets.add(diet)));
-
-    allDiets.forEach(diet => {
-        merged[diet] = {
-            breakfast: mergeMealAttendanceDetail(
-                ...dietCountsArr.map(dc => dc[diet]?.breakfast || initMealAttendanceDetail())
-            ),
-            lunch: mergeMealAttendanceDetail(
-                ...dietCountsArr.map(dc => dc[diet]?.lunch || initMealAttendanceDetail())
-            ),
-            dinner: mergeMealAttendanceDetail(
-                ...dietCountsArr.map(dc => dc[diet]?.dinner || initMealAttendanceDetail())
-            ),
-        };
-    });
-    return merged;
-};
-
-
 // --- Popover Component for Click Interaction ---
 const CountWithPopover = ({ detail }: { detail: MealAttendanceDetail }) => {
   if (detail.count === 0) {
@@ -142,7 +113,7 @@ const DailyReportPage = () => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(today);
   const [loading, setLoading] = useState(true);
   const [selectedCentre, setSelectedCentre] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'daily' | 'summary'>('daily'); // State to toggle view
+  const [viewMode, setViewMode] = useState<'daily' | 'summary'>('daily'); // State to control view
 
   useEffect(() => {
     const centre = localStorage.getItem('selectedCentre');
@@ -286,7 +257,7 @@ const DailyReportPage = () => {
         <CardContent className="grid gap-4 px-4">
         <section className="grid gap-2 pt-4">
           <div className="flex justify-between items-center gap-4 flex-wrap ">
-            {/*<h2 className="text-xl font-semibold">Select Base Date</h2>*/}
+            {/* Date Picker */}
             <Popover>
                 <PopoverTrigger asChild>
                 <Button
@@ -309,247 +280,248 @@ const DailyReportPage = () => {
                 />
                 </PopoverContent>
             </Popover>
-            <div className="flex gap-2">
-                <Button
-                    variant={viewMode === 'daily' ? 'default' : 'secondary'}
-                    onClick={() => setViewMode('daily')}
-                    >
-                    Daily View
-                </Button>
-                <Button
-                    variant={viewMode === 'summary' ? 'default' : 'secondary'}
-                    onClick={() => setViewMode('summary')}
-                >
-                    Summary
-                </Button>
-            </div>
+            {/* Remove old Buttons */}
             </div>
             <Separator />
 
-            {loading ? (
-                <div className="flex justify-center items-center py-10">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-            ) : viewMode === 'daily' ? (
-            <>
-                <h3 className="text-lg font-semibold mt-4">
-                Daily Report for {formattedReportDisplayDate}
-                </h3>
-                {/* Daily Meal Attendance Table */}
-                <Card>
-                <CardHeader className="pb-1 pt-4">
-                    <CardTitle className="text-base font-semibold">Meal Attendance</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                    <Table>
-                    <TableHeader>
-                        <TableRow>
-                        <TableHead className="w-[100px]">Meal</TableHead>
-                        <TableHead>Present</TableHead>
-                        <TableHead>Packed</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow>
-                        <TableCell>Breakfast</TableCell>
-                        <TableCell><CountWithPopover detail={dailyReport.attendancePresent.breakfast} /></TableCell>
-                        <TableCell><CountWithPopover detail={dailyReport.attendancePacked.breakfast} /></TableCell>
-                        </TableRow>
-                        <TableRow>
-                        <TableCell>Lunch</TableCell>
-                        <TableCell><CountWithPopover detail={dailyReport.attendancePresent.lunch} /></TableCell>
-                        <TableCell><CountWithPopover detail={dailyReport.attendancePacked.lunch} /></TableCell>
-                        </TableRow>
-                        <TableRow>
-                        <TableCell>Dinner</TableCell>
-                        <TableCell><CountWithPopover detail={dailyReport.attendancePresent.dinner} /></TableCell>
-                        <TableCell><CountWithPopover detail={dailyReport.attendancePacked.dinner} /></TableCell>
-                        </TableRow>
-                    </TableBody>
-                    </Table>
-                </CardContent>
-                </Card>
+            <Tabs defaultValue="daily" value={viewMode} onValueChange={(value) => setViewMode(value as 'daily' | 'summary')} className="w-full pt-2">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="daily">Daily View</TabsTrigger>
+                    <TabsTrigger value="summary">Summary</TabsTrigger>
+                </TabsList>
 
-                {/* Daily Diet Label Counts (Present) */}
-                {Object.keys(dailyReport.dietCountsPresent).length > 0 && (
-                <Card className="mt-4">
-                    <CardHeader className="pb-1 pt-4">
-                        <CardTitle className="text-base font-semibold">Dietary Attendance (Present)</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-0">
-                    <Table>
-                        <TableHeader>
-                        <TableRow>
-                            <TableHead>Diet</TableHead>
-                            <TableHead>Breakfast</TableHead>
-                            <TableHead>Lunch</TableHead>
-                            <TableHead>Dinner</TableHead>
-                        </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                        {Object.entries(dailyReport.dietCountsPresent).map(([diet, counts]) => (
-                            <TableRow key={diet}>
-                            <TableCell>{diet}</TableCell>
-                            <TableCell><CountWithPopover detail={counts.breakfast} /></TableCell>
-                            <TableCell><CountWithPopover detail={counts.lunch} /></TableCell>
-                            <TableCell><CountWithPopover detail={counts.dinner} /></TableCell>
-                            </TableRow>
-                        ))}
-                        </TableBody>
-                    </Table>
-                    </CardContent>
-                </Card>
-                )}
-
-
-                {/* Daily Diet Label Counts (Packed) */}
-                {Object.keys(dailyReport.dietCountsPacked).length > 0 && (
-                <Card className="mt-4">
-                    <CardHeader className="pb-1 pt-4">
-                        <CardTitle className="text-base font-semibold">Dietary Attendance (Packed)</CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-0">
-                    <Table>
-                        <TableHeader>
-                        <TableRow>
-                            <TableHead>Diet</TableHead>
-                            <TableHead>Breakfast</TableHead>
-                            <TableHead>Lunch</TableHead>
-                            <TableHead>Dinner</TableHead>
-                        </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                        {Object.entries(dailyReport.dietCountsPacked).map(([diet, counts]) => (
-                            <TableRow key={diet}>
-                            <TableCell>{diet}</TableCell>
-                            <TableCell><CountWithPopover detail={counts.breakfast} /></TableCell>
-                            <TableCell><CountWithPopover detail={counts.lunch} /></TableCell>
-                            <TableCell><CountWithPopover detail={counts.dinner} /></TableCell>
-                            </TableRow>
-                        ))}
-                        </TableBody>
-                    </Table>
-                    </CardContent>
-                </Card>
-                )}
-                {!Object.keys(dailyReport.dietCountsPresent).length && !Object.keys(dailyReport.dietCountsPacked).length && (
-                    <div className="mt-4 text-muted-foreground">No dietary information recorded for this date.</div>
-                )}
-
-            </>
-            ) : viewMode === 'summary' && summaryReport ? (
-                <>
-                    <h3 className="text-lg font-semibold mt-4">
-                    Summary Report (Based on {formattedReportDisplayDate})
-                    </h3>
-
-                    {/* Summary Meal Attendance Table */}
-                    <Card>
-                        <CardHeader className="pb-1 pt-4">
-                            <CardTitle className="text-base font-semibold">Meal Attendance Summary</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-4 pt-0">
-                            <Table>
-                            <TableHeader>
-                                <TableRow>
-                                <TableHead>Meal</TableHead>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Present</TableHead>
-                                <TableHead>Packed</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                <TableRow>
-                                <TableCell>Lunch</TableCell>
-                                <TableCell>{summaryReport.dates.nextDay}</TableCell>
-                                <TableCell><CountWithPopover detail={summaryReport.mealAttendance.lunchNextDay.present} /></TableCell>
-                                <TableCell><CountWithPopover detail={summaryReport.mealAttendance.lunchNextDay.packed} /></TableCell>
-                                </TableRow>
-                                <TableRow>
-                                <TableCell>Dinner</TableCell>
-                                <TableCell>{summaryReport.dates.nextDay}</TableCell>
-                                    <TableCell><CountWithPopover detail={summaryReport.mealAttendance.dinnerNextDay.present} /></TableCell>
-                                <TableCell><CountWithPopover detail={summaryReport.mealAttendance.dinnerNextDay.packed} /></TableCell>
-                                </TableRow>
-                                <TableRow>
-                                <TableCell>Breakfast</TableCell>
-                                <TableCell>{summaryReport.dates.dayAfter}</TableCell>
-                                <TableCell><CountWithPopover detail={summaryReport.mealAttendance.breakfastDayAfter.present} /></TableCell>
-                                <TableCell><CountWithPopover detail={summaryReport.mealAttendance.breakfastDayAfter.packed} /></TableCell>
-                                </TableRow>
-                            </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-
-                    {/* Summary Dietary Attendance (Present) */}
-                    {Object.keys(summaryReport.dietCountsPresent).length > 0 && (
-                    <Card className="mt-4">
-                        <CardHeader className="pb-1 pt-4">
-                            <CardTitle className="text-base font-semibold">Dietary Attendance Summary (Present)</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-4 pt-0">
-                            <Table>
+                {loading ? (
+                    <div className="flex justify-center items-center py-10">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                ) : (
+                    <>
+                        {/* Daily View Content */}
+                        <TabsContent value="daily">
+                            <h3 className="text-lg font-semibold mt-4">
+                                Daily Report for {formattedReportDisplayDate}
+                            </h3>
+                            {/* Daily Meal Attendance Table */}
+                            <Card>
+                            <CardHeader className="pb-1 pt-4">
+                                <CardTitle className="text-base font-semibold">Meal Attendance</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-0">
+                                <Table>
                                 <TableHeader>
-                                <TableRow>
-                                    <TableHead>Diet</TableHead>
-                                    <TableHead>Lunch ({summaryReport.dates.nextDay})</TableHead>
-                                    <TableHead>Dinner ({summaryReport.dates.nextDay})</TableHead>
-                                    <TableHead>Breakfast ({summaryReport.dates.dayAfter})</TableHead>
-                                </TableRow>
+                                    <TableRow>
+                                    <TableHead className="w-[100px]">Meal</TableHead>
+                                    <TableHead>Present</TableHead>
+                                    <TableHead>Packed</TableHead>
+                                    </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                {Object.entries(summaryReport.dietCountsPresent).map(([diet, counts]) => (
-                                    <TableRow key={diet}>
-                                    <TableCell>{diet}</TableCell>
-                                    <TableCell><CountWithPopover detail={counts.lunch} /></TableCell>
-                                    <TableCell><CountWithPopover detail={counts.dinner} /></TableCell>
-                                    <TableCell><CountWithPopover detail={counts.breakfast} /></TableCell>
+                                    <TableRow>
+                                    <TableCell>Breakfast</TableCell>
+                                    <TableCell><CountWithPopover detail={dailyReport.attendancePresent.breakfast} /></TableCell>
+                                    <TableCell><CountWithPopover detail={dailyReport.attendancePacked.breakfast} /></TableCell>
                                     </TableRow>
-                                ))}
+                                    <TableRow>
+                                    <TableCell>Lunch</TableCell>
+                                    <TableCell><CountWithPopover detail={dailyReport.attendancePresent.lunch} /></TableCell>
+                                    <TableCell><CountWithPopover detail={dailyReport.attendancePacked.lunch} /></TableCell>
+                                    </TableRow>
+                                    <TableRow>
+                                    <TableCell>Dinner</TableCell>
+                                    <TableCell><CountWithPopover detail={dailyReport.attendancePresent.dinner} /></TableCell>
+                                    <TableCell><CountWithPopover detail={dailyReport.attendancePacked.dinner} /></TableCell>
+                                    </TableRow>
                                 </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                    )}
+                                </Table>
+                            </CardContent>
+                            </Card>
 
-                    {/* Summary Dietary Attendance (Packed) */}
-                    {Object.keys(summaryReport.dietCountsPacked).length > 0 && (
-                    <Card className="mt-4">
-                        <CardHeader className="pb-1 pt-4">
-                            <CardTitle className="text-base font-semibold">Dietary Attendance Summary (Packed)</CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-4 pt-0">
-                            <Table>
-                                <TableHeader>
-                                <TableRow>
-                                    <TableHead>Diet</TableHead>
-                                    <TableHead>Lunch ({summaryReport.dates.nextDay})</TableHead>
-                                    <TableHead>Dinner ({summaryReport.dates.nextDay})</TableHead>
-                                    <TableHead>Breakfast ({summaryReport.dates.dayAfter})</TableHead>
-                                </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                {Object.entries(summaryReport.dietCountsPacked).map(([diet, counts]) => (
-                                    <TableRow key={diet}>
-                                    <TableCell>{diet}</TableCell>
-                                    <TableCell><CountWithPopover detail={counts.lunch} /></TableCell>
-                                    <TableCell><CountWithPopover detail={counts.dinner} /></TableCell>
-                                    <TableCell><CountWithPopover detail={counts.breakfast} /></TableCell>
+                            {/* Daily Diet Label Counts (Present) */}
+                            {Object.keys(dailyReport.dietCountsPresent).length > 0 && (
+                            <Card className="mt-4">
+                                <CardHeader className="pb-1 pt-4">
+                                    <CardTitle className="text-base font-semibold">Dietary Attendance (Present)</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4 pt-0">
+                                <Table>
+                                    <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Diet</TableHead>
+                                        <TableHead>Breakfast</TableHead>
+                                        <TableHead>Lunch</TableHead>
+                                        <TableHead>Dinner</TableHead>
                                     </TableRow>
-                                ))}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                    )}
-                    {!Object.keys(summaryReport.dietCountsPresent).length && !Object.keys(summaryReport.dietCountsPacked).length && (
-                        <div className="mt-4 text-muted-foreground">No summary dietary information available for these dates.</div>
-                    )}
-                </>
-            ) : (
-                <div className="mt-4">No data available for the selected view or an error occurred.</div>
-            )}
+                                    </TableHeader>
+                                    <TableBody>
+                                    {Object.entries(dailyReport.dietCountsPresent).map(([diet, counts]) => (
+                                        <TableRow key={diet}>
+                                        <TableCell>{diet}</TableCell>
+                                        <TableCell><CountWithPopover detail={counts.breakfast} /></TableCell>
+                                        <TableCell><CountWithPopover detail={counts.lunch} /></TableCell>
+                                        <TableCell><CountWithPopover detail={counts.dinner} /></TableCell>
+                                        </TableRow>
+                                    ))}
+                                    </TableBody>
+                                </Table>
+                                </CardContent>
+                            </Card>
+                            )}
+
+
+                            {/* Daily Diet Label Counts (Packed) */}
+                            {Object.keys(dailyReport.dietCountsPacked).length > 0 && (
+                            <Card className="mt-4">
+                                <CardHeader className="pb-1 pt-4">
+                                    <CardTitle className="text-base font-semibold">Dietary Attendance (Packed)</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-4 pt-0">
+                                <Table>
+                                    <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Diet</TableHead>
+                                        <TableHead>Breakfast</TableHead>
+                                        <TableHead>Lunch</TableHead>
+                                        <TableHead>Dinner</TableHead>
+                                    </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                    {Object.entries(dailyReport.dietCountsPacked).map(([diet, counts]) => (
+                                        <TableRow key={diet}>
+                                        <TableCell>{diet}</TableCell>
+                                        <TableCell><CountWithPopover detail={counts.breakfast} /></TableCell>
+                                        <TableCell><CountWithPopover detail={counts.lunch} /></TableCell>
+                                        <TableCell><CountWithPopover detail={counts.dinner} /></TableCell>
+                                        </TableRow>
+                                    ))}
+                                    </TableBody>
+                                </Table>
+                                </CardContent>
+                            </Card>
+                            )}
+                            {!Object.keys(dailyReport.dietCountsPresent).length && !Object.keys(dailyReport.dietCountsPacked).length && (
+                                <div className="mt-4 text-muted-foreground">No dietary information recorded for this date.</div>
+                            )}
+                        </TabsContent>
+
+                        {/* Summary View Content */}
+                        <TabsContent value="summary">
+                            {summaryReport ? (
+                                <>
+                                    <h3 className="text-lg font-semibold mt-4">
+                                    Summary Report (Based on {formattedReportDisplayDate})
+                                    </h3>
+
+                                    {/* Summary Meal Attendance Table */}
+                                    <Card>
+                                        <CardHeader className="pb-1 pt-4">
+                                            <CardTitle className="text-base font-semibold">Meal Attendance Summary</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-4 pt-0">
+                                            <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                <TableHead>Meal</TableHead>
+                                                <TableHead>Date</TableHead>
+                                                <TableHead>Present</TableHead>
+                                                <TableHead>Packed</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                <TableRow>
+                                                <TableCell>Lunch</TableCell>
+                                                <TableCell>{summaryReport.dates.nextDay}</TableCell>
+                                                <TableCell><CountWithPopover detail={summaryReport.mealAttendance.lunchNextDay.present} /></TableCell>
+                                                <TableCell><CountWithPopover detail={summaryReport.mealAttendance.lunchNextDay.packed} /></TableCell>
+                                                </TableRow>
+                                                <TableRow>
+                                                <TableCell>Dinner</TableCell>
+                                                <TableCell>{summaryReport.dates.nextDay}</TableCell>
+                                                    <TableCell><CountWithPopover detail={summaryReport.mealAttendance.dinnerNextDay.present} /></TableCell>
+                                                <TableCell><CountWithPopover detail={summaryReport.mealAttendance.dinnerNextDay.packed} /></TableCell>
+                                                </TableRow>
+                                                <TableRow>
+                                                <TableCell>Breakfast</TableCell>
+                                                <TableCell>{summaryReport.dates.dayAfter}</TableCell>
+                                                <TableCell><CountWithPopover detail={summaryReport.mealAttendance.breakfastDayAfter.present} /></TableCell>
+                                                <TableCell><CountWithPopover detail={summaryReport.mealAttendance.breakfastDayAfter.packed} /></TableCell>
+                                                </TableRow>
+                                            </TableBody>
+                                            </Table>
+                                        </CardContent>
+                                    </Card>
+
+                                    {/* Summary Dietary Attendance (Present) */}
+                                    {Object.keys(summaryReport.dietCountsPresent).length > 0 && (
+                                    <Card className="mt-4">
+                                        <CardHeader className="pb-1 pt-4">
+                                            <CardTitle className="text-base font-semibold">Dietary Attendance Summary (Present)</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-4 pt-0">
+                                            <Table>
+                                                <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Diet</TableHead>
+                                                    <TableHead>Lunch ({summaryReport.dates.nextDay})</TableHead>
+                                                    <TableHead>Dinner ({summaryReport.dates.nextDay})</TableHead>
+                                                    <TableHead>Breakfast ({summaryReport.dates.dayAfter})</TableHead>
+                                                </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                {Object.entries(summaryReport.dietCountsPresent).map(([diet, counts]) => (
+                                                    <TableRow key={diet}>
+                                                    <TableCell>{diet}</TableCell>
+                                                    <TableCell><CountWithPopover detail={counts.lunch} /></TableCell>
+                                                    <TableCell><CountWithPopover detail={counts.dinner} /></TableCell>
+                                                    <TableCell><CountWithPopover detail={counts.breakfast} /></TableCell>
+                                                    </TableRow>
+                                                ))}
+                                                </TableBody>
+                                            </Table>
+                                        </CardContent>
+                                    </Card>
+                                    )}
+
+                                    {/* Summary Dietary Attendance (Packed) */}
+                                    {Object.keys(summaryReport.dietCountsPacked).length > 0 && (
+                                    <Card className="mt-4">
+                                        <CardHeader className="pb-1 pt-4">
+                                            <CardTitle className="text-base font-semibold">Dietary Attendance Summary (Packed)</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-4 pt-0">
+                                            <Table>
+                                                <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Diet</TableHead>
+                                                    <TableHead>Lunch ({summaryReport.dates.nextDay})</TableHead>
+                                                    <TableHead>Dinner ({summaryReport.dates.nextDay})</TableHead>
+                                                    <TableHead>Breakfast ({summaryReport.dates.dayAfter})</TableHead>
+                                                </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                {Object.entries(summaryReport.dietCountsPacked).map(([diet, counts]) => (
+                                                    <TableRow key={diet}>
+                                                    <TableCell>{diet}</TableCell>
+                                                    <TableCell><CountWithPopover detail={counts.lunch} /></TableCell>
+                                                    <TableCell><CountWithPopover detail={counts.dinner} /></TableCell>
+                                                    <TableCell><CountWithPopover detail={counts.breakfast} /></TableCell>
+                                                    </TableRow>
+                                                ))}
+                                                </TableBody>
+                                            </Table>
+                                        </CardContent>
+                                    </Card>
+                                    )}
+                                    {!Object.keys(summaryReport.dietCountsPresent).length && !Object.keys(summaryReport.dietCountsPacked).length && (
+                                        <div className="mt-4 text-muted-foreground">No summary dietary information available for these dates.</div>
+                                    )}
+                                </>
+                             ) : (
+                                <div className="mt-4">No summary data available for the selected date range or an error occurred.</div>
+                            )}
+                        </TabsContent>
+                    </>
+                )}
+            </Tabs>
         </section>
         </CardContent>
     </Card>
@@ -558,3 +530,5 @@ const DailyReportPage = () => {
 };
 
 export default DailyReportPage;
+
+    
