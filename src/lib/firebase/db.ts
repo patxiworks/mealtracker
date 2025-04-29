@@ -1,8 +1,8 @@
 // src/lib/firebase/db.ts
 import { db } from './firebase';
-import { doc, setDoc, getDoc, updateDoc, Timestamp } from 'firebase/firestore'; // Added Timestamp
+import { doc, setDoc, getDoc, updateDoc, Timestamp } from 'firebase/firestore';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { format } from 'date-fns'; // Added for date formatting
+import { format, isWithinInterval, addDays, startOfDay, getMonth, getDate, getYear } from 'date-fns'; // Added date-fns functions
 
 const USERS_COLLECTION = 'users';
 const DIETS_COLLECTION = 'diets'; // Added diets collection constant
@@ -68,9 +68,36 @@ export interface DietInfo {
 // Interface for Birthday Information
 export interface BirthdayInfo {
     initials: string;
-    birthday: string; // Formatted as "MMM dd"
+    birthday: string; // Formatted as "MMMM dd" (e.g., "January 01")
     sortKey: string; // For sorting (e.g., "01-01" for Jan 1st)
+    isUpcoming: boolean; // True if birthday is within the next 14 days
 }
+
+// Helper function to check if a birthday is within the next 14 days
+const isBirthdayUpcoming = (birthdayDate: Date): boolean => {
+    const today = startOfDay(new Date());
+    const twoWeeksFromNow = addDays(today, 14);
+    const currentYear = getYear(today);
+
+    // Create a date object for the birthday in the current year
+    const birthdayThisYear = new Date(currentYear, getMonth(birthdayDate), getDate(birthdayDate));
+
+    // Create a date object for the birthday in the next year if it already passed this year
+    const birthdayNextYear = new Date(currentYear + 1, getMonth(birthdayDate), getDate(birthdayDate));
+
+    // Check if the birthday falls within the interval [today, today + 14 days]
+    // Check this year first
+    if (isWithinInterval(birthdayThisYear, { start: today, end: twoWeeksFromNow })) {
+        return true;
+    }
+    // If it already passed this year, check next year's occurrence
+    if (birthdayThisYear < today && isWithinInterval(birthdayNextYear, { start: today, end: twoWeeksFromNow })) {
+        return true;
+    }
+
+    return false;
+};
+
 
 // Function to create user meal attendance data
 export const createUserMealAttendance = async (
@@ -96,25 +123,33 @@ export const createUserMealAttendance = async (
         });
         console.log('User meal attendance created successfully');
     } else {
-        // Update existing user's diet and centre if needed
-        // Only update fields that are explicitly provided or need initialization
+        // User exists, check if we need to update non-attendance fields
         const updateData: Partial<UserData> = {};
-        if (diet !== undefined) updateData.diet = diet;
-        if (centre !== undefined) updateData.centre = centre;
-        if (username !== undefined) updateData.name = username; // Update name if provided? Usually username is key
-        // Do not overwrite existing mealAttendance unless explicitly intended
+        if (diet !== undefined && diet !== userData?.diet) {
+            updateData.diet = diet;
+        }
+        if (centre !== undefined && centre !== userData?.centre) {
+             updateData.centre = centre;
+        }
+        // Update name only if provided and different? Usually name is tied to username (key).
+        // if (username !== undefined && username !== userData?.name) updateData.name = username;
+
+        // Update existing mealAttendance by merging - THIS PART WAS WRONG, should only update non-attendance fields here
+        // The meal attendance should be updated separately by updateUserMealAttendance
+        // Do NOT overwrite existing mealAttendance here unless explicitly intended.
+        // The initialAttendance passed here is only relevant if the user *doesn't* exist.
 
         if (Object.keys(updateData).length > 0) {
             await updateDoc(userDocRef, updateData);
-            console.log('User data updated.');
+            console.log('User non-attendance data updated.');
         } else {
-             console.log('No new data provided to update user.');
+             console.log('User exists and no non-attendance data provided to update.');
         }
     }
 
 
   } catch (error) {
-    console.error('Error creating/updating user meal attendance:', error);
+    console.error('Error creating/updating user data:', error);
     throw error;
   }
 };
@@ -356,6 +391,8 @@ export const getUsersBirthdays = async (centre: string): Promise<BirthdayInfo[]>
                     birthdayDate = userData.birthday.toDate();
                 } else if (typeof userData.birthday === 'string') {
                     try {
+                        // Attempt to parse common formats, adjust if needed
+                        // Example: 'YYYY-MM-DD', 'MM/DD/YYYY', 'Month DD, YYYY'
                         birthdayDate = new Date(userData.birthday);
                         // Basic validation if it's a string date
                         if (isNaN(birthdayDate.getTime())) {
@@ -369,12 +406,14 @@ export const getUsersBirthdays = async (centre: string): Promise<BirthdayInfo[]>
                 }
 
                 if (birthdayDate) {
-                    const formattedBirthday = format(birthdayDate, 'MMM dd');
+                    const formattedBirthday = format(birthdayDate, 'MMMM dd'); // Format as "Month Day" (e.g., "January 01")
                     const sortKey = format(birthdayDate, 'MM-dd'); // Use MM-dd for reliable sorting
+                    const isUpcoming = isBirthdayUpcoming(birthdayDate); // Check if upcoming
                      birthdays.push({
                         initials,
                         birthday: formattedBirthday,
                         sortKey,
+                        isUpcoming, // Add the upcoming status
                     });
                 }
             } else if (userData.birthday && !userData.initials) {

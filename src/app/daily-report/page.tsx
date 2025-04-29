@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { getDailyReportData, getUserAttendanceForDate, getDietsData, getUsersBirthdays } from "@/lib/firebase/db"; // Added getDietsData, getUsersBirthdays
 import type { DailyReportDataWithUsers, MealAttendanceDetail, DietCountsDetail, MealAttendanceState, DietInfo, BirthdayInfo } from "@/lib/firebase/db"; // Added MealAttendanceState, DietInfo, BirthdayInfo
-import { CalendarCheck2, CalendarIcon, HomeIcon, Loader2, Sun, Utensils, Moon, PackageCheck, X, Check, NotebookText, Cake } from "lucide-react"; // Added Loader2, Sun, Utensils, Moon, PackageCheck, X, Check, NotebookText, Cake
+import { CalendarCheck2, CalendarIcon, HomeIcon, Loader2, Sun, Utensils, Moon, PackageCheck, X, Check, NotebookText, Cake, Gift } from "lucide-react"; // Added Loader2, Sun, Utensils, Moon, PackageCheck, X, Check, NotebookText, Cake, Gift
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Define the meal status type locally for getMealStatusIcon if needed, or rely on import
@@ -719,6 +719,7 @@ const DailyReportPage = () => {
                                                 <TableRow>
                                                     <TableHead className="w-[80px]">Initials</TableHead>
                                                     <TableHead>Birthday</TableHead>
+                                                    <TableHead className="w-[80px] text-center">Upcoming</TableHead> {/* Added Upcoming column */}
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -726,6 +727,9 @@ const DailyReportPage = () => {
                                                     <TableRow key={`${user.initials}-${index}`}>
                                                         <TableCell className="font-medium">{user.initials}</TableCell>
                                                         <TableCell>{user.birthday}</TableCell>
+                                                        <TableCell className="text-center">
+                                                            {user.isUpcoming && <Gift className="h-5 w-5 text-primary inline-block" />} {/* Conditionally render Gift icon */}
+                                                        </TableCell>
                                                     </TableRow>
                                                 ))}
                                             </TableBody>
@@ -747,4 +751,3 @@ const DailyReportPage = () => {
 };
 
 export default DailyReportPage;
-
