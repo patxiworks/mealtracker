@@ -88,7 +88,7 @@ const formatPickerDate = (date: Date): string => {
 
 // --- Popover Component for Click Interaction ---
 const CountWithPopover = ({ detail }: { detail: MealAttendanceDetail }) => {
-  if (detail.count === 0) {
+  if (!detail || detail.count === 0) {
     return <span>0</span>;
   }
   return (
@@ -231,22 +231,26 @@ const DailyReportPage = () => {
         };
 
         // Aggregate Diet Counts (Present & Packed)
-        const allDiets = new Set<string>([
-            ...Object.keys(reportNextDay.dietCountsPresent),
-            ...Object.keys(reportDayAfter.dietCountsPresent),
-            ...Object.keys(reportNextDay.dietCountsPacked),
-            ...Object.keys(reportDayAfter.dietCountsPacked)
-        ]);
+        const allDiets = new Set<string>();
+        // Collect all unique diet keys from both present and packed counts for both days
+        [
+            reportNextDay.dietCountsPresent,
+            reportDayAfter.dietCountsPresent,
+            reportNextDay.dietCountsPacked,
+            reportDayAfter.dietCountsPacked
+        ].forEach(dietCountObj => {
+            Object.keys(dietCountObj).forEach(diet => allDiets.add(diet));
+        });
+
 
         allDiets.forEach(diet => {
-            // Present
+            // Initialize Present counts for the diet
             processedSummaryData.dietCountsPresent[diet] = {
-                // We need MealAttendanceDetail structure here
                  breakfast: reportDayAfter.dietCountsPresent[diet]?.breakfast ?? initMealAttendanceDetail(), // Day After for Breakfast
                  lunch: reportNextDay.dietCountsPresent[diet]?.lunch ?? initMealAttendanceDetail(), // Next Day for Lunch
                  dinner: reportNextDay.dietCountsPresent[diet]?.dinner ?? initMealAttendanceDetail(), // Next Day for Dinner
             };
-             // Packed
+             // Initialize Packed counts for the diet
             processedSummaryData.dietCountsPacked[diet] = {
                  breakfast: reportDayAfter.dietCountsPacked[diet]?.breakfast ?? initMealAttendanceDetail(), // Day After for Breakfast
                  lunch: reportNextDay.dietCountsPacked[diet]?.lunch ?? initMealAttendanceDetail(), // Next Day for Lunch
@@ -424,9 +428,9 @@ const DailyReportPage = () => {
                                     {Object.entries(dailyReport.dietCountsPresent).map(([diet, counts]) => (
                                         <TableRow key={diet}>
                                         <TableCell>{diet}</TableCell>
-                                        <TableCell><CountWithPopover detail={counts.breakfast} /></TableCell>
-                                        <TableCell><CountWithPopover detail={counts.lunch} /></TableCell>
-                                        <TableCell><CountWithPopover detail={counts.dinner} /></TableCell>
+                                        <TableCell><CountWithPopover detail={counts?.breakfast} /></TableCell>
+                                        <TableCell><CountWithPopover detail={counts?.lunch} /></TableCell>
+                                        <TableCell><CountWithPopover detail={counts?.dinner} /></TableCell>
                                         </TableRow>
                                     ))}
                                     </TableBody>
@@ -456,9 +460,9 @@ const DailyReportPage = () => {
                                     {Object.entries(dailyReport.dietCountsPacked).map(([diet, counts]) => (
                                         <TableRow key={diet}>
                                         <TableCell>{diet}</TableCell>
-                                        <TableCell><CountWithPopover detail={counts.breakfast} /></TableCell>
-                                        <TableCell><CountWithPopover detail={counts.lunch} /></TableCell>
-                                        <TableCell><CountWithPopover detail={counts.dinner} /></TableCell>
+                                        <TableCell><CountWithPopover detail={counts?.breakfast} /></TableCell>
+                                        <TableCell><CountWithPopover detail={counts?.lunch} /></TableCell>
+                                        <TableCell><CountWithPopover detail={counts?.dinner} /></TableCell>
                                         </TableRow>
                                     ))}
                                     </TableBody>
@@ -538,9 +542,9 @@ const DailyReportPage = () => {
                                                 {Object.entries(summaryReport.dietCountsPresent).map(([diet, counts]) => (
                                                     <TableRow key={diet}>
                                                     <TableCell>{diet}</TableCell>
-                                                    <TableCell><CountWithPopover detail={counts.lunch} /></TableCell>
-                                                    <TableCell><CountWithPopover detail={counts.dinner} /></TableCell>
-                                                    <TableCell><CountWithPopover detail={counts.breakfast} /></TableCell>
+                                                    <TableCell><CountWithPopover detail={counts?.lunch} /></TableCell>
+                                                    <TableCell><CountWithPopover detail={counts?.dinner} /></TableCell>
+                                                    <TableCell><CountWithPopover detail={counts?.breakfast} /></TableCell>
                                                     </TableRow>
                                                 ))}
                                                 </TableBody>
@@ -569,9 +573,9 @@ const DailyReportPage = () => {
                                                 {Object.entries(summaryReport.dietCountsPacked).map(([diet, counts]) => (
                                                     <TableRow key={diet}>
                                                     <TableCell>{diet}</TableCell>
-                                                    <TableCell><CountWithPopover detail={counts.lunch} /></TableCell>
-                                                    <TableCell><CountWithPopover detail={counts.dinner} /></TableCell>
-                                                    <TableCell><CountWithPopover detail={counts.breakfast} /></TableCell>
+                                                    <TableCell><CountWithPopover detail={counts?.lunch} /></TableCell>
+                                                    <TableCell><CountWithPopover detail={counts?.dinner} /></TableCell>
+                                                    <TableCell><CountWithPopover detail={counts?.breakfast} /></TableCell>
                                                     </TableRow>
                                                 ))}
                                                 </TableBody>
@@ -639,9 +643,9 @@ const DailyReportPage = () => {
                                         </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                        {dietsData.sort((a, b) => a.id.localeCompare(b.id)).map((diet) => ( // Sort by ID for consistency
+                                        {dietsData.sort((a, b) => a.id.localeCompare(b.id)).map((diet) => (
                                             <TableRow key={diet.id}>
-                                                <TableCell className="font-medium">{diet.name || diet.id}</TableCell> {/* Show name or ID */}
+                                                <TableCell className="font-medium">{diet.name || diet.id}</TableCell>
                                                 <TableCell>{diet.description}</TableCell>
                                             </TableRow>
                                         ))}
@@ -664,3 +668,4 @@ const DailyReportPage = () => {
 };
 
 export default DailyReportPage;
+
