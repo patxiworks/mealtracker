@@ -56,7 +56,7 @@ const CentreSelectionPage = () => {
             </div>
           ) : centres.length > 0 ? (
              centres.sort((a, b) => a.name.localeCompare(b.name)).map(centre => ( // Sort centres alphabetically by name
-              <Button key={centre.id} onClick={() => handleCentreSelect(centre.id)} size="lg" variant="secondary"> {/* Use centre name for button label */}
+              <Button key={centre.id} onClick={() => handleCentreSelect(centre.id)} size="lg"> {/* Use centre name for button label */}
                 {centre.name}
               </Button>
             ))
