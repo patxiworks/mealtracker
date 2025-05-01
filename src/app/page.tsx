@@ -64,6 +64,19 @@ const MealCheckin = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+      // Request notification permission from the user
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+          Notification.requestPermission().then(permission => {
+              if (permission === 'granted') {
+                  console.log('Notification permission granted.');
+              } else {
+                  console.log('Notification permission denied.');
+              }
+          });
+      }
+  }, []);
+  
+  useEffect(() => {
     // Check if a centre is selected
     const selectedCentre = localStorage.getItem('selectedCentre');
     if (!selectedCentre) {

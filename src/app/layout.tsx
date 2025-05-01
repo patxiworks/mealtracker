@@ -1,4 +1,4 @@
-import type {Metadata} from 'next';
+import type { Metadata } from 'next';
 import {Geist, Geist_Mono} from 'next/font/google';
 import './globals.css';
 
@@ -17,15 +17,27 @@ export const metadata: Metadata = {
   description: 'Are you present at breakfast/lunch/dinner today?',
 };
 
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased  bg-[#e0e7fc]`}>
-        {children}
+      <link rel="manifest" href="/manifest.json" />
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased  bg-[#e0e7fc]`}
+      >
+        {typeof window !== 'undefined' && (
+          <script>
+            {`if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.register('/service-worker.js');
+            }`}
+          </script>
+        )}
+        {children} 
       </body>
     </html>
   );
