@@ -17,6 +17,7 @@ import {
 } from '@/lib/firebase/db';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { registerForPushNotifications } from '@/lib/utils';
 
 // Format date as "MMM dd, yyyy" for database keys and general storage
 const formatDateForKey = (date: Date): string => {
@@ -69,12 +70,14 @@ const MealCheckin = () => {
           Notification.requestPermission().then(permission => {
               if (permission === 'granted') {
                   console.log('Notification permission granted.');
+                  registerForPushNotifications()
               } else {
                   console.log('Notification permission denied.');
+                  console.log(permission)
               }
           });
-      }
-  }, []);
+      } 
+  }, [username]);
   
   useEffect(() => {
     // Check if a centre is selected
