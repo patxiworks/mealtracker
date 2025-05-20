@@ -9,16 +9,20 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'register-push') {
+    //console.log(process.env.MESSAGING_APPLICATION_SERVER_KEY)
     self.registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: "BDXf9wP75wX-i6fH349g4v9xQ0sYp89l6_71pTqZcM4z289gR9Q84dD017e46Gq5lGzI804hF16r69G9tI"
+      applicationServerKey: "BG2l6SHlAlY0y2-VScR3WEMuOgvZfoXrvqFTNMVqdSCh7I-fZN4LPezazfebEtmvmjDRc9QG6ItXhGVTuFwGhqY"
     }).then((subscription) => {
       self.clients.matchAll().then(clients => {
         clients.forEach(client => {
           // Send the subscription back to the client
           client.postMessage({
             type: 'push-subscription',
-            payload: subscription
+            payload: {
+              endpoint: subscription.endpoint,
+              keys: subscription.toJSON().keys
+            }
           });
         })
       })
@@ -30,7 +34,11 @@ self.addEventListener('message', (event) => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(subscription),
+        //body: JSON.stringify(subscription),
+        body: JSON.stringify({
+          pushSubscription: subscription,
+          userId: 'Patrick Enaholo'
+        }),
       }).catch(error => {
         console.error('Error sending push subscription to server:', error);
       });

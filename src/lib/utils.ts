@@ -10,7 +10,6 @@ export async function registerForPushNotifications() {
     navigator.serviceWorker.ready.then(registration => {
       if (registration.active) {
         registration.active.postMessage({ type: 'register-push' });
-        console.log("Successful registration");
         
         navigator.serviceWorker.addEventListener('message', event => {
           console.log("Type: "+event.data.type);
