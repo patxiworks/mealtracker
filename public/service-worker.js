@@ -21,7 +21,8 @@ self.addEventListener('message', (event) => {
             type: 'push-subscription',
             payload: {
               endpoint: subscription.endpoint,
-              keys: subscription.toJSON().keys
+              keys: subscription.toJSON().keys,
+              date: new Date()
             }
           });
         })
