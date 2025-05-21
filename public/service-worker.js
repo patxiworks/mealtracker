@@ -16,6 +16,7 @@ self.addEventListener('message', (event) => {
     }).then((subscription) => {
       self.clients.matchAll().then(clients => {
         clients.forEach(client => {
+          console.log(subscription)
           // Send the subscription back to the client
           client.postMessage({
             type: 'push-subscription',
