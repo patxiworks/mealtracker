@@ -10,7 +10,7 @@ const firebaseConfig = {
   authDomain: "mealtime-tracker.firebaseapp.com",
   projectId: "mealtime-tracker",
   storageBucket: "mealtime-tracker.firebasestorage.app",
-  messagingSenderId: 329350250908,
+  messagingSenderId: "329350250908",
   appId: "1:329350250908:web:fb304732f6976a78fa4859"
 };
 firebase.initializeApp(firebaseConfig);
