@@ -1,4 +1,23 @@
 // This service worker is used to manage push messages
+
+// Import Firebase and Firebase Messaging
+importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js');
+
+// Initialize Firebase (use your actual config)
+const firebaseConfig = {
+  apiKey: "AIzaSyA5f-G8LXvQtskk-wswEawmgHswkaw8TFA",
+  authDomain: "mealtime-tracker.firebaseapp.com",
+  projectId: "mealtime-tracker",
+  storageBucket: "mealtime-tracker.firebasestorage.app",
+  messagingSenderId: 329350250908,
+  appId: "1:329350250908:web:fb304732f6976a78fa4859"
+};
+firebase.initializeApp(firebaseConfig);
+
+const messaging = firebase.messaging();
+
+
 self.addEventListener('push', (event) => {
   const title = 'New Notification';
   const body = 'You have a new notification!';
@@ -49,4 +68,32 @@ self.addEventListener('message', (event) => {
     }); 
   }
 })
-// public/service-worker.js
+
+// Handle token refresh
+messaging.onTokenRefresh(() => {
+  messaging.getToken().then((refreshedToken) => {
+    console.log('Token refreshed: '+refreshedToken);
+
+    // Get the updated subscription
+    self.registration.pushManager.getSubscription().then(subscription => {
+      if (subscription) {
+        // Send the updated subscription to your backend
+        fetch('https://us-central1-mealtime-tracker.cloudfunctions.net/subscribe', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            pushSubscription: subscription, // Send the updated subscription
+            userId: 'Patrick Enaholo' // Make sure to include the user ID
+          }),
+        }).catch(error => {
+          console.error('Error sending refreshed subscription to server:', error);
+        });
+      }
+    });
+
+  }).catch((err) => {
+    console.error('Unable to retrieve refreshed token ', err);
+  });
+});
