@@ -18,13 +18,14 @@ firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
 
-self.addEventListener('push', (event) => {
-  const title = 'New Notification';
-  const body = 'You have a new notification!';
-  event.waitUntil(
-    self.registration.showNotification(title, { body })
-  );
-}); 
+// self.addEventListener('push', (event) => {
+//   console.log(e)
+//   const title = 'New Notification';
+//   const body = 'You have a new notification!';
+//   event.waitUntil(
+//     self.registration.showNotification(title, { body })
+//   );
+// }); 
 
 // Message Listener for Push Subscription: Listens for message events. 
 // When a message with the type 'register-push' is received (likely from the client-side of the application), it triggers the process of subscribing the user to push notifications
