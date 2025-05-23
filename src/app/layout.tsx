@@ -32,7 +32,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased  bg-[#e0e7fc]`}
       >
-        <RegisterSW />
+        {/*<RegisterSW />
         {typeof window !== 'undefined' && (
           <script>
             {`console.log('Service worker registered.');
@@ -40,7 +40,7 @@ export default function RootLayout({
               navigator.serviceWorker.register('/service-worker.js');
             }`}
           </script>
-        )}
+        )}*/}
         {children} 
       </body>
     </html>
