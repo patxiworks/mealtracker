@@ -108,10 +108,10 @@ const messaging = firebase.messaging();
 //   });
 // });
 
-// messaging.onMessage((payload) => {
-//   console.log('[SW] Received message', payload)
-//   alert('Please tick for the next two days (at least)!')
-// });
+messaging.onMessage((payload) => {
+  console.log('[SW] Received message', payload)
+  alert('Please tick for the next two days (at least)!')
+});
 
 messaging.onBackgroundMessage((payload) => {
   console.log('[SW] Received background message', payload);
