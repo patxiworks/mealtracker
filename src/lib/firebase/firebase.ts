@@ -18,7 +18,9 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-export const db = getFirestore(app);
+const db = getFirestore(app);
+
+export { app, db }
 
 // Enable offline persistence
 enableIndexedDbPersistence(db)

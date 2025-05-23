@@ -18,6 +18,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { registerForPushNotifications } from '@/lib/utils';
+import useFCM from '@/hooks/use-fcm';
 
 // Format date as "MMM dd, yyyy" for database keys and general storage
 const formatDateForKey = (date: Date): string => {
@@ -64,20 +65,23 @@ const MealCheckin = () => {
   const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({}); // Track loading state per meal box
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-      // Request notification permission from the user
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-          Notification.requestPermission().then(permission => {
-              if (permission === 'granted') {
-                  console.log('Notification permission granted.');
-                  registerForPushNotifications()
-              } else {
-                  console.log('Notification permission denied.');
-                  console.log(permission)
-              }
-          });
-      } 
-  }, [username]);
+  // useEffect(() => {
+  //     // Request notification permission from the user
+  //     if (typeof window !== 'undefined' && 'Notification' in window) {
+  //         Notification.requestPermission().then(permission => {
+  //             if (permission === 'granted') {
+  //                 console.log('Notification permission granted.');
+  //                 registerForPushNotifications()
+  //             } else {
+  //                 console.log('Notification permission denied.');
+  //                 console.log(permission)
+  //             }
+  //         });
+  //     } 
+      
+  // }, [username]);
+
+  useFCM(username);
   
   useEffect(() => {
     // Check if a centre is selected
