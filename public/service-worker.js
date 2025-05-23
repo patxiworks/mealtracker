@@ -108,13 +108,18 @@ const messaging = firebase.messaging();
 //   });
 // });
 
+messaging.onMessage((payload) => {
+  console.log('[SW] Received message', payload)
+  alert('Please tick for the next two days (at least)!')
+});
+
 messaging.onBackgroundMessage((payload) => {
   console.log('[SW] Received background message', payload);
   // Customize notification
-  const notificationTitle = payload.notification?.title || 'New Message';
+  const notificationTitle = payload.notification?.title || 'Meal Sheet Reminder';
   const notificationOptions = {
-    body: payload.notification?.body || '',
-    //icon: '/icons/icon-192x192.png',
+    body: payload.notification?.body || 'Please tick for the next two days',
+    icon: '/mealtracker.png',
     data: { url: payload.data?.url } // For handling clicks
   };
   
