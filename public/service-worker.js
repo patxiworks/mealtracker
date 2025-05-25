@@ -114,8 +114,6 @@ messaging.onMessage((payload) => {
 });
 
 messaging.onBackgroundMessage((payload) => {
-  const messageId = payload.messageId || payload.data?.messageId;
-
   console.log('[SW] Received background message', payload);
   // Customize notification
   const notificationTitle = payload.notification?.title || 'Mealtracker Reminder';
