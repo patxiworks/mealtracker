@@ -10,9 +10,15 @@ export default function useFCM(username: string | null) {
       try {
         if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
 
-          const registration = await navigator.serviceWorker.register('/service-worker.js', {
-            scope: '/'
-          });
+          // Get existing registration first
+          let registration = await navigator.serviceWorker.getRegistration('/');
+
+            // Register only if not already exists
+          if (!registration) {
+            registration = await navigator.serviceWorker.register('/service-worker.js', {
+              scope: '/'
+            });
+          }
 
           const messaging = getMessaging(app);
           
@@ -41,10 +47,10 @@ export default function useFCM(username: string | null) {
             }
 
             // Handle incoming messages
-            onMessage(messaging, (payload) => {
-              console.log('Message received:', payload);
+            //onMessage(messaging, (payload) => {
+              //console.log('Message received:', payload);
               // Display notification or update UI
-            });
+            //});
           } else {
             console.log('Notification permission denied.');
             console.log(permission)
