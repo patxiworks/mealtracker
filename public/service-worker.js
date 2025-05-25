@@ -114,6 +114,23 @@ messaging.onMessage((payload) => {
 });
 
 messaging.onBackgroundMessage((payload) => {
+  const messageId = payload.messageId || payload.data?.messageId;
+  
+  // Skip if already processed
+  if (messageId && processedMessages.has(messageId)) {
+    console.log('[SW] Duplicate message skipped:', messageId);
+    return;
+  }
+
+  if (messageId) {
+    processedMessages.add(messageId);
+    // Clean up old messages to prevent memory leaks
+    if (processedMessages.size > 100) {
+      const first = processedMessages.values().next().value;
+      processedMessages.delete(first);
+    }
+  }
+
   console.log('[SW] Received background message', payload);
   // Customize notification
   const notificationTitle = payload.notification?.title || 'Mealtracker Reminder';
