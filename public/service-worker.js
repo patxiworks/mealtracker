@@ -113,32 +113,32 @@ const messaging = firebase.messaging();
 //   alert('Please tick for the next two days (at least)!')
 // });
 
-// messaging.onBackgroundMessage((payload) => {
-//   const messageId = payload.messageId || payload.data?.messageId;
+messaging.onBackgroundMessage((payload) => {
+  //const messageId = payload.messageId || payload.data?.messageId;
   
-//   // Skip if already processed
-//   if (messageId && processedMessages.has(messageId)) {
-//     console.log('[SW] Duplicate message skipped:', messageId);
-//     return;
-//   }
+  // Skip if already processed
+  // if (messageId && processedMessages.has(messageId)) {
+  //   console.log('[SW] Duplicate message skipped:', messageId);
+  //   return;
+  // }
 
-//   if (messageId) {
-//     processedMessages.add(messageId);
-//     // Clean up old messages to prevent memory leaks
-//     if (processedMessages.size > 100) {
-//       const first = processedMessages.values().next().value;
-//       processedMessages.delete(first);
-//     }
-//   }
+  // if (messageId) {
+  //   processedMessages.add(messageId);
+  //   // Clean up old messages to prevent memory leaks
+  //   if (processedMessages.size > 100) {
+  //     const first = processedMessages.values().next().value;
+  //     processedMessages.delete(first);
+  //   }
+  // }
 
-//   console.log('[SW] Received background message', payload);
-//   // Customize notification
-//   const notificationTitle = payload.notification?.title || 'Mealtracker Reminder';
-//   const notificationOptions = {
-//     body: payload.notification?.body || 'Please tick for the next two days',
-//     icon: './mealtracker.png',
-//     //data: { url: payload.data?.url } // For handling clicks
-//   };
+  console.log('[SW] Received background message', payload);
+  // Customize notification
+  const notificationTitle = payload.notification?.title || 'Mealtick Reminder';
+  const notificationOptions = {
+    //body: payload.notification?.body || 'Please tick for the next two days',
+    icon: './mealtracker.png',
+    //data: { url: payload.data?.url } // For handling clicks
+  };
   
-//   self.registration.showNotification(notificationTitle, notificationOptions);
-// });
+  self.registration.showNotification(notificationTitle, notificationOptions);
+});
