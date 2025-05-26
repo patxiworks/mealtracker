@@ -79,42 +79,51 @@ const messaging = firebase.messaging();
 //   }
 // })
 
+let currentUserId = null; // Variable to store the user ID
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SET_USER_ID') {
+    currentUserId = event.data.userId;
+    console.log('Service Worker received user ID:', currentUserId);
+  }
+});
+
+// Use the stored currentUserId
+const userIdToSend = currentUserId || 'Patrick Enaholo'; // fallback if userId is not yet set
+
 // Handle token refresh
-// messaging.onTokenRefresh(() => {
-//   messaging.getToken().then((refreshedToken) => {
-//     console.log('Token refreshed: '+refreshedToken);
+messaging.onTokenRefresh(() => {
+  messaging.getToken().then((refreshedToken) => {
+    console.log('Token refreshed: ' + refreshedToken);
 
-//     // Get the updated subscription
-//     self.registration.pushManager.getSubscription().then(subscription => {
-//       if (subscription) {
-//         // Send the updated subscription to your backend
-//         fetch('https://us-central1-mealtime-tracker.cloudfunctions.net/subscribe', {
-//           method: 'POST',
-//           headers: {
-//             'Content-Type': 'application/json',
-//           },
-//           body: JSON.stringify({
-//             pushSubscription: subscription, // Send the updated subscription
-//             userId: 'Patrick Enaholo' // Make sure to include the user ID
-//           }),
-//         }).catch(error => {
-//           console.error('Error sending refreshed subscription to server:', error);
-//         });
-//       }
-//     });
+    // Send the refreshed token to your backend
+    fetch('https://us-central1-mealtime-tracker.cloudfunctions.net/subscribe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        // Send only the refreshed token and user ID
+        pushSubscription: refreshedToken, 
+        userId: userIdToSend 
+      }),
+    }).catch(error => {
+      console.error('Error sending refreshed token to server:', error);
+    });
 
-//   }).catch((err) => {
-//     console.error('Unable to retrieve refreshed token ', err);
-//   });
-// });
+  }).catch((err) => {
+    console.error('Unable to retrieve refreshed token ', err);
+  });
+});
 
-// messaging.onMessage((payload) => {
-//   console.log('[SW] Received message', payload)
-//   alert('Please tick for the next two days (at least)!')
-// });
+// Handle incoming messages in the foreground
+messaging.onMessage((payload) => {
+  console.log('[SW] Received message', payload)
+  alert('Please tick for the next two days (at least)!')
+});
 
+// Handle incoming messages in the background
 messaging.onBackgroundMessage((payload) => {
-  
   console.log('[SW] Received background message', payload);
   // Customize notification
   const notificationTitle = payload.data?.title || 'Mealtick Reminder';

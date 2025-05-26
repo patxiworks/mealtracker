@@ -154,6 +154,18 @@ const SignIn = () => {
     verifyCentreCode();
   }, [centreCode, router]);
 
+  useEffect(() => {
+    if (selectedUsername) {
+      // Check if service workers are supported and active
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'SET_USER_ID',
+          userId: selectedUsername
+        });
+      }
+    }
+  }, [selectedUsername]); // This effect runs whenever selectedUsername changes
+
   return (
     <>
       <div className="container mx-auto py-10">

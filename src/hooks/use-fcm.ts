@@ -13,13 +13,14 @@ export default function useFCM(username: string | null) {
           // Get existing registration first
           let registration = await navigator.serviceWorker.getRegistration('/');
 
-            // Register only if not already exists
+          // Register only if not already exists
           if (!registration) {
             registration = await navigator.serviceWorker.register('/service-worker.js', {
               scope: '/'
             });
           }
 
+          // Initiate the messaging variable
           const messaging = getMessaging(app);
           
           // Request notification permission
@@ -32,13 +33,13 @@ export default function useFCM(username: string | null) {
             });
             
             if (currentToken) {
-                console.log(currentToken)
+              console.log(currentToken)
               // Send token to your backend
               await fetch('https://us-central1-mealtime-tracker.cloudfunctions.net/subscribe', {
                 method: 'POST',
                 body: JSON.stringify({ 
                     pushSubscription: currentToken,
-                    userId: 'Patrick Enaholo'
+                    userId: username
                 }),
                 headers: {
                   'Content-Type': 'application/json'
