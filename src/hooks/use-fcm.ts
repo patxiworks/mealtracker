@@ -5,6 +5,7 @@ import { app } from '../lib/firebase/firebase'; // Your Firebase config
 export default function useFCM(username: string | null) {
   useEffect(() => {
     if (!username) return;
+    console.log(username)
 
     const setupFCM = async () => {
       try {
@@ -19,7 +20,7 @@ export default function useFCM(username: string | null) {
               scope: '/'
             });
           }
-
+          console.log(username)
           // Initiate the messaging variable
           const messaging = getMessaging(app);
           
