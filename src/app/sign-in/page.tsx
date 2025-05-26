@@ -30,7 +30,7 @@ interface MealAttendanceState {
 }
 
 const SignIn = () => {
-  const [preloadedUsers, setPreloadedUsers] = useState<{ name: string; diet: string; centre: string; }[]>([]);
+  const [preloadedUsers, setPreloadedUsers] = useState<{ id: string; name: string; diet: string; centre: string; }[]>([]);
   const [centreCode, setCentreCode] = useState<string | null>(null);
   const [isValidCentreCode, setIsValidCentreCode] = useState<boolean>(false);
   const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
@@ -52,14 +52,14 @@ const SignIn = () => {
 
           if (docSnap.exists()) {
             const data = docSnap.data();
-            const users = (data.users || []) as { name: string; diet: string }[];
+            const users = (data.users || []) as { id: string; name: string; diet: string }[];
             // Fetch the centre for each user
             const usersWithCentre = await Promise.all(
-              users.map(async user => {
+              users.map(async (user: { id: string; name: string; diet: string }) => {
                 return { ...user, centre: selectedCentre }; // Assuming the centre is 'vi' for all users in this document.  Can modify as needed.
               })
             );
-            setPreloadedUsers(usersWithCentre as { name: string; diet: string; centre: string }[]);
+            setPreloadedUsers(usersWithCentre as { id: string; name: string; diet: string; centre: string }[]);
           } else {
             console.log('No such document!');
             setPreloadedUsers([]);
@@ -83,16 +83,18 @@ const SignIn = () => {
     }
   }, [router]);
 
-  const handleSignInWithPreload = async (user: { name: string; diet: string; centre: string }) => {
+  const handleSignInWithPreload = async (user: { id: string; name: string; diet: string; centre: string }) => {
     if (!isValidCentreCode) {
       toast({
         title: 'Error',
         description: 'Please enter a valid centre code.',
       });
       return;
+
     }
 
-    localStorage.setItem('username', user.name);
+    localStorage.setItem('username', user.id); // Use id instead of name
+    localStorage.setItem('fullname', user.name);
     localStorage.setItem('diet', user.diet);
     localStorage.setItem('selectedCentre', user.centre);
 
@@ -111,8 +113,7 @@ const SignIn = () => {
         }, {} as Record<string, MealAttendanceState>);
       }
 
-
-      await createUserMealAttendance(user.name, initialAttendance, user.diet || null, user.centre);
+      await createUserMealAttendance(user.id, initialAttendance, user.diet || null, user.centre); // Use id instead of name
 
       router.push('/');
     } catch (error: any) {
@@ -189,7 +190,7 @@ const SignIn = () => {
                     {preloadedUsers.map(user => (
                       <SelectItem key={user.name} value={user.name}>
                         {user.name} {user.diet ? `(${user.diet})` : ''}
-                      </SelectItem>
+ </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
