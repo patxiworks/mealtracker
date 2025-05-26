@@ -51,6 +51,7 @@ interface MealAttendanceState {
 
 const MealCheckin = () => {
   const [username, setUsername] = useState<string | null>(null);
+  const [fullname, setFullname] = useState<string | null>(null);
   const [mealAttendance, setMealAttendance] = useState<
     Record<string, MealAttendanceState>
   >({});
@@ -97,8 +98,10 @@ const MealCheckin = () => {
   useEffect(() => {
     // Load username from localStorage on component mount
     const storedUsername = localStorage.getItem('username');
+    const storedFullname = localStorage.getItem('fullname');
     if (storedUsername) {
       setUsername(storedUsername);
+      setFullname(storedFullname);
     } else if (isRouteInitialized) { // Redirect only if route is initialized and no username
         router.push('/sign-in');
     }
@@ -335,7 +338,7 @@ const MealCheckin = () => {
             ) : (
             <section className="grid gap-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm text-muted-foreground">Welcome, {username?.split(" ")[0]}</h4>
+                <h4 className="text-sm text-muted-foreground">Welcome, {fullname?.split(" ")[0]}</h4>
                 <Select onValueChange={value => handleWeekChange(new Date(value))} value={initialWeekOption.start.toISOString()}>
                   <SelectTrigger className="w-auto pr-4">
                     <SelectValue placeholder={initialWeekOption.label} />
