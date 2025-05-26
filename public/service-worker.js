@@ -79,42 +79,42 @@ const messaging = firebase.messaging();
 //   }
 // })
 
-let currentUserId = null; // Variable to store the user ID
+// let currentUserId = null; // Variable to store the user ID
 
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SET_USER_ID') {
-    currentUserId = event.data.userId;
-    console.log('Service Worker received user ID:', currentUserId);
-  }
-});
+// self.addEventListener('message', (event) => {
+//   if (event.data && event.data.type === 'SET_USER_ID') {
+//     currentUserId = event.data.userId;
+//     console.log('Service Worker received user ID:', currentUserId);
+//   }
+// });
 
-// Use the stored currentUserId
-const userIdToSend = currentUserId || 'Patrick Enaholo'; // fallback if userId is not yet set
+// // Use the stored currentUserId
+// const userIdToSend = currentUserId || 'Patrick Enaholo'; // fallback if userId is not yet set
 
-// Handle token refresh
-messaging.onTokenRefresh(() => {
-  messaging.getToken().then((refreshedToken) => {
-    console.log('Token refreshed: ' + refreshedToken);
+// // Handle token refresh
+// messaging.onTokenRefresh(() => {
+//   messaging.getToken().then((refreshedToken) => {
+//     console.log('Token refreshed: ' + refreshedToken);
 
-    // Send the refreshed token to your backend
-    fetch('https://us-central1-mealtime-tracker.cloudfunctions.net/subscribe', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        // Send only the refreshed token and user ID
-        pushSubscription: refreshedToken, 
-        userId: userIdToSend 
-      }),
-    }).catch(error => {
-      console.error('Error sending refreshed token to server:', error);
-    });
+//     // Send the refreshed token to your backend
+//     fetch('https://us-central1-mealtime-tracker.cloudfunctions.net/subscribe', {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//       },
+//       body: JSON.stringify({
+//         // Send only the refreshed token and user ID
+//         pushSubscription: refreshedToken, 
+//         userId: userIdToSend 
+//       }),
+//     }).catch(error => {
+//       console.error('Error sending refreshed token to server:', error);
+//     });
 
-  }).catch((err) => {
-    console.error('Unable to retrieve refreshed token ', err);
-  });
-});
+//   }).catch((err) => {
+//     console.error('Unable to retrieve refreshed token ', err);
+//   });
+// });
 
 // Handle incoming messages in the foreground
 messaging.onMessage((payload) => {
