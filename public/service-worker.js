@@ -133,11 +133,11 @@ messaging.onBackgroundMessage((payload) => {
 
   console.log('[SW] Received background message', payload);
   // Customize notification
-  const notificationTitle = payload.notification?.title || 'Mealtick Reminder';
+  const notificationTitle = payload.data?.title || 'Mealtick Reminder';
   const notificationOptions = {
-    //body: payload.notification?.body || 'Please tick for the next two days',
+    body: payload.data?.body || 'Please tick for the next two days',
     icon: './mealtracker.png',
-    //data: { url: payload.data?.url } // For handling clicks
+    data: { url: payload.data?.url } // For handling clicks
   };
   
   self.registration.showNotification(notificationTitle, notificationOptions);
