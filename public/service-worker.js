@@ -114,23 +114,7 @@ const messaging = firebase.messaging();
 // });
 
 messaging.onBackgroundMessage((payload) => {
-  //const messageId = payload.messageId || payload.data?.messageId;
   
-  // Skip if already processed
-  // if (messageId && processedMessages.has(messageId)) {
-  //   console.log('[SW] Duplicate message skipped:', messageId);
-  //   return;
-  // }
-
-  // if (messageId) {
-  //   processedMessages.add(messageId);
-  //   // Clean up old messages to prevent memory leaks
-  //   if (processedMessages.size > 100) {
-  //     const first = processedMessages.values().next().value;
-  //     processedMessages.delete(first);
-  //   }
-  // }
-
   console.log('[SW] Received background message', payload);
   // Customize notification
   const notificationTitle = payload.data?.title || 'Mealtick Reminder';
@@ -141,4 +125,32 @@ messaging.onBackgroundMessage((payload) => {
   };
   
   self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close(); // Close the notification after clicking
+
+  const urlToOpen = event.notification.data.url; // Get the URL from the notification data
+
+  event.waitUntil(
+    clients.matchAll({
+      type: 'window',
+      includeUncontrolled: true
+    }).then((clientList) => {
+      if (clientList.length > 0) {
+        // If there's at least one window client, focus it and navigate
+        let client = clientList[0];
+        for (let i = 0; i < clientList.length; i++) {
+          if (clientList[i].focused) {
+            client = clientList[i];
+            break;
+          }
+        }
+        return client.focus().then(() => client.navigate(urlToOpen));
+      } else {
+        // If no window clients are open, open a new window
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
 });
