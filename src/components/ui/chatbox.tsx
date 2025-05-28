@@ -4,6 +4,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { getFirestore, Timestamp, collection, doc, query, orderBy, limit, addDoc, serverTimestamp, CollectionReference, onSnapshot, where, updateDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase';
 import { formatDate } from '@/lib/utils';
+import { Send } from 'lucide-react';
 
 interface Message {
   id?: string;
@@ -103,7 +104,7 @@ export function ChatRoom() {
 
   return (
       <>
-          <main className="p-2 h-[80vh] my-[10vh] overflow-y-scroll flex flex-col">
+          <main className="p-2 h-[84vh] mt-[6vh] overflow-y-scroll flex flex-col">
               {/*{messages && messages.map(msg => <ChatMessage key={msg.id ? msg.id : Date.now()+'-'+Math.random()} message={msg} />)}
               <span ref={dummy}></span>*/}
               {messages.map(msg => (
@@ -117,8 +118,8 @@ export function ChatRoom() {
               ))}
           </main>
           <form className="h-[10vh] fixed bottom-0 bg-[rgb(24,23,23)] w-full max-w-[890px] flex text-xl" onSubmit={sendMessage}>
-              <input className="leading-normal w-full text-xl bg-[rgb(58,58,58)] text-white outline-none border-none px-2" value={formValue} onChange={(e) => setFormValue(e.target.value)} placeholder="say something nice" />
-              <button className="w-1/5 bg-[rgb(56,56,143)] disabled:opacity-50 disabled:cursor-not-allowed" type="submit" disabled={!formValue}>🕊️</button>
+              <input className="leading-normal w-full text-xl bg-[rgb(58,58,58)] text-white outline-none border-none px-4" value={formValue} onChange={(e) => setFormValue(e.target.value)} placeholder="Send a message" />
+              <button className="flex justify-center items-center w-1/5 bg-[#0b93f6] disabled:opacity-70 disabled:cursor-not-allowed" type="submit" disabled={!formValue}><Send size={30} /></button>
           </form>
       </>
   )
@@ -169,7 +170,7 @@ function ChatMessage(props: ChatMessageProps) {
             {/* Display replies if they exist */}
             {message?.replies && message?.replies.map((reply, index) => (
               // You'll need to style these replies appropriately
-              <div key={index} className={`max-w-sm leading-6 p-3 rounded-xl relative text-white text-left bg-[#0b93f6] self-end'}`}>
+              <div key={index} className={`max-w-sm leading-6 p-3 rounded-xl relative text-white text-left bg-[#0b93f6] border border-[#4864c3] self-end'}`}>
                 {msgFormat(reply)}
               </div>
             ))}

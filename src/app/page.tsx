@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { format, startOfWeek, addDays, addWeeks } from 'date-fns';
+import { format, startOfWeek, addDays, addWeeks, eachDayOfInterval, endOfWeek } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Loader2, CalendarCheck2, NotepadText, LogOut, Sun, Utensils, Moon, PackageCheck, X, Check } from 'lucide-react';
 import Link from 'next/link';
@@ -55,6 +55,9 @@ const MealCheckin = () => {
   const [mealAttendance, setMealAttendance] = useState<
     Record<string, MealAttendanceState>
   >({});
+  const [temporaryMealAttendance, setTemporaryMealAttendance] = useState<
+  Record<string, MealAttendanceState>
+>({});
   const [selectedWeekStart, setSelectedWeekStart] = useState<Date>(
     startOfWeek(new Date(), { weekStartsOn: 0 })
   );
@@ -65,6 +68,7 @@ const MealCheckin = () => {
   const [isRouteInitialized, setIsRouteInitialized] = useState(false);
   const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({}); // Track loading state per meal box
   const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   // useEffect(() => {
   //     // Request notification permission from the user
@@ -83,6 +87,13 @@ const MealCheckin = () => {
   // }, [username]);
 
   useFCM(username);
+
+  // This useEffect will synchronize temporaryMealAttendance with mealAttendance
+  // when the mealAttendance data is initially loaded or updated from the database.
+  // useEffect(() => {
+  //   setTemporaryMealAttendance(mealAttendance);
+  //   console.log('meal-attendance')
+  // }, [mealAttendance]);
   
   useEffect(() => {
     // Check if a centre is selected
@@ -118,6 +129,7 @@ const MealCheckin = () => {
           const userData = await getUserMealAttendance(username);
           if (userData) {
             setMealAttendance(userData.mealAttendance);
+            setTemporaryMealAttendance(userData.mealAttendance)
             setDiet(userData.diet || null); // Load diet from database
             setLoading(false);
           } else {
@@ -150,7 +162,7 @@ const MealCheckin = () => {
     };
 
     loadMealAttendance();
-  }, [username, weekDates, toast, diet, isRouteInitialized]); // Add isRouteInitialized dependency
+  }, [username, isRouteInitialized]); // Add isRouteInitialized dependency
 
   const handleSignOut = () => {
     setUsername(null);
@@ -183,7 +195,7 @@ const MealCheckin = () => {
     const { date, meal, status, dateKey, username, mealBoxKey } = updateData;
 
     // Indicate loading for this specific meal box
-    setIsUpdating(prev => ({ ...prev, [mealBoxKey]: true }));
+    //setIsUpdating(prev => ({ ...prev, [mealBoxKey]: true }));
 
     // Calculate the state *as it would be after the update*
     // This object will be used both for the DB update and the local state update if successful
@@ -237,8 +249,48 @@ const MealCheckin = () => {
     return icon;
   };
 
-  const handleMealTimeBoxClick = (date: Date, meal: string) => {
-    //console.log(date, new Date())
+  // const handleMealTimeBoxClick = (date: Date, meal: string) => {
+  //   //console.log(date, new Date())
+  //   if (date < new Date()) {
+  //     return;
+  //   }
+
+  //   if (!username) {
+  //     toast({
+  //       title: 'Error',
+  //       description: 'Please sign in to update meal attendance.',
+  //       variant: 'destructive',
+  //     });
+  //     return;
+  //   }
+
+  //   const dateKey = formatDateForKey(date);
+  //   const mealBoxKey = `${dateKey}-${meal}`; // Unique identifier for the box
+
+  //   // Prevent clicking if already updating
+  //   if (isUpdating[mealBoxKey]) {
+  //       return;
+  //   }
+
+  //   const currentStatus = mealAttendance[dateKey]?.[meal as keyof MealAttendanceState];
+  //   let newStatus: MealStatus = null;
+  //   if (currentStatus === null) {
+  //     newStatus = 'present';
+  //   } else if (currentStatus === 'present') {
+  //     newStatus = 'absent';
+  //   } else if (currentStatus === 'absent') {
+  //     newStatus = 'packed';
+  //   } else { // currentStatus === 'packed'
+  //     newStatus = null; // Cycle back to null
+  //   }
+
+  //   // Call the async update function
+  //   updateMealAttendanceInDb({ date, meal, status: newStatus, dateKey, username, mealBoxKey });
+  //   // **Crucially, do NOT call setMealAttendance here anymore.**
+  //   // It will be called inside updateMealAttendanceInDb *after* the DB is updated.
+  // };
+
+  const handleMealTimeBoxClick = (date: Date, meal: 'breakfast' | 'lunch' | 'dinner') => {
     if (date < new Date()) {
       return;
     }
@@ -251,31 +303,38 @@ const MealCheckin = () => {
       });
       return;
     }
-
+    
     const dateKey = formatDateForKey(date);
-    const mealBoxKey = `${dateKey}-${meal}`; // Unique identifier for the box
-
-    // Prevent clicking if already updating
+    const mealBoxKey = `${dateKey}-${meal}`;
+  
+    // Prevent clicking if already updating (this is for the final save, but good to keep)
     if (isUpdating[mealBoxKey]) {
-        return;
+      return;
     }
-
-    const currentStatus = mealAttendance[dateKey]?.[meal as keyof MealAttendanceState];
+    
+    // Use the temporary state
+    const currentStatus = temporaryMealAttendance[dateKey]?.[meal];
     let newStatus: MealStatus = null;
+    console.log(currentStatus)
     if (currentStatus === null) {
       newStatus = 'present';
     } else if (currentStatus === 'present') {
       newStatus = 'absent';
     } else if (currentStatus === 'absent') {
       newStatus = 'packed';
-    } else { // currentStatus === 'packed'
+    } else {
       newStatus = null; // Cycle back to null
     }
-
-    // Call the async update function
-    updateMealAttendanceInDb({ date, meal, status: newStatus, dateKey, username, mealBoxKey });
-    // **Crucially, do NOT call setMealAttendance here anymore.**
-    // It will be called inside updateMealAttendanceInDb *after* the DB is updated.
+    console.log(newStatus)
+    // Update the temporary state
+    setTemporaryMealAttendance(prev => ({
+      ...prev,
+      [dateKey]: {
+        ...(prev[dateKey] || { breakfast: null, lunch: null, dinner: null }),
+        [meal]: newStatus
+      },
+    }));
+    console.log(temporaryMealAttendance, mealAttendance)
   };
 
   const handleWeekChange = (weekStartDate: Date) => {
@@ -307,6 +366,65 @@ const MealCheckin = () => {
   if (!username && isRouteInitialized) { // Render loading or nothing until initialization and user check is done
       return null; // Or a loading spinner
   }
+
+  const handleSaveWeek = async () => {
+    if (!username) {
+      console.error('Attempted to save without a username.');
+      toast({
+        title: 'Error',
+        description: 'Please sign in to save your meal attendance.',
+        variant: 'destructive',
+      });
+      return; // Stop the function if no username is found
+    }
+
+    setIsSaving(true);
+  
+    try {
+      const dates = eachDayOfInterval({ start: startOfWeek(selectedWeekStart), end: endOfWeek(selectedWeekStart) });
+      console.log(temporaryMealAttendance, mealAttendance)
+      for (const date of dates) {
+        const dateKey = formatDateForKey(date);
+        const originalDayAttendance = mealAttendance[dateKey] || { breakfast: null, lunch: null, dinner: null };
+        const temporaryDayAttendance = temporaryMealAttendance[dateKey] || { breakfast: null, lunch: null, dinner: null };
+    
+        // Check if there are any changes for this day
+        if (
+          originalDayAttendance.breakfast !== temporaryDayAttendance.breakfast ||
+          originalDayAttendance.lunch !== temporaryDayAttendance.lunch ||
+          originalDayAttendance.dinner !== temporaryDayAttendance.dinner
+        ) {
+          // If there are changes, iterate through the meals
+          for (const meal of ['breakfast', 'lunch', 'dinner'] as const) {
+            if (originalDayAttendance[meal] !== temporaryDayAttendance[meal]) {
+              const mealBoxKey = `${dateKey}-${meal}`;
+              const newStatus = temporaryDayAttendance[meal];
+    
+              // Call the update function for each changed meal
+              await updateMealAttendanceInDb({ date, meal, status: newStatus, dateKey, username, mealBoxKey });
+            }
+          }
+        }
+      }
+      // If all updates are successful, update the main mealAttendance state
+    // This assumes temporaryMealAttendance holds the desired final state
+    setMealAttendance(temporaryMealAttendance);
+
+    toast({
+      title: 'Success',
+      description: 'Meal attendance updated for the week.',
+    });
+  } catch (error) {
+    console.error('Error saving meal attendance:', error);
+    toast({
+      title: 'Error',
+      description: 'Failed to update meal attendance. Please try again.',
+      variant: 'destructive', // Assuming your toast component supports variants
+    });
+  } finally {
+    setIsSaving(false); // Always set loading state to false
+  }
+}
 
   return (
       <div className="container mx-auto py-0">
@@ -389,11 +507,11 @@ const MealCheckin = () => {
                           "flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer",
                           isUpdating[`${dateKey}-breakfast`] && "opacity-50 cursor-not-allowed" // Add loading style
                         )}
-                        onClick={() => handleMealTimeBoxClick(date, 'breakfast')}
+                        onClick={() => {isSaving ? null : handleMealTimeBoxClick(date, 'breakfast')}}
                       >
                         {isUpdating[`${dateKey}-breakfast`]
                           ? <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div> // Simple spinner
-                          : getMealStatusIcon(date, 'breakfast', mealAttendance[dateKey]?.breakfast)
+                          : getMealStatusIcon(date, 'breakfast', temporaryMealAttendance[dateKey]?.breakfast)
                         }
                       </div>
 
@@ -403,11 +521,11 @@ const MealCheckin = () => {
                           "flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer",
                           isUpdating[`${dateKey}-lunch`] && "opacity-50 cursor-not-allowed"
                         )}
-                        onClick={() => handleMealTimeBoxClick(date, 'lunch')}
+                        onClick={() => {isSaving ? null : handleMealTimeBoxClick(date, 'lunch')}}
                       >
                         {isUpdating[`${dateKey}-lunch`]
                           ? <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>
-                          : getMealStatusIcon(date, 'lunch', mealAttendance[dateKey]?.lunch)
+                          : getMealStatusIcon(date, 'lunch', temporaryMealAttendance[dateKey]?.lunch)
                         }
                       </div>
 
@@ -417,17 +535,18 @@ const MealCheckin = () => {
                           "flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer",
                           isUpdating[`${dateKey}-dinner`] && "opacity-50 cursor-not-allowed"
                         )}
-                        onClick={() => handleMealTimeBoxClick(date, 'dinner')}
+                        onClick={() => {isSaving ? null : handleMealTimeBoxClick(date, 'dinner')}}
                       >
                         {isUpdating[`${dateKey}-dinner`]
                           ? <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>
-                          : getMealStatusIcon(date, 'dinner', mealAttendance[dateKey]?.dinner)
+                          : getMealStatusIcon(date, 'dinner', temporaryMealAttendance[dateKey]?.dinner)
                         }
                       </div>
                     </React.Fragment>
                    );
                 })}
               </div>
+              <Button onClick={handleSaveWeek} className="flex mt-4 self-end justify-center items-center w-full bg-[#0b93f6]">{isSaving ? <Loader2 className="h-8 w-8 animate-spin text-black" /> : 'Save Week'}</Button>
             </section>
             )}
           </CardContent>
