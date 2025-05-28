@@ -1,4 +1,5 @@
 import { clsx, type ClassValue } from "clsx"
+import { Timestamp } from "firebase/firestore";
 import { twMerge } from "tailwind-merge"
 
 export function cn(...inputs: ClassValue[]) {
@@ -23,4 +24,15 @@ export async function registerForPushNotifications() {
       console.error("Error registering for push notifications:", error);
     });
   }
+}
+
+export function formatDate(date: Date): string {
+  const month = date.toLocaleString('default', { month: 'short' });
+  const year = date.getFullYear();
+  const time = date.toLocaleTimeString('default', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  return `${month}, ${year} ${time}`;
 }

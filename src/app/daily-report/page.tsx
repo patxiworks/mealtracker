@@ -22,6 +22,7 @@ import { getDailyReportData, getUserAttendanceForDate, getDietsData, getUsersBir
 import type { DailyReportDataWithUsers, MealAttendanceDetail, DietCountsDetail, MealAttendanceState, DietInfo, BirthdayInfo } from "@/lib/firebase/db"; // Added MealAttendanceState, DietInfo, BirthdayInfo
 import { CalendarCheck2, CalendarIcon, HomeIcon, Loader2, Sun, Utensils, Moon, PackageCheck, X, Check, NotebookText, Cake, Gift } from "lucide-react"; // Added Loader2, Sun, Utensils, Moon, PackageCheck, X, Check, NotebookText, Cake, Gift
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Header } from "@/components/ui/header";
 
 // Define the meal status type locally for getMealStatusIcon if needed, or rely on import
 type MealStatus = 'present' | 'absent' | 'packed' | null;
@@ -335,22 +336,7 @@ const DailyReportPage = () => {
   return (
     <div className="container mx-auto pb-10">
       <Card className="w-full max-w-4xl mx-auto">
-        <CardHeader className="px-4 py-4 sm:px-4 bg-[#4864c3]">
-          <div className="flex justify-between items-center">
-            <CardTitle className="flex gap-1 text-2xl text-[#c6cfec]">
-              <CalendarCheck2 className="inline-block" size={30} />
-              <span className="">MealTrack Report</span>
-            </CardTitle>
-            <div className="flex gap-4 items-center">
-                <span className="text-sm text-[#c6cfec] font-medium">Centre: {selectedCentre || 'N/A'}</span>
-              <Link href="/">
-                <Button variant="secondary" className="px-2 h-8">
-                  <HomeIcon size={10} />
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </CardHeader>
+        <Header centre={selectedCentre} />
         <CardContent className="grid gap-4 px-4">
         <section className="grid gap-2 pt-4">
           <div className="flex justify-between items-center gap-4 flex-wrap ">

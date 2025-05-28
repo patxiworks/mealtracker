@@ -323,6 +323,11 @@ const MealCheckin = () => {
                     <NotepadText size={10} />
                   </Button>
                 </Link>
+                <Link href="/chats">
+                  <Button variant="secondary" className="px-2 h-8">
+                    <NotepadText size={10} />
+                  </Button>
+                </Link>
                 <Button variant="outline" onClick={handleSignOut} className="px-2 h-8">
                   <LogOut size={10} />
                 </Button>

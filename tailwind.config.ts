@@ -87,7 +87,13 @@ export default {
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out'
-  		}
+  		},
+		transitionProperty: {
+			'opacity-transform': 'opacity, transform',
+		},
+		transitionTimingFunction: {
+			'bubble': 'cubic-bezier(.25, 1.5, .75, 1.25)', // Custom bubble-like easing
+		},
   	}
   },
   plugins: [require("tailwindcss-animate")],
