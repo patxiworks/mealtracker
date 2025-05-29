@@ -4,7 +4,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { getFirestore, Timestamp, collection, doc, query, orderBy, limit, addDoc, serverTimestamp, CollectionReference, onSnapshot, where, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase';
 import { formatDate } from '@/lib/utils';
-import { Send } from 'lucide-react';
+import { Send, CircleX } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Message {
@@ -71,6 +71,7 @@ export function ChatRoom() {
     } catch (error) {
       console.error(`Error deleting message with ID ${messageId}:`, error);
     }
+    setHighlightedMessageId(null);
   };
 
   const sendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -220,11 +221,22 @@ function ChatMessage(props: ChatMessageProps) {
           </div>
           </div>
         )}
-        {/*<div className={`flex flex-col items-center max-w-[80%] ${opacityClass} transition-opacity-transform duration-300`} onMouseDown={handleMouseDown} onMouseUp={handleMouseUp} onClick={(e) => { e.stopPropagation(); onMessageClick(message.id || null); }}>*/}
-        <div className={`flex flex-col items-center max-w-[80%] ${opacityClass} transition-opacity-transform duration-300`} onMouseDown={handleMouseDown} onMouseUp={handleMouseUp} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onClick={(e) => { e.stopPropagation(); onMessageClick(message.id || null); }}>
+        {/*<div className={`flex flex-col items-center max-w-[80%] ${opacityClass} transition-opacity-transform duration-300`} onMouseDown={handleMouseDown} onMouseUp={handleMouseUp} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onClick={(e) => { e.stopPropagation(); onMessageClick(message.id || null); }}>*/}
+        <div className={`flex flex-col items-center max-w-[80%] ${opacityClass} transition-opacity-transform duration-300`} onClick={(e) => { e.stopPropagation(); onMessageClick(message.id || null); }}>
           <div className={`flex flex-col items-center ${isHighlighted ? 'scale-105' : 'scale-100'} transition-transform duration-300 ease-bubble`}> {/* Changed transition property */}
             <div className={`max-w-sm mt-6 leading-6 p-3 rounded-xl relative text-[#2c2c2c] text-left bg-[#A2D9AB] border border-[#7CB98E]`}>
               {msgFormat(message)}
+              {isHighlighted && (
+                <button
+                  className="absolute -top-3 -right-3 mt-1 mr-1 p-1 rounded-full bg-red-500 text-white text-xs" // Added styling for delete icon
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent message click from happening
+                    setShowDeleteConfirm(true);
+                  }}
+                >
+                  <CircleX />
+                </button>
+              )}
             </div>
             {/* Display replies if they exist */}
             {message?.replies && message.replies.map((reply, index) => (
