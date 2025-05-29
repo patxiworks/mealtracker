@@ -66,6 +66,7 @@ const MealCheckin = () => {
   const [diet, setDiet] = useState<string | null>(null);
   const router = useRouter();
   const [isRouteInitialized, setIsRouteInitialized] = useState(false);
+  const [mealChanged, setMealChanged] = useState(false);
   const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({}); // Track loading state per meal box
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -88,12 +89,12 @@ const MealCheckin = () => {
 
   useFCM(username);
 
-  // This useEffect will synchronize temporaryMealAttendance with mealAttendance
-  // when the mealAttendance data is initially loaded or updated from the database.
-  // useEffect(() => {
-  //   setTemporaryMealAttendance(mealAttendance);
-  //   console.log('meal-attendance')
-  // }, [mealAttendance]);
+  // Check if meal attendance has changed
+  useEffect(() => {
+    setMealChanged(
+      hasMealAttendanceChanged(mealAttendance, temporaryMealAttendance)
+    )
+  }, [temporaryMealAttendance]);
   
   useEffect(() => {
     // Check if a centre is selected
@@ -200,9 +201,9 @@ const MealCheckin = () => {
     // Calculate the state *as it would be after the update*
     // This object will be used both for the DB update and the local state update if successful
     const attendanceForDbUpdate = {
-      ...mealAttendance,
+      ...temporaryMealAttendance,
       [dateKey]: {
-        ...(mealAttendance[dateKey] || { breakfast: null, lunch: null, dinner: null }),
+        ...(temporaryMealAttendance[dateKey] || { breakfast: null, lunch: null, dinner: null }),
         [meal]: status
       },
     };
@@ -315,7 +316,6 @@ const MealCheckin = () => {
     // Use the temporary state
     const currentStatus = temporaryMealAttendance[dateKey]?.[meal];
     let newStatus: MealStatus = null;
-    console.log(currentStatus)
     if (currentStatus === null) {
       newStatus = 'present';
     } else if (currentStatus === 'present') {
@@ -325,7 +325,7 @@ const MealCheckin = () => {
     } else {
       newStatus = null; // Cycle back to null
     }
-    console.log(newStatus)
+    
     // Update the temporary state
     setTemporaryMealAttendance(prev => ({
       ...prev,
@@ -334,7 +334,7 @@ const MealCheckin = () => {
         [meal]: newStatus
       },
     }));
-    console.log(temporaryMealAttendance, mealAttendance)
+
   };
 
   const handleWeekChange = (weekStartDate: Date) => {
@@ -367,6 +367,38 @@ const MealCheckin = () => {
       return null; // Or a loading spinner
   }
 
+  const hasMealAttendanceChanged = (
+    original: Record<string, MealAttendanceState>,
+    temporary: Record<string, MealAttendanceState>
+  ): boolean => {
+    // Get all date keys from both objects
+    const originalDates = Object.keys(original);
+    const temporaryDates = Object.keys(temporary);
+  
+    // If the number of dates is different, they have changed
+    if (originalDates.length !== temporaryDates.length) {
+      return true;
+    }
+  
+    // Check each date and each meal within that date
+    for (const dateKey of originalDates) {
+      const originalDay = original[dateKey] || { breakfast: null, lunch: null, dinner: null };
+      const temporaryDay = temporary[dateKey] || { breakfast: null, lunch: null, dinner: null };
+  
+      // Check if the meal attendance for any meal is different
+      if (
+        originalDay.breakfast !== temporaryDay.breakfast ||
+        originalDay.lunch !== temporaryDay.lunch ||
+        originalDay.dinner !== temporaryDay.dinner
+      ) {
+        return true; // Found a difference
+      }
+    }
+  
+    // If no differences were found, the objects are considered the same for our purpose
+    return false;
+  };
+
   const handleSaveWeek = async () => {
     if (!username) {
       console.error('Attempted to save without a username.');
@@ -382,12 +414,10 @@ const MealCheckin = () => {
   
     try {
       const dates = eachDayOfInterval({ start: startOfWeek(selectedWeekStart), end: endOfWeek(selectedWeekStart) });
-      console.log(temporaryMealAttendance, mealAttendance)
       for (const date of dates) {
         const dateKey = formatDateForKey(date);
         const originalDayAttendance = mealAttendance[dateKey] || { breakfast: null, lunch: null, dinner: null };
         const temporaryDayAttendance = temporaryMealAttendance[dateKey] || { breakfast: null, lunch: null, dinner: null };
-    
         // Check if there are any changes for this day
         if (
           originalDayAttendance.breakfast !== temporaryDayAttendance.breakfast ||
@@ -399,7 +429,6 @@ const MealCheckin = () => {
             if (originalDayAttendance[meal] !== temporaryDayAttendance[meal]) {
               const mealBoxKey = `${dateKey}-${meal}`;
               const newStatus = temporaryDayAttendance[meal];
-    
               // Call the update function for each changed meal
               await updateMealAttendanceInDb({ date, meal, status: newStatus, dateKey, username, mealBoxKey });
             }
@@ -546,7 +575,7 @@ const MealCheckin = () => {
                    );
                 })}
               </div>
-              <Button onClick={handleSaveWeek} className="flex mt-4 self-end justify-center items-center w-full bg-[#0b93f6]">{isSaving ? <Loader2 className="h-8 w-8 animate-spin text-black" /> : 'Save Week'}</Button>
+              <Button onClick={handleSaveWeek} className={`flex h-12 mt-4 p-2 self-end justify-center items-center w-full ${mealChanged ? 'bg-[#f36767]' : 'bg-[#4864c3]'} font-semibold text-lg`}>{isSaving ? <Loader2 className="h-8 w-8 animate-spin text-black" /> : 'Save for this week'}</Button>
             </section>
             )}
           </CardContent>
