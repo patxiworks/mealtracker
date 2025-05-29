@@ -438,6 +438,7 @@ const MealCheckin = () => {
       // If all updates are successful, update the main mealAttendance state
     // This assumes temporaryMealAttendance holds the desired final state
     setMealAttendance(temporaryMealAttendance);
+    setMealChanged(false);
 
     toast({
       title: 'Success',
@@ -575,7 +576,20 @@ const MealCheckin = () => {
                    );
                 })}
               </div>
-              <Button onClick={handleSaveWeek} className={`flex h-12 mt-4 p-2 self-end justify-center items-center w-full ${mealChanged ? 'bg-[#f36767]' : 'bg-[#4864c3]'} font-semibold text-lg`}>{isSaving ? <Loader2 className="h-8 w-8 animate-spin text-black" /> : 'Save for this week'}</Button>
+              <Button 
+                onClick={handleSaveWeek} 
+                className={`flex h-12 mt-4 p-2 self-end justify-center items-center w-full ${mealChanged ? 'bg-[#f36767]' : 'bg-[#4864c3]'} font-semibold text-lg`}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-8 w-8 animate-spin text-black" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save for this week'
+                )}
+              </Button>
             </section>
             )}
           </CardContent>
