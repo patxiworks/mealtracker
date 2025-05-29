@@ -5,6 +5,7 @@ import { getFirestore, Timestamp, collection, doc, query, orderBy, limit, addDoc
 import { db } from '@/lib/firebase/firebase';
 import { formatDate } from '@/lib/utils';
 import { Send } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Message {
   id?: string;
@@ -30,6 +31,7 @@ export function ChatRoom() {
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [formValue, setFormValue] = useState('');
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     // Access localStorage inside useEffect
@@ -47,8 +49,7 @@ export function ChatRoom() {
           id: doc.id,
           ...doc.data() as Omit<Message, 'id'>
         }));
-        setMessages(messagesData);
-        console.log(messagesData)
+        setMessages(messagesData.sort((a, b) => b.createdAt - a.createdAt));
       });
       
       return () => unsubscribe();
@@ -84,7 +85,6 @@ export function ChatRoom() {
           text: formValue,
           createdAt: Timestamp.fromDate(new Date()), // Use serverTimestamp() here
         };
-        console.log(reply)
         await updateDoc(messageDocRef, {
           replies: arrayUnion(reply)
         });
@@ -116,26 +116,26 @@ export function ChatRoom() {
   };
 
   return (
-      <>
-          <main className="p-2 h-[84vh] mt-[6vh] overflow-y-scroll flex flex-col">
-              {/*{messages && messages.map(msg => <ChatMessage key={msg.id ? msg.id : Date.now()+'-'+Math.random()} message={msg} />)}
-              <span ref={dummy}></span>*/}
-              {messages.map(msg => (
-                <ChatMessage
-                  key={msg.id ? msg.id : Date.now() + '-' + Math.random()}
-                  message={msg}
-                  onMessageClick={() => handleMessageClick(msg.id || null)} // Use the handleMessageClick function
-                  isHighlighted={msg.id === highlightedMessageId}
-                  highlightedMessageId={highlightedMessageId}
-                  onDeleteMessage={handleDeleteMessage}
-                />
-              ))}
-          </main>
-          <form className="h-[10vh] fixed bottom-0 bg-[rgb(24,23,23)] w-full max-w-[890px] flex text-xl" onSubmit={sendMessage}>
-              <textarea className="leading-normal w-full text-lg bg-[rgb(58,58,58)] text-white outline-none border-none px-4 py-2" value={formValue} onChange={(e) => setFormValue(e.target.value)} placeholder="Send a message" />
-              <button className="flex justify-center items-center w-1/5 bg-[#4864c3] disabled:opacity-70 disabled:cursor-not-allowed" type="submit" disabled={!formValue}><Send size={30} /></button>
-          </form>
-      </>
+    <>
+      <main className="p-2 h-[84vh] mt-[6vh] overflow-y-scroll flex flex-col items-center">
+          {/*{messages && messages.map(msg => <ChatMessage key={msg.id ? msg.id : Date.now()+'-'+Math.random()} message={msg} />)}
+          <span ref={dummy}></span>*/}
+          {messages.map(msg => (
+            <ChatMessage
+              key={msg.id ? msg.id : Date.now() + '-' + Math.random()}
+              message={msg}
+              onMessageClick={() => handleMessageClick(msg.id || null)} // Use the handleMessageClick function
+              isHighlighted={msg.id === highlightedMessageId}
+              highlightedMessageId={highlightedMessageId}
+              onDeleteMessage={handleDeleteMessage}
+            />
+          ))}
+      </main>
+      <form className="fixed bottom-0 bg-[rgb(24,23,23)] w-full max-w-[890px] flex text-xl" onSubmit={sendMessage}>
+          <textarea className="leading-normal w-full text-base bg-[rgb(58,58,58)] text-white outline-none border-none px-4 py-2" value={formValue} onChange={(e) => setFormValue(e.target.value)} placeholder="Send a message" />
+          <button className="flex justify-center items-center w-1/5 bg-[#4864c3] disabled:opacity-70 disabled:cursor-not-allowed" type="submit" disabled={!formValue}><Send size={30} /></button>
+      </form>
+    </>
   )
 }
   
@@ -152,7 +152,8 @@ function ChatMessage(props: ChatMessageProps) {
   const { text, uid, name, createdAt, id } = props.message; // Include id
   const { onMessageClick, isHighlighted, message, onDeleteMessage } = props; // Include onDeleteMessage
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const pressTimer = useRef<NodeJS.Timeout | null>(null);
+  //const pressTimer = useRef<NodeJS.Timeout | null>(null);
+  const pressTimer = useRef<any | null>(null); // Changed type to any for broader compatibility
   const handleMouseDown = () => {
     pressTimer.current = setTimeout(() => {
       setShowDeleteConfirm(true); // Show confirmation after a long press
@@ -161,6 +162,20 @@ function ChatMessage(props: ChatMessageProps) {
 
   const handleMouseUp = () => {
     if (pressTimer.current) {
+      clearTimeout(pressTimer.current);
+    }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    // Prevent default touch behavior to avoid issues with long press
+    //e.preventDefault();
+    pressTimer.current = setTimeout(() => {
+      setShowDeleteConfirm(true); // Show confirmation after a long press
+    }, 700); // Adjust the time for long press
+  };
+
+  const handleTouchEnd = () => {
+    if (pressTimer.current) { // Only clear timer if it exists
       clearTimeout(pressTimer.current);
     }
   };
@@ -186,7 +201,6 @@ function ChatMessage(props: ChatMessageProps) {
     )
   }
 
-  //const messageDivClass = `flex flex-col items-center opacity-100 ${isHighlighted ? 'opacity-100' : 'opacity-25'}`;
   //const opacityClass = (highlightedMessageId === null || isHighlighted) ? 'opacity-100' : 'opacity-25';
   const opacityClass = isHighlighted ? 'opacity-100' : (props.highlightedMessageId === null ? 'opacity-100' : 'opacity-25'); // Fixed opacity logic
 
@@ -206,7 +220,8 @@ function ChatMessage(props: ChatMessageProps) {
           </div>
           </div>
         )}
-        <div className={`flex flex-col items-center ${opacityClass} transition-opacity-transform duration-300`} onMouseDown={handleMouseDown} onMouseUp={handleMouseUp} onClick={(e) => { e.stopPropagation(); onMessageClick(message.id || null); }}>
+        {/*<div className={`flex flex-col items-center max-w-[80%] ${opacityClass} transition-opacity-transform duration-300`} onMouseDown={handleMouseDown} onMouseUp={handleMouseUp} onClick={(e) => { e.stopPropagation(); onMessageClick(message.id || null); }}>*/}
+        <div className={`flex flex-col items-center max-w-[80%] ${opacityClass} transition-opacity-transform duration-300`} onMouseDown={handleMouseDown} onMouseUp={handleMouseUp} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onClick={(e) => { e.stopPropagation(); onMessageClick(message.id || null); }}>
           <div className={`flex flex-col items-center ${isHighlighted ? 'scale-105' : 'scale-100'} transition-transform duration-300 ease-bubble`}> {/* Changed transition property */}
             <div className={`max-w-sm mt-6 leading-6 p-3 rounded-xl relative text-[#2c2c2c] text-left bg-[#A2D9AB] border border-[#7CB98E]`}>
               {msgFormat(message)}
