@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -70,9 +70,6 @@ const MealCheckin = () => {
   const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({}); // Track loading state per meal box
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
-  const [openSelects, setOpenSelects] = useState<Record<string, boolean>>({});
-  const [isLongPress, setIsLongPress] = useState(false);
 
   // useEffect(() => {
   //     // Request notification permission from the user
@@ -167,26 +164,6 @@ const MealCheckin = () => {
 
     loadMealAttendance();
   }, [username, isRouteInitialized]); // Add isRouteInitialized dependency
-
-  const handleMealStatusChange = (date: Date, meal: 'breakfast' | 'lunch' | 'dinner', value: string) => {
-    const dateKey = formatDateForKey(date);
-    const newStatus: MealStatus = value === 'None' ? null : value as MealStatus; // Handle 'None' option
-    // Update the temporary state with the selected value from the dropdown
-    setTemporaryMealAttendance(prev => ({
-      ...prev,
-      [dateKey]: {
-        ...(prev[dateKey] || { breakfast: null, lunch: null, dinner: null }),
-        [meal]: newStatus
-      },
-    }));
-    // Close the dropdown after selection
-    setOpenSelects(prev => ({
-      ...prev,
-      [`${dateKey}-${meal}`]: false
-    }));
-    // Note: The actual database update will happen when the user clicks the "Save for this week" button.
-    // The temporary state is updated here to reflect the selection immediately in the UI.
-  };
 
   const handleSignOut = () => {
     setUsername(null);
@@ -385,59 +362,6 @@ const MealCheckin = () => {
     ) || weekOptions[0]; // Default to the first option if not found
   }, [selectedWeekStart, weekOptions]); // Depend on selectedWeekStart and the generated options
 
-  // const pressTimer = useRef<any | null>(null); // Changed type to any for broader compatibility
-  // const handleMouseDown = (event: React.MouseEvent, dateKey: string, meal: 'breakfast' | 'lunch' | 'dinner') => {
-  //   console.log('mouse down')
-  //   pressTimer.current = setTimeout(() => {
-  //     setOpenSelects(prev => ({ ...prev, [`${dateKey}-${meal}`]: true }));
-  //   }, 700); // Adjust the time for long press
-  // };
-  // Function to handle long press start
-  const handleTouchStart = (event: React.TouchEvent, dateKey: string, meal: 'breakfast' | 'lunch' | 'dinner') => {
-    setIsLongPress(false); // Assume it's not a long press initially
-    // Prevent the default touch action (like scrolling)
-    // Clear any existing timer to prevent multiple timers running
-    if (longPressTimer) {
-      clearTimeout(longPressTimer);
-    }
-    // Start a timer for the long press duration (e.g., 500ms)
-    const timer = setTimeout(() => {
-      setIsLongPress(true); // Mark as long press if timer completes
-      // This code runs if the touch is held for the long press duration
-      setOpenSelects(prev => ({ ...prev, [`${dateKey}-${meal}`]: true }));
-    }, 500); // Adjust long press duration as needed (in milliseconds)
-    setLongPressTimer(timer);
-  };
-  // Function to handle touch end
-  const handleTouchEnd = () => {
-    // Clear the timer when the touch ends (quickly or after long press)
-    if (longPressTimer) {
-      clearTimeout(longPressTimer);
-      setLongPressTimer(null); // Reset the timer state
-    }
-  };
-  // Function to handle opening/closing the select
-  const handleOpenChange = (open: boolean, dateKey: string, meal: 'breakfast' | 'lunch' | 'dinner') => {
-      // We control the open state programmatically based on long press,
-      // so we only update our internal state when the select's open state changes.
-      // This prevents the select from opening on a short tap.
-      setOpenSelects(prev => ({ ...prev, [`${dateKey}-${meal}`]: open }));
-  };
-  // When using programmatically controlled open state, we need to add
-  // onTouchStart and onTouchEnd to the SelectTrigger. We also need to
-  // handle the onOpenChange event to update our state and ensure the select
-  // behaves correctly after the long press opens it.
-  const getSelectTriggerProps = (dateKey: string, meal: 'breakfast' | 'lunch' | 'dinner') => ({
-      //className: "w-full h-[50px] flex items-center justify-center touch-manipulation",
-      //onMouseDown: (e: React.MouseEvent) => handleTouchStart(e, dateKey, meal),
-      //onMouseUp: handleTouchEnd,
-      //onTouchStart: (e: React.TouchEvent) => handleTouchStart(e, dateKey, meal),
-      //onTouchEnd: handleTouchEnd,
-      className: "w-full h-[50px] flex items-center justify-center touch-manipulation opacity-0", // Made trigger invisible
-      tabIndex: -1, // Prevent focus on the hidden trigger
-      //onClick: (e: React.MouseEvent) => { e.stopPropagation(); if (!isSaving) {console.log('clicked');handleMealTimeBoxClick(new Date(dateKey), meal);} },
-  });
-
 
   if (!username && isRouteInitialized) { // Render loading or nothing until initialization and user check is done
       return null; // Or a loading spinner
@@ -607,58 +531,39 @@ const MealCheckin = () => {
                         </div>
                       </div>
 
-
-                      {/* Breakfast */}
-                      <div 
-                        className="relative"
-                        onMouseDown={(e) => handleTouchStart(e as any, dateKey, 'breakfast')} // Added handlers for long press
-                        onTouchStart={(e) => handleTouchStart(e, dateKey, 'breakfast')}
-                        onTouchEnd={handleTouchEnd}
-                        onMouseUp={handleTouchEnd}
+                      {/* Breakfast 
+                      <div
+                        className={cn(
+                          "flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer",
+                          isUpdating[`${dateKey}-breakfast`] && "opacity-50 cursor-not-allowed" // Add loading style
+                        )}
                         onClick={() => {isSaving ? null : handleMealTimeBoxClick(date, 'breakfast')}}
                       >
-                        <div
-                          className={cn(
-                            "z-10 flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer",
-                            isUpdating[`${dateKey}-breakfast`] && "opacity-50 cursor-not-allowed" // Add loading style
-                          )}
-                          //onClick={() => {isSaving ? null : handleMealTimeBoxClick(date, 'breakfast')}}
-                        >
-                          {isUpdating[`${dateKey}-breakfast`]
-                            ? <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div> // Simple spinner
-                            : getMealStatusIcon(date, 'breakfast', temporaryMealAttendance[dateKey]?.breakfast)
-                          }
-                        </div>
-
-                        {/* Breakfast Dropdown */}
-                        {date < new Date
-                        ? ''
-                        : <div className="absolute z-0 top-0 left-0 w-[100%] h-[100%]">
-                          <Select
-                            open={openSelects[`${dateKey}-breakfast`] || false}
-                            onOpenChange={(open) => handleOpenChange(open, dateKey, 'breakfast')}
-                            value={temporaryMealAttendance[dateKey]?.breakfast || ''}
-                            //onValueChange={(value: MealStatus) => handleMealStatusChange(date, 'breakfast', value)}
-                            onValueChange={(value: string) => handleMealStatusChange(date, 'breakfast', value)}
-                          >
-                            <SelectTrigger {...getSelectTriggerProps(dateKey, 'breakfast')} className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer" style={{ pointerEvents: 'none' }}>
-                              {isUpdating[`${dateKey}-breakfast`] ? (
-                                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                              ) : (
-                                getMealStatusIcon(date, 'breakfast', temporaryMealAttendance[dateKey]?.breakfast)
-                              )}
-                            </SelectTrigger>
-                            <SelectContent className="w-fit">
-                              <SelectItem value="present" className="justify-center"><Check className="h-6 w-6 text-green-500 font-bold" /></SelectItem>
-                              <SelectItem value="absent" className="justify-center"><X className="h-6 w-6 text-red-500 font-bold" /></SelectItem>
-                              <SelectItem value="packed" className="justify-center"><PackageCheck className="h-6 w-6 text-blue-500 font-bold" /></SelectItem>
-                              <SelectItem value="late" className="justify-center">Late</SelectItem>
-                              <SelectItem value="None" className="justify-center">N/A</SelectItem> {/* Option for null/unset */}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        {isUpdating[`${dateKey}-breakfast`]
+                          ? <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div> // Simple spinner
+                          : getMealStatusIcon(date, 'breakfast', temporaryMealAttendance[dateKey]?.breakfast)
                         }
-                      </div>
+                      </div>*/}
+                      {/* Breakfast Dropdown */}
+                      <Select
+                        value={temporaryMealAttendance[dateKey]?.breakfast || ''}
+                        //onValueChange={(value: MealStatus) => handleMealStatusChange(date, 'breakfast', value)}
+                      >
+                        <SelectTrigger className="w-full h-[50px] flex items-center justify-center">
+                           {isUpdating[`${dateKey}-breakfast`] ? (
+                            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                          ) : (
+                            getMealStatusIcon(date, 'breakfast', temporaryMealAttendance[dateKey]?.breakfast)
+                          )}
+                        </SelectTrigger>
+                        <SelectContent className="w-fit">
+                          <SelectItem value="present" className="justify-center"><Check className="h-6 w-6 text-green-500 font-bold" /></SelectItem>
+                          <SelectItem value="absent" className="justify-center"><X className="h-6 w-6 text-red-500 font-bold" /></SelectItem>
+                          <SelectItem value="packed" className="justify-center"><PackageCheck className="h-6 w-6 text-blue-500 font-bold" /></SelectItem>
+                          <SelectItem value="late" className="justify-center">Late</SelectItem>
+                          <SelectItem value="None" className="justify-center">N/A</SelectItem> {/* Option for null/unset */}
+                        </SelectContent>
+                      </Select>
 
                       {/* Lunch */}
                       <div
