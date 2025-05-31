@@ -171,6 +171,7 @@ const MealCheckin = () => {
   const handleMealStatusChange = (date: Date, meal: 'breakfast' | 'lunch' | 'dinner', value: string) => {
     const dateKey = formatDateForKey(date);
     const newStatus: MealStatus = value === 'None' ? null : value as MealStatus; // Handle 'None' option
+    console.log(newStatus)
     // Update the temporary state with the selected value from the dropdown
     setTemporaryMealAttendance(prev => ({
       ...prev,
@@ -616,6 +617,7 @@ const MealCheckin = () => {
                         onTouchEnd={handleTouchEnd}
                         onMouseUp={handleTouchEnd}
                         onClick={() => {isSaving ? null : handleMealTimeBoxClick(date, 'breakfast')}}
+                        //onClick={isLongPress ? null : () => {{isSaving ? null : handleMealTimeBoxClick(date, 'breakfast')}}}
                       >
                         <div
                           className={cn(
@@ -641,7 +643,12 @@ const MealCheckin = () => {
                             //onValueChange={(value: MealStatus) => handleMealStatusChange(date, 'breakfast', value)}
                             onValueChange={(value: string) => handleMealStatusChange(date, 'breakfast', value)}
                           >
-                            <SelectTrigger {...getSelectTriggerProps(dateKey, 'breakfast')} className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer" style={{ pointerEvents: 'none' }}>
+                            <SelectTrigger 
+                              {...getSelectTriggerProps(dateKey, 'breakfast')} 
+                              className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer" 
+                              style={{ pointerEvents: 'none' }}
+                              
+                            >
                               {isUpdating[`${dateKey}-breakfast`] ? (
                                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
                               ) : (
@@ -649,11 +656,11 @@ const MealCheckin = () => {
                               )}
                             </SelectTrigger>
                             <SelectContent className="w-fit">
-                              <SelectItem value="present" className="justify-center"><Check className="h-6 w-6 text-green-500 font-bold" /></SelectItem>
-                              <SelectItem value="absent" className="justify-center"><X className="h-6 w-6 text-red-500 font-bold" /></SelectItem>
-                              <SelectItem value="packed" className="justify-center"><PackageCheck className="h-6 w-6 text-blue-500 font-bold" /></SelectItem>
-                              <SelectItem value="late" className="justify-center">Late</SelectItem>
-                              <SelectItem value="None" className="justify-center">N/A</SelectItem> {/* Option for null/unset */}
+                              <SelectItem value="present" className="justify-center" onClick={(e) => e.stopPropagation()}><Check className="h-6 w-6 text-green-500 font-bold" /></SelectItem>
+                              <SelectItem value="absent" className="justify-center" onClick={(e) => e.stopPropagation()}><X className="h-6 w-6 text-red-500 font-bold" /></SelectItem>
+                              <SelectItem value="packed" className="justify-center" onClick={(e) => e.stopPropagation()}><PackageCheck className="h-6 w-6 text-blue-500 font-bold" /></SelectItem>
+                              <SelectItem value="late" className="justify-center" onClick={(e) => e.stopPropagation()}>Late</SelectItem>
+                              <SelectItem value="None" className="justify-center" onClick={(e) => e.stopPropagation()}>N/A</SelectItem> {/* Option for null/unset */}
                             </SelectContent>
                           </Select>
                         </div>
