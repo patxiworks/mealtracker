@@ -25,7 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Header } from "@/components/ui/header";
 
 // Define the meal status type locally for getMealStatusIcon if needed, or rely on import
-type MealStatus = 'present' | 'absent' | 'packed' | null;
+type MealStatus = 'present' | 'absent' | 'packed' | 'late' | null;
 
 
 // Helper to initialize MealAttendanceDetail

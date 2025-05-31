@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { format, startOfWeek, addDays, addWeeks, eachDayOfInterval, endOfWeek } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Loader2, CalendarCheck2, NotepadText, LogOut, Sun, Utensils, Moon, PackageCheck, X, Check } from 'lucide-react';
+import { Loader2, CalendarCheck2, NotepadText, LogOut, Sun, Utensils, Moon, PackageCheck, X, Check, AlarmClockMinus } from 'lucide-react';
 import Link from 'next/link';
 import {
   createUserMealAttendance,
@@ -41,7 +41,7 @@ const formatDayOfWeek = (date: Date): string => {
 };
 
 // Define the meal status type
-type MealStatus = 'present' | 'absent' | 'packed' | null;
+type MealStatus = 'present' | 'absent' | 'packed' | 'late' | null;
 
 interface MealAttendanceState {
   breakfast: MealStatus;
@@ -73,6 +73,13 @@ const MealCheckin = () => {
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [openSelects, setOpenSelects] = useState<Record<string, boolean>>({});
   const [isLongPress, setIsLongPress] = useState(false);
+
+  const mealStatusIcons = {
+    'present': <Check className="h-6 w-6 text-green-500 font-bold" />,
+    'absent': <X className="h-6 w-6 text-red-500 font-bold" />,
+    'packed': <PackageCheck className="h-6 w-6 text-blue-500 font-bold" />,
+    'late': <AlarmClockMinus className="h-6 w-6 text-amber-500 font-bold" />,
+  };
 
   // useEffect(() => {
   //     // Request notification permission from the user
@@ -263,57 +270,12 @@ const MealCheckin = () => {
 
 
   const getMealStatusIcon = (date: Date, meal: string, status: MealStatus) => {
-    let icon = null;
-    if (status === 'present') {
-      icon = <Check className="h-6 w-6 text-green-500 font-bold" />;
-    } else if (status === 'absent') {
-      icon = <X className="h-6 w-6 text-red-500 font-bold" />;
-    } else if (status === 'packed') {
-      icon = <PackageCheck className="h-6 w-6 text-blue-500 font-bold" />;
+    // Check if status is null or undefined before accessing mealStatusIcons
+    if (status === null || status === undefined) {
+      return null;
     }
-    return icon;
+    return mealStatusIcons[status];
   };
-
-  // const handleMealTimeBoxClick = (date: Date, meal: string) => {
-  //   //console.log(date, new Date())
-  //   if (date < new Date()) {
-  //     return;
-  //   }
-
-  //   if (!username) {
-  //     toast({
-  //       title: 'Error',
-  //       description: 'Please sign in to update meal attendance.',
-  //       variant: 'destructive',
-  //     });
-  //     return;
-  //   }
-
-  //   const dateKey = formatDateForKey(date);
-  //   const mealBoxKey = `${dateKey}-${meal}`; // Unique identifier for the box
-
-  //   // Prevent clicking if already updating
-  //   if (isUpdating[mealBoxKey]) {
-  //       return;
-  //   }
-
-  //   const currentStatus = mealAttendance[dateKey]?.[meal as keyof MealAttendanceState];
-  //   let newStatus: MealStatus = null;
-  //   if (currentStatus === null) {
-  //     newStatus = 'present';
-  //   } else if (currentStatus === 'present') {
-  //     newStatus = 'absent';
-  //   } else if (currentStatus === 'absent') {
-  //     newStatus = 'packed';
-  //   } else { // currentStatus === 'packed'
-  //     newStatus = null; // Cycle back to null
-  //   }
-
-  //   // Call the async update function
-  //   updateMealAttendanceInDb({ date, meal, status: newStatus, dateKey, username, mealBoxKey });
-  //   // **Crucially, do NOT call setMealAttendance here anymore.**
-  //   // It will be called inside updateMealAttendanceInDb *after* the DB is updated.
-  // };
 
   const handleMealTimeBoxClick = (date: Date, meal: 'breakfast' | 'lunch' | 'dinner') => {
     if (date < new Date()) {
@@ -339,15 +301,18 @@ const MealCheckin = () => {
     
     // Use the temporary state
     const currentStatus = temporaryMealAttendance[dateKey]?.[meal];
-    let newStatus: MealStatus = null;
+    //let newStatus: MealStatus = null;
+    const statusOrder: MealStatus[] = ['present', 'absent', 'packed', 'late', null];
+    const currentIndex = statusOrder.indexOf(currentStatus);
+    let newStatus = statusOrder[(currentIndex + 1) % statusOrder.length];
     if (currentStatus === null) {
       newStatus = 'present';
-    } else if (currentStatus === 'present') {
-      newStatus = 'absent';
-    } else if (currentStatus === 'absent') {
-      newStatus = 'packed';
-    } else {
-      newStatus = null; // Cycle back to null
+    // } else if (currentStatus === 'present') {
+    //   newStatus = 'absent';
+    // } else if (currentStatus === 'absent') {
+    //   newStatus = 'packed';
+    // } else {
+    //   newStatus = null; // Cycle back to null
     }
     
     // Update the temporary state
@@ -386,13 +351,6 @@ const MealCheckin = () => {
     ) || weekOptions[0]; // Default to the first option if not found
   }, [selectedWeekStart, weekOptions]); // Depend on selectedWeekStart and the generated options
 
-  // const pressTimer = useRef<any | null>(null); // Changed type to any for broader compatibility
-  // const handleMouseDown = (event: React.MouseEvent, dateKey: string, meal: 'breakfast' | 'lunch' | 'dinner') => {
-  //   console.log('mouse down')
-  //   pressTimer.current = setTimeout(() => {
-  //     setOpenSelects(prev => ({ ...prev, [`${dateKey}-${meal}`]: true }));
-  //   }, 700); // Adjust the time for long press
-  // };
   // Function to handle long press start
   const handleTouchStart = (event: React.TouchEvent, dateKey: string, meal: 'breakfast' | 'lunch' | 'dinner') => {
     setIsLongPress(false); // Assume it's not a long press initially
@@ -533,6 +491,16 @@ const MealCheckin = () => {
   }
 }
 
+const selectOptions = (
+  <SelectContent className="w-fit">
+    <SelectItem value="present" className="justify-center" onClick={(e) => e.stopPropagation()}>{mealStatusIcons["present"]}</SelectItem>
+    <SelectItem value="absent" className="justify-center" onClick={(e) => e.stopPropagation()}>{mealStatusIcons["absent"]}</SelectItem>
+    <SelectItem value="packed" className="justify-center" onClick={(e) => e.stopPropagation()}>{mealStatusIcons["packed"]}</SelectItem>
+    <SelectItem value="late" className="justify-center" onClick={(e) => e.stopPropagation()}>{mealStatusIcons["late"]}</SelectItem>
+    <SelectItem value="None" className="justify-center" onClick={(e) => e.stopPropagation()}></SelectItem> {/* Option for null/unset */}
+  </SelectContent>
+)
+
   return (
       <div className="container mx-auto py-0">
         <Card className="w-full max-w-4xl mx-auto">
@@ -608,92 +576,58 @@ const MealCheckin = () => {
                         </div>
                       </div>
 
-
-                      {/* Breakfast */}
-                      <div 
+                      {(['breakfast', 'lunch', 'dinner'] as const).map((meal: 'breakfast' | 'lunch' | 'dinner') => (
+                        <div 
+                        key={meal}
                         className="relative"
-                        onMouseDown={(e) => handleTouchStart(e as any, dateKey, 'breakfast')} // Added handlers for long press
-                        onTouchStart={(e) => handleTouchStart(e, dateKey, 'breakfast')}
+                        onMouseDown={(e) => handleTouchStart(e as any, dateKey, meal)} // Added handlers for long press
+                        onTouchStart={(e) => handleTouchStart(e, dateKey, meal)}
                         onTouchEnd={handleTouchEnd}
                         onMouseUp={handleTouchEnd}
-                        onClick={() => {isSaving ? null : handleMealTimeBoxClick(date, 'breakfast')}}
-                        //onClick={isLongPress ? null : () => {{isSaving ? null : handleMealTimeBoxClick(date, 'breakfast')}}}
+                        onClick={() => {isSaving ? null : handleMealTimeBoxClick(date, meal)}}
                       >
                         <div
                           className={cn(
                             "z-10 flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer",
-                            isUpdating[`${dateKey}-breakfast`] && "opacity-50 cursor-not-allowed" // Add loading style
+                            isUpdating[`${dateKey}-${meal}`] && "opacity-50 cursor-not-allowed" // Add loading style
                           )}
-                          //onClick={() => {isSaving ? null : handleMealTimeBoxClick(date, 'breakfast')}}
                         >
-                          {isUpdating[`${dateKey}-breakfast`]
+                          {isUpdating[`${dateKey}-${meal}`]
                             ? <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div> // Simple spinner
-                            : getMealStatusIcon(date, 'breakfast', temporaryMealAttendance[dateKey]?.breakfast)
+                            : getMealStatusIcon(date, meal, temporaryMealAttendance[dateKey]?.[meal])
                           }
                         </div>
 
-                        {/* Breakfast Dropdown */}
+                        {/* Options Dropdown */}
                         {date < new Date
                         ? ''
                         : <div className="absolute z-0 top-0 left-0 w-[100%] h-[100%]">
                           <Select
-                            open={openSelects[`${dateKey}-breakfast`] || false}
-                            onOpenChange={(open) => handleOpenChange(open, dateKey, 'breakfast')}
-                            value={temporaryMealAttendance[dateKey]?.breakfast || ''}
-                            //onValueChange={(value: MealStatus) => handleMealStatusChange(date, 'breakfast', value)}
-                            onValueChange={(value: string) => handleMealStatusChange(date, 'breakfast', value)}
+                            open={openSelects[`${dateKey}-${meal}`] || false}
+                            onOpenChange={(open) => handleOpenChange(open, dateKey, meal)}
+                            value={temporaryMealAttendance[dateKey]?.[meal] || ''}
+                            //onValueChange={(value: MealStatus) => handleMealStatusChange(date, meal, value)}
+                            onValueChange={(value: string) => handleMealStatusChange(date, meal, value)}
                           >
                             <SelectTrigger 
-                              {...getSelectTriggerProps(dateKey, 'breakfast')} 
+                              {...getSelectTriggerProps(dateKey, meal)} 
                               className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer" 
                               style={{ pointerEvents: 'none' }}
                               
                             >
-                              {isUpdating[`${dateKey}-breakfast`] ? (
+                              {isUpdating[`${dateKey}-${meal}`] ? (
                                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
                               ) : (
-                                getMealStatusIcon(date, 'breakfast', temporaryMealAttendance[dateKey]?.breakfast)
+                                getMealStatusIcon(date, meal, temporaryMealAttendance[dateKey]?.[meal])
                               )}
                             </SelectTrigger>
-                            <SelectContent className="w-fit">
-                              <SelectItem value="present" className="justify-center" onClick={(e) => e.stopPropagation()}><Check className="h-6 w-6 text-green-500 font-bold" /></SelectItem>
-                              <SelectItem value="absent" className="justify-center" onClick={(e) => e.stopPropagation()}><X className="h-6 w-6 text-red-500 font-bold" /></SelectItem>
-                              <SelectItem value="packed" className="justify-center" onClick={(e) => e.stopPropagation()}><PackageCheck className="h-6 w-6 text-blue-500 font-bold" /></SelectItem>
-                              <SelectItem value="late" className="justify-center" onClick={(e) => e.stopPropagation()}>Late</SelectItem>
-                              <SelectItem value="None" className="justify-center" onClick={(e) => e.stopPropagation()}>N/A</SelectItem> {/* Option for null/unset */}
-                            </SelectContent>
+                            {selectOptions}
                           </Select>
                         </div>
                         }
                       </div>
-
-                      {/* Lunch */}
-                      <div
-                        className={cn(
-                          "flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer",
-                          isUpdating[`${dateKey}-lunch`] && "opacity-50 cursor-not-allowed"
-                        )}
-                        onClick={() => {isSaving ? null : handleMealTimeBoxClick(date, 'lunch')}}
-                      >
-                        {isUpdating[`${dateKey}-lunch`]
-                          ? <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>
-                          : getMealStatusIcon(date, 'lunch', temporaryMealAttendance[dateKey]?.lunch)
-                        }
-                      </div>
-
-                      {/* Dinner */}
-                      <div
-                        className={cn(
-                          "flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer",
-                          isUpdating[`${dateKey}-dinner`] && "opacity-50 cursor-not-allowed"
-                        )}
-                        onClick={() => {isSaving ? null : handleMealTimeBoxClick(date, 'dinner')}}
-                      >
-                        {isUpdating[`${dateKey}-dinner`]
-                          ? <div className="h-6 w-6 animate-spin rounded-full border-2 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" role="status"></div>
-                          : getMealStatusIcon(date, 'dinner', temporaryMealAttendance[dateKey]?.dinner)
-                        }
-                      </div>
+                      ))}
+                      
                     </React.Fragment>
                    );
                 })}

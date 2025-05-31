@@ -8,7 +8,7 @@ const USERS_COLLECTION = 'users';
 const DIETS_COLLECTION = 'diets'; // Added diets collection constant
 
 // Define the meal status type
-export type MealStatus = 'present' | 'absent' | 'packed' | null;
+export type MealStatus = 'present' | 'absent' | 'packed' | 'late' | null;
 
 // Define the meal attendance state
 export interface MealAttendanceState {
