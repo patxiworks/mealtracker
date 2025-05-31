@@ -54,8 +54,14 @@ export interface DailyReportDataWithUsers {
         lunch: MealAttendanceDetail;
         dinner: MealAttendanceDetail;
     };
+    attendanceLate: {
+        breakfast: MealAttendanceDetail;
+        lunch: MealAttendanceDetail;
+        dinner: MealAttendanceDetail;
+    };
     dietCountsPresent: DietCountsDetail;
     dietCountsPacked: DietCountsDetail;
+    dietCountsLate: DietCountsDetail;
 }
 
 // Interface for Diet Information
@@ -228,8 +234,14 @@ export const getDailyReportData = async (date: string, centre: string): Promise<
             lunch: initMealAttendanceDetail(),
             dinner: initMealAttendanceDetail(),
         },
+        attendanceLate: {
+            breakfast: initMealAttendanceDetail(),
+            lunch: initMealAttendanceDetail(),
+            dinner: initMealAttendanceDetail(),
+        },
         dietCountsPresent: initDietCountsDetail(),
         dietCountsPacked: initDietCountsDetail(),
+        dietCountsLate: initDietCountsDetail(),
     };
 
 
@@ -253,7 +265,13 @@ export const getDailyReportData = async (date: string, centre: string): Promise<
               if (!reportData.dietCountsPacked[diet]) reportData.dietCountsPacked[diet] = { breakfast: initMealAttendanceDetail(), lunch: initMealAttendanceDetail(), dinner: initMealAttendanceDetail() };
               reportData.dietCountsPacked[diet].breakfast.users.push(username);
           }
-      }
+      } else if (dailyAttendance.breakfast === 'late') {
+        reportData.attendanceLate.breakfast.users.push(username);
+         if (diet) {
+            if (!reportData.dietCountsLate[diet]) reportData.dietCountsLate[diet] = { breakfast: initMealAttendanceDetail(), lunch: initMealAttendanceDetail(), dinner: initMealAttendanceDetail() };
+            reportData.dietCountsLate[diet].breakfast.users.push(username);
+        }
+    }
 
       // --- Process Lunch ---
       if (dailyAttendance.lunch === 'present') {
@@ -268,7 +286,13 @@ export const getDailyReportData = async (date: string, centre: string): Promise<
               if (!reportData.dietCountsPacked[diet]) reportData.dietCountsPacked[diet] = { breakfast: initMealAttendanceDetail(), lunch: initMealAttendanceDetail(), dinner: initMealAttendanceDetail() };
               reportData.dietCountsPacked[diet].lunch.users.push(username);
           }
-      }
+      } else if (dailyAttendance.lunch === 'late') {
+        reportData.attendanceLate.lunch.users.push(username);
+         if (diet) {
+            if (!reportData.dietCountsLate[diet]) reportData.dietCountsLate[diet] = { breakfast: initMealAttendanceDetail(), lunch: initMealAttendanceDetail(), dinner: initMealAttendanceDetail() };
+            reportData.dietCountsLate[diet].lunch.users.push(username);
+        }
+    }
 
       // --- Process Dinner ---
       if (dailyAttendance.dinner === 'present') {
@@ -283,7 +307,13 @@ export const getDailyReportData = async (date: string, centre: string): Promise<
               if (!reportData.dietCountsPacked[diet]) reportData.dietCountsPacked[diet] = { breakfast: initMealAttendanceDetail(), lunch: initMealAttendanceDetail(), dinner: initMealAttendanceDetail() };
               reportData.dietCountsPacked[diet].dinner.users.push(username);
           }
-      }
+      } else if (dailyAttendance.dinner === 'late') {
+        reportData.attendanceLate.dinner.users.push(username);
+         if (diet) {
+            if (!reportData.dietCountsLate[diet]) reportData.dietCountsLate[diet] = { breakfast: initMealAttendanceDetail(), lunch: initMealAttendanceDetail(), dinner: initMealAttendanceDetail() };
+            reportData.dietCountsLate[diet].dinner.users.push(username);
+        }
+    }
     });
 
     // --- Calculate counts from user list lengths ---
@@ -299,12 +329,22 @@ export const getDailyReportData = async (date: string, centre: string): Promise<
     calculateCounts(reportData.attendancePacked.lunch);
     calculateCounts(reportData.attendancePacked.dinner);
 
+    calculateCounts(reportData.attendanceLate.breakfast);
+    calculateCounts(reportData.attendanceLate.lunch);
+    calculateCounts(reportData.attendanceLate.dinner);
+
     Object.values(reportData.dietCountsPresent).forEach(dietMeals => {
         calculateCounts(dietMeals.breakfast);
         calculateCounts(dietMeals.lunch);
         calculateCounts(dietMeals.dinner);
     });
      Object.values(reportData.dietCountsPacked).forEach(dietMeals => {
+        calculateCounts(dietMeals.breakfast);
+        calculateCounts(dietMeals.lunch);
+        calculateCounts(dietMeals.dinner);
+    });
+
+    Object.values(reportData.dietCountsLate).forEach(dietMeals => {
         calculateCounts(dietMeals.breakfast);
         calculateCounts(dietMeals.lunch);
         calculateCounts(dietMeals.dinner);
@@ -326,8 +366,14 @@ export const getDailyReportData = async (date: string, centre: string): Promise<
             lunch: initMealAttendanceDetail(),
             dinner: initMealAttendanceDetail(),
         },
+        attendanceLate: {
+            breakfast: initMealAttendanceDetail(),
+            lunch: initMealAttendanceDetail(),
+            dinner: initMealAttendanceDetail(),
+        },
         dietCountsPresent: initDietCountsDetail(),
         dietCountsPacked: initDietCountsDetail(),
+        dietCountsLate: initDietCountsDetail(),
     };
     // throw error; // Or rethrow if you want the caller to handle it
   }
