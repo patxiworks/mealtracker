@@ -13,7 +13,7 @@ const firebaseConfig = {
 };
 
 let app: FirebaseApp | undefined = undefined;
-let db: Firestore | undefined = undefined;
+let db: Firestore;
 
 if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
   console.error(

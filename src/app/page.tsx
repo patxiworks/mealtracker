@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { format, startOfWeek, addDays, addWeeks, eachDayOfInterval, endOfWeek } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Loader2, CalendarCheck2, NotepadText, LogOut, Sun, Utensils, Moon, PackageCheck, X, Check, AlarmClockMinus } from 'lucide-react';
+import { Loader2, CalendarCheck2, NotepadText, MessageCircleMore, LogOut, Sun, Utensils, Moon, PackageCheck, X, Check, AlarmClockMinus } from 'lucide-react';
 import Link from 'next/link';
 import {
   createUserMealAttendance,
@@ -17,6 +17,7 @@ import {
 } from '@/lib/firebase/db';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Logo } from '@/components/ui/logo';
 import { registerForPushNotifications } from '@/lib/utils';
 import useFCM from '@/hooks/use-fcm';
 
@@ -52,6 +53,7 @@ interface MealAttendanceState {
 const MealCheckin = () => {
   const [username, setUsername] = useState<string | null>(null);
   const [fullname, setFullname] = useState<string | null>(null);
+  const [centre, setCentre] = useState<string | null>(null);
   const [mealAttendance, setMealAttendance] = useState<
     Record<string, MealAttendanceState>
   >({});
@@ -109,6 +111,7 @@ const MealCheckin = () => {
   useEffect(() => {
     // Check if a centre is selected
     const selectedCentre = localStorage.getItem('selectedCentre');
+    setCentre(selectedCentre);
     if (!selectedCentre) {
       router.push('/select-centre'); // Redirect to centre selection page
     } else {
@@ -506,10 +509,7 @@ const selectOptions = (
         <Card className="w-full max-w-4xl mx-auto">
           <CardHeader className="px-4 py-4 sm:px-6 bg-[#4864c3]">
             <div className="flex justify-between items-center">
-              <CardTitle className="flex gap-1 text-2xl text-[#c6cfec]">
-                <CalendarCheck2 className="inline-block" size={30} />
-                <span className="">MealTrack</span>
-              </CardTitle>
+              <Logo centre={centre} title="" />
               <div className="flex gap-4 items-center">
                 <Link href="/daily-report">
                   <Button variant="secondary" className="px-2 h-8">
@@ -518,7 +518,7 @@ const selectOptions = (
                 </Link>
                 <Link href="/chats">
                   <Button variant="secondary" className="px-2 h-8">
-                    <NotepadText size={10} />
+                    <MessageCircleMore size={10} />
                   </Button>
                 </Link>
                 <Button variant="outline" onClick={handleSignOut} className="px-2 h-8">

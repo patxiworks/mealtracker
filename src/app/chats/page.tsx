@@ -17,7 +17,7 @@ export default function Chats() {
         <div className="container mx-auto pb-10">
             <Card className="w-full max-w-4xl mx-auto">
                 <div className="fixed w-full max-w-[890px] z-50">
-                    <Header centre={centre || ''} /> {/* Pass centre to Header */}
+                    <Header centre={centre} title="Messages" /> {/* Pass centre to Header */}
                 </div>
                 <ChatRoom />
             </Card>

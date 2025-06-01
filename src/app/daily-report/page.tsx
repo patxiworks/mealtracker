@@ -377,7 +377,7 @@ const DailyReportPage = () => {
   return (
     <div className="container mx-auto pb-10">
       <Card className="w-full max-w-4xl mx-auto">
-        <Header centre={selectedCentre} />
+        <Header centre={selectedCentre} title="Reports" />
         <CardContent className="grid gap-4 px-4">
         <section className="grid gap-2 pt-4">
           <div className="flex justify-between items-center gap-4 flex-wrap ">

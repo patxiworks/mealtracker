@@ -113,7 +113,6 @@ export const createUserMealAttendance = async (
   centre: string // Add centre as a required field
 ) => {
   try {
-    console.log(username)
     const userDocRef = doc(db, USERS_COLLECTION, username);
     const docSnap = await getDoc(userDocRef);
     const userData = docSnap.data() as Partial<UserData>; // Get existing data
