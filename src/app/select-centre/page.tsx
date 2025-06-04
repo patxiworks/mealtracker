@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { db } from '@/lib/firebase/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react'; // Import Loader2
+import { Header } from "@/components/ui/header";
 
 const CentreSelectionPage = () => {
   // Update state type to include name
@@ -38,14 +39,16 @@ const CentreSelectionPage = () => {
     fetchCentres();
   }, []);
 
-  const handleCentreSelect = (centreId: string) => {
-    localStorage.setItem('selectedCentre', centreId);
+  const handleCentreSelect = (centreId: string, centreName: string) => {
+    localStorage.setItem('selectedCr', centreId);
+    localStorage.setItem('ctrName', centreName);
     router.push('/sign-in'); // Redirect to the sign-in page
   };
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container mx-auto pb-10">
       <Card className="w-full max-w-md mx-auto">
+        <Header centre="" title="" />
         <CardHeader className="pb-4"> {/* Increased bottom padding */}
           <CardTitle className="text-2xl text-center">Select Your Centre</CardTitle>
         </CardHeader>
@@ -56,7 +59,7 @@ const CentreSelectionPage = () => {
             </div>
           ) : centres.length > 0 ? (
              centres.sort((a, b) => a.name.localeCompare(b.name)).map(centre => ( // Sort centres alphabetically by name
-              <Button key={centre.id} onClick={() => handleCentreSelect(centre.id)} size="lg"> {/* Use centre name for button label */}
+              <Button key={centre.id} onClick={() => handleCentreSelect(centre.id, centre.name)} size="lg"> {/* Use centre name for button label */}
                 {centre.name}
               </Button>
             ))

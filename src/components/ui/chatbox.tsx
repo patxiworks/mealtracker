@@ -26,6 +26,7 @@ export function ChatRoom() {
   //const firestore = getFirestore();
   const [currentUser, setCurrentUser] = useState<string | null>(null); // Use state for currentUser
   const [fullname, setFullname] = useState<string | null>(null); // Use state for fullname
+  const [userRole, setUserRole] = useState<string | null>(null); // Use state for fullname
   const messagesRef: CollectionReference<Message> = collection(db, 'chats') as CollectionReference<Message>;
   //const messagesQuery = query(messagesRef, where('uid', '==', currentUser), orderBy('createdAt'), limit(50));
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
@@ -38,6 +39,7 @@ export function ChatRoom() {
     // Access localStorage inside useEffect
     setCurrentUser(localStorage.getItem('username'));
     setFullname(localStorage.getItem('fullname'));
+    setUserRole(localStorage.getItem('role'));
   }, []); // Run this effect only once on component mount
 
   useEffect(() => {
@@ -45,7 +47,10 @@ export function ChatRoom() {
     if (currentUser) {
       try {
         setLoading(true)
-        const messagesQuery = query(messagesRef, where('uid', '==', currentUser), orderBy('createdAt'), limit(50));
+        let messagesQuery = query(messagesRef, where('uid', '==', currentUser), orderBy('createdAt'), limit(50));
+        if (userRole == "admin") {
+          messagesQuery = query(messagesRef, orderBy('createdAt'), limit(50));
+        }
         const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
           const messagesData: Message[] = snapshot.docs.map(doc => ({
             id: doc.id,
@@ -212,7 +217,6 @@ function ChatMessage(props: ChatMessageProps) {
     )
   }
 
-  //const opacityClass = (highlightedMessageId === null || isHighlighted) ? 'opacity-100' : 'opacity-25';
   const opacityClass = isHighlighted ? 'opacity-100' : (props.highlightedMessageId === null ? 'opacity-100' : 'opacity-25'); // Fixed opacity logic
 
   return (

@@ -112,7 +112,8 @@ const MealCheckin = () => {
   useEffect(() => {
     // Check if a centre is selected
     const selectedCentre = localStorage.getItem('selectedCentre');
-    setCentre(selectedCentre);
+    const centreName = localStorage.getItem('ctrName');
+    setCentre(centreName);
     if (!selectedCentre) {
       router.push('/select-centre'); // Redirect to centre selection page
     } else {

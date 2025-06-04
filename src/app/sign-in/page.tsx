@@ -17,7 +17,7 @@ import {
   format, startOfWeek, addDays, addWeeks
 } from 'date-fns';
 import Link from 'next/link';
-import { cn } from "@/lib/utils"
+import { Header } from "@/components/ui/header";
 
 const formatDate = (date: Date): string => {
   return format(date, 'MMM dd, yyyy');
@@ -30,8 +30,9 @@ interface MealAttendanceState {
 }
 
 const SignIn = () => {
-  const [preloadedUsers, setPreloadedUsers] = useState<{ id: string; name: string; diet: string; centre: string; }[]>([]);
+  const [preloadedUsers, setPreloadedUsers] = useState<{ id: string; name: string; diet: string; centre: string; role: string}[]>([]);
   const [centreCode, setCentreCode] = useState<string | null>(null);
+  const [centre, setCentre] = useState<string | null>(null);
   const [isValidCentreCode, setIsValidCentreCode] = useState<boolean>(false);
   const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
   const router = useRouter();
@@ -41,6 +42,8 @@ const SignIn = () => {
   useEffect(() => {
     // Load selected centre from localStorage
     const selectedCentre = localStorage.getItem('selectedCentre');
+    const centreName = localStorage.getItem('ctrName');
+    setCentre(centreName);
     if (!selectedCentre) {
       router.push('/select-centre'); // Redirect to centre selection page
     } else {
@@ -59,7 +62,7 @@ const SignIn = () => {
                 return { ...user, centre: selectedCentre }; // Assuming the centre is 'vi' for all users in this document.  Can modify as needed.
               })
             );
-            setPreloadedUsers(usersWithCentre as { id: string; name: string; diet: string; centre: string }[]);
+            setPreloadedUsers(usersWithCentre as { id: string; name: string; diet: string; centre: string; role: string }[]);
           } else {
             console.log('No such document!');
             setPreloadedUsers([]);
@@ -83,7 +86,7 @@ const SignIn = () => {
     }
   }, [router]);
 
-  const handleSignInWithPreload = async (user: { id: string; name: string; diet: string; centre: string }) => {
+  const handleSignInWithPreload = async (user: { id: string; name: string; diet: string; centre: string; role: string }) => {
     if (!isValidCentreCode) {
       toast({
         title: 'Error',
@@ -97,6 +100,7 @@ const SignIn = () => {
     localStorage.setItem('fullname', user.name);
     localStorage.setItem('diet', user.diet);
     localStorage.setItem('selectedCentre', user.centre);
+    localStorage.setItem('role', user.role);
 
     try {
       // Fetch existing meal attendance, if any
@@ -169,10 +173,11 @@ const SignIn = () => {
 
   return (
     <>
-      <div className="container mx-auto py-10">
+      <div className="container mx-auto pb-10">
         <Card className="w-full max-w-md mx-auto">
+          <Header centre={centre} title="Sign-In" />
           <CardHeader className="pb-2">
-            <CardTitle className="text-2xl">Sign In</CardTitle>
+            <CardTitle className="text-2xl">Sign In {centre ? `to ${centre}` : ""}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
             {preloadedUsers.length > 0 && (
