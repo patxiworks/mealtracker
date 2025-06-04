@@ -40,7 +40,7 @@ const CentreSelectionPage = () => {
   }, []);
 
   const handleCentreSelect = (centreId: string, centreName: string) => {
-    localStorage.setItem('selectedCr', centreId);
+    localStorage.setItem('selectedCentre', centreId);
     localStorage.setItem('ctrName', centreName);
     router.push('/sign-in'); // Redirect to the sign-in page
   };
