@@ -2,9 +2,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Timestamp, collection, doc, getDoc, updateDoc, arrayRemove, arrayUnion, writeBatch, documentId } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast'; // Use your custom toast hook
-import { db } from '@/lib/firebase/firebase'; // Adjust the import path as needed
+import { Timestamp, collection, doc, getDoc, updateDoc, arrayRemove, arrayUnion, writeBatch, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { db } from '@/lib/firebase/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Header } from "@/components/ui/header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,9 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2 } from 'lucide-react';
 
-
-// Assuming you have the CentreUser interface defined in db.ts or here
 interface CentreUser {
   birthday: Timestamp | string | null;
   diet: string | null;
@@ -23,16 +22,27 @@ interface CentreUser {
   role: "admin" | "carer" | "therapist";
 }
 
+interface Diet {
+  id: string; // Document ID, e.g., "D1"
+  description: string;
+}
+
 export default function ManageSettingsPage() {
-    const { toast } = useToast(); // Get the toast function from your hook
+    const { toast } = useToast();
     const [users, setUsers] = useState<CentreUser[]>([]);
     const [loadingUsers, setLoadingUsers] = useState(true);
-    const [submittingUser, setSubmittingUser] = useState(false); // To track individual user operation loading
+    const [submittingUser, setSubmittingUser] = useState(false);
     const [userError, setUserError] = useState<string | null>(null);
     const [showAddUserModal, setShowAddUserModal] = useState(false);
     const [editingUser, setEditingUser] = useState<CentreUser | null>(null);
 
-    // You'll need a way to get the centreId, maybe from the URL or context
+    const [diets, setDiets] = useState<Diet[]>([]);
+    const [loadingDiets, setLoadingDiets] = useState(true);
+    const [submittingDiet, setSubmittingDiet] = useState(false);
+    const [dietError, setDietError] = useState<string | null>(null);
+    const [showDietFormModal, setShowDietFormModal] = useState(false);
+    const [editingDiet, setEditingDiet] = useState<Diet | null>(null);
+
     const centreId = 'vi'; // Replace with actual logic to get centreId
 
     useEffect(() => {
@@ -47,10 +57,10 @@ export default function ManageSettingsPage() {
               if (data && data.users) {
                 setUsers(data.users);
               } else {
-                setUsers([]); // No users field or empty array
+                setUsers([]);
               }
             } else {
-              setUsers([]); // Centre document doesn't exist
+              setUsers([]);
             }
           } catch (err: any) {
             setUserError(`Error fetching users: ${err.message}`);
@@ -59,21 +69,43 @@ export default function ManageSettingsPage() {
             setLoadingUsers(false);
           }
         };
-      
         fetchUsers();
-    }, [centreId]); // Refetch if centreId changes
+    }, [centreId]);
+
+    useEffect(() => {
+        const fetchDiets = async () => {
+            try {
+                setLoadingDiets(true);
+                setDietError(null);
+                const dietsCollectionRef = collection(db, 'diets');
+                const dietsSnapshot = await getDocs(dietsCollectionRef);
+                const dietsList = dietsSnapshot.docs.map(docSnap => ({
+                    id: docSnap.id,
+                    description: docSnap.data().description || ''
+                }));
+                setDiets(dietsList.sort((a, b) => a.id.localeCompare(b.id)));
+            } catch (err: any) {
+                setDietError(`Error fetching diets: ${err.message}`);
+                toast({ title: "Error", description: `Error fetching diets: ${err.message}`, variant: "destructive" });
+                console.error(err);
+            } finally {
+                setLoadingDiets(false);
+            }
+        };
+        fetchDiets();
+    }, []);
 
 
     const addUser = async (newUser: CentreUser) => {
         try {
           setSubmittingUser(true);
-          setUserError(null); // Clear previous errors
+          setUserError(null);
           const centreRef = doc(db, 'centres', centreId);
           await updateDoc(centreRef, {
             users: arrayUnion(newUser)
           });
-          setUsers([...users, newUser]); // Optimistically update state
-          setShowAddUserModal(false); // Close modal on success
+          setUsers(prevUsers => [...prevUsers, newUser].sort((a,b) => a.name.localeCompare(b.name)));
+          setShowAddUserModal(false);
           toast({ title: "Success", description: "User added successfully." });
         } catch (err: any) {
           setUserError(`Error adding user: ${err.message}`);
@@ -88,7 +120,7 @@ export default function ManageSettingsPage() {
         try {
           const centreRef = doc(db, 'centres', centreId);
           setSubmittingUser(true);
-          setUserError(null); // Clear previous errors
+          setUserError(null);
           
           const userToUpdate = users.find(user => user.id === updatedUser.id);
           if (!userToUpdate) {
@@ -97,14 +129,14 @@ export default function ManageSettingsPage() {
 
           const batch = writeBatch(db);
           batch.update(centreRef, {
-            users: arrayRemove(userToUpdate) // Remove the old user object
+            users: arrayRemove(userToUpdate)
           });
           batch.update(centreRef, {
-            users: arrayUnion(updatedUser) // Add the updated user object
+            users: arrayUnion(updatedUser)
           });
           await batch.commit();
       
-          setUsers(users.map(user => user.id === updatedUser.id ? updatedUser : user)); 
+          setUsers(users.map(user => user.id === updatedUser.id ? updatedUser : user).sort((a,b) => a.name.localeCompare(b.name))); 
           setEditingUser(null); 
           toast({ title: "Success", description: "User updated successfully." });
         } catch (err: any) {
@@ -139,6 +171,57 @@ export default function ManageSettingsPage() {
         }
     };
 
+    const handleAddOrUpdateDiet = async (dietData: Diet) => {
+        try {
+            setSubmittingDiet(true);
+            setDietError(null);
+            const dietDocRef = doc(db, 'diets', dietData.id);
+            await setDoc(dietDocRef, { description: dietData.description }); // setDoc handles both create and update
+
+            if (editingDiet) { // If editing
+                setDiets(diets.map(d => d.id === dietData.id ? dietData : d).sort((a,b) => a.id.localeCompare(b.id)));
+                toast({ title: "Success", description: `Diet ${dietData.id} updated successfully.` });
+            } else { // If adding new
+                 // Check if diet ID already exists before adding to state
+                if (diets.some(d => d.id === dietData.id)) {
+                    // This case should ideally be prevented by form validation or handled if ID changed during edit
+                    setDiets(diets.map(d => d.id === dietData.id ? dietData : d).sort((a,b) => a.id.localeCompare(b.id)));
+                    toast({ title: "Success", description: `Diet ${dietData.id} (existing) updated successfully.` });
+                } else {
+                    setDiets(prevDiets => [...prevDiets, dietData].sort((a,b) => a.id.localeCompare(b.id)));
+                    toast({ title: "Success", description: `Diet ${dietData.id} added successfully.` });
+                }
+            }
+            setShowDietFormModal(false);
+            setEditingDiet(null);
+        } catch (err: any) {
+            setDietError(`Error saving diet: ${err.message}`);
+            toast({ title: "Error", description: `Error saving diet ${dietData.id}: ${err.message}`, variant: "destructive" });
+            console.error(err);
+        } finally {
+            setSubmittingDiet(false);
+        }
+    };
+
+    const handleDeleteDiet = async (dietId: string) => {
+        if (!confirm(`Are you sure you want to delete diet ${dietId}?`)) return;
+        try {
+            setSubmittingDiet(true);
+            setDietError(null);
+            const dietDocRef = doc(db, 'diets', dietId);
+            await deleteDoc(dietDocRef);
+            setDiets(diets.filter(d => d.id !== dietId));
+            toast({ title: "Success", description: `Diet ${dietId} deleted successfully.` });
+        } catch (err: any) {
+            setDietError(`Error deleting diet: ${err.message}`);
+            toast({ title: "Error", description: `Error deleting diet ${dietId}: ${err.message}`, variant: "destructive" });
+            console.error(err);
+        } finally {
+            setSubmittingDiet(false);
+        }
+    };
+
+
 interface UserFormProps {
     onSubmitUser: (user: CentreUser) => void;
     onClose: () => void;
@@ -163,12 +246,16 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
       onSubmitUser(userWithId);
     };
   
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    const handleSelectChange = (name: string, value: string) => {
+        setFormData({ ...formData, [name]: value });
+    };
+
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const dateValue = e.target.value; // Date as string 'YYYY-MM-DD'
+        const dateValue = e.target.value;
         if (dateValue) {
             setFormData({ ...formData, birthday: Timestamp.fromDate(new Date(dateValue)) });
         } else {
@@ -181,10 +268,9 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
         if (formData.birthday instanceof Timestamp) {
             birthdayString = formData.birthday.toDate().toISOString().split('T')[0];
         } else if (typeof formData.birthday === 'string') {
-            // Attempt to parse if it's a string already (e.g., from previous state)
             try {
                 birthdayString = new Date(formData.birthday).toISOString().split('T')[0];
-            } catch (e) { /* ignore if parsing fails, will remain empty */ }
+            } catch (e) { /* ignore */ }
         }
     }
   
@@ -205,12 +291,12 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
                         <Input id="birthday" type="date" name="birthday" value={birthdayString} onChange={handleDateChange} />
                     </div>
                     <div>
-                        <Label htmlFor="diet">Diet</Label>
+                        <Label htmlFor="diet">Diet Code (e.g., D1, D2)</Label>
                         <Input id="diet" name="diet" value={formData.diet || ''} onChange={handleChange} placeholder="e.g., D1, D2" />
                     </div>
                     <div>
                         <Label htmlFor="role">Role</Label>
-                        <Select name="role" value={formData.role} onValueChange={(value) => setFormData({...formData, role: value as CentreUser["role"] })}>
+                        <Select name="role" value={formData.role} onValueChange={(value) => handleSelectChange('role', value as CentreUser["role"] )}>
                             <SelectTrigger id="role">
                                 <SelectValue placeholder="Select role" />
                             </SelectTrigger>
@@ -229,6 +315,71 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
             </CardContent>
         </Card>
       </div>
+    );
+};
+
+interface DietFormProps {
+    onSubmitDiet: (diet: Diet) => void;
+    onClose: () => void;
+    submitting: boolean;
+    initialDiet?: Diet | null;
+}
+
+const DietForm: React.FC<DietFormProps> = ({ onSubmitDiet, onClose, submitting, initialDiet }) => {
+    const [id, setId] = useState(initialDiet?.id || '');
+    const [description, setDescription] = useState(initialDiet?.description || '');
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!id.trim() || !description.trim()) {
+            toast({ title: "Validation Error", description: "Diet ID and Description cannot be empty.", variant: "destructive"});
+            return;
+        }
+        onSubmitDiet({ id: id.trim().toUpperCase(), description: description.trim() });
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <Card className="w-full max-w-md">
+                <CardHeader>
+                    <CardTitle>{initialDiet ? `Edit Diet: ${initialDiet.id}` : 'Add New Diet'}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <Label htmlFor="dietId">Diet ID (e.g., D1, VEG)</Label>
+                            <Input 
+                                id="dietId" 
+                                name="dietId" 
+                                value={id} 
+                                onChange={(e) => setId(e.target.value)} 
+                                required 
+                                disabled={!!initialDiet} // Disable if editing
+                                className={initialDiet ? "bg-muted" : ""}
+                            />
+                            {initialDiet && <p className="text-xs text-muted-foreground mt-1">Diet ID cannot be changed after creation.</p>}
+                        </div>
+                        <div>
+                            <Label htmlFor="description">Description</Label>
+                            <Input 
+                                id="description" 
+                                name="description" 
+                                value={description} 
+                                onChange={(e) => setDescription(e.target.value)} 
+                                required 
+                            />
+                        </div>
+                        <div className="flex justify-end space-x-2">
+                            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
+                            <Button type="submit" disabled={submitting}>
+                                {submitting ? (initialDiet ? 'Updating...' : 'Adding...') : (initialDiet ? 'Update Diet' : 'Add Diet')}
+                                {submitting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                            </Button>
+                        </div>
+                    </form>
+                </CardContent>
+            </Card>
+        </div>
     );
 };
       
@@ -260,23 +411,23 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
                         <Card className="mt-4">
                             <CardHeader className="flex flex-row items-center justify-between">
                                 <CardTitle>Manage Centre Users</CardTitle>
-                                <Button onClick={() => setShowAddUserModal(true)} disabled={submittingUser}>Add New User</Button>
+                                <Button onClick={() => { setEditingUser(null); setShowAddUserModal(true); }} disabled={submittingUser}>Add New User</Button>
                             </CardHeader>
                             <CardContent>
-                                {loadingUsers && <p>Loading users...</p>}
+                                {loadingUsers && <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
                                 {userError && <p className="text-red-500">{userError}</p>}
                                 {!loadingUsers && users.length === 0 && <p>No users found for this centre.</p>}
                                 {!loadingUsers && users.length > 0 && (
                                   <ul className="space-y-2">
                                     {users.map(user => (
-                                      <li key={user.id} className="flex items-center justify-between p-2 border rounded-md">
+                                      <li key={user.id} className="flex items-center justify-between p-3 border rounded-md hover:bg-secondary/50">
                                         <div>
                                             <p className="font-semibold">{user.name} <span className="text-sm text-muted-foreground">({user.role})</span></p>
-                                            {user.diet && <p className="text-xs text-muted-foreground">Diet: {user.diet}</p>}
+                                            {user.diet && <p className="text-xs text-muted-foreground">Diet Code: {user.diet}</p>}
                                             {user.birthday && <p className="text-xs text-muted-foreground">Birthday: {user.birthday instanceof Timestamp ? user.birthday.toDate().toLocaleDateString() : String(user.birthday)}</p>}
                                         </div>
                                         <div className="space-x-2">
-                                            <Button variant="outline" size="sm" onClick={() => setEditingUser(user)} disabled={submittingUser}>Edit</Button>
+                                            <Button variant="outline" size="sm" onClick={() => { setEditingUser(user); setShowAddUserModal(true);}} disabled={submittingUser}>Edit</Button>
                                             <Button variant="destructive" size="sm" onClick={() => deleteUser(user.id)} disabled={submittingUser}>Delete</Button>
                                         </div>
                                       </li>
@@ -289,11 +440,30 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
 
                     <TabsContent value="diets">
                         <Card className="mt-4">
-                            <CardHeader>
+                            <CardHeader className="flex flex-row items-center justify-between">
                                 <CardTitle>Manage Diets</CardTitle>
+                                <Button onClick={() => { setEditingDiet(null); setShowDietFormModal(true); }} disabled={submittingDiet}>Add New Diet</Button>
                             </CardHeader>
                             <CardContent>
-                                <p>Diet management functionality will be here.</p>
+                                {loadingDiets && <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
+                                {dietError && <p className="text-red-500 py-2">{dietError}</p>}
+                                {!loadingDiets && diets.length === 0 && <p>No diets found. Add one to get started!</p>}
+                                {!loadingDiets && diets.length > 0 && (
+                                  <ul className="space-y-2">
+                                    {diets.map(diet => (
+                                      <li key={diet.id} className="flex items-center justify-between p-3 border rounded-md hover:bg-secondary/50">
+                                        <div>
+                                            <p className="font-semibold">{diet.id}</p>
+                                            <p className="text-sm text-muted-foreground">{diet.description}</p>
+                                        </div>
+                                        <div className="space-x-2">
+                                            <Button variant="outline" size="sm" onClick={() => { setEditingDiet(diet); setShowDietFormModal(true); }} disabled={submittingDiet}>Edit</Button>
+                                            <Button variant="destructive" size="sm" onClick={() => handleDeleteDiet(diet.id)} disabled={submittingDiet}>Delete</Button>
+                                        </div>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
                             </CardContent>
                         </Card>
                     </TabsContent>
@@ -312,18 +482,19 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
 
                 {showAddUserModal && (
                     <UserForm
-                      onSubmitUser={addUser}
-                      onClose={() => setShowAddUserModal(false)}
+                      initialUser={editingUser}
+                      onSubmitUser={editingUser ? updateUser : addUser}
+                      onClose={() => { setShowAddUserModal(false); setEditingUser(null); }}
                       submitting={submittingUser}
                     />
                 )}
             
-                {editingUser && (
-                    <UserForm
-                      initialUser={editingUser}
-                      onSubmitUser={updateUser}
-                      onClose={() => setEditingUser(null)}
-                      submitting={submittingUser}
+                {showDietFormModal && (
+                    <DietForm
+                        initialDiet={editingDiet}
+                        onSubmitDiet={handleAddOrUpdateDiet}
+                        onClose={() => { setShowDietFormModal(false); setEditingDiet(null); }}
+                        submitting={submittingDiet}
                     />
                 )}
             </CardContent>
