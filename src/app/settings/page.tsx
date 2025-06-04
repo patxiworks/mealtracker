@@ -220,7 +220,7 @@ const EditUserForm: React.FC<EditUserFormProps & { submitting: boolean }> = ({ u
             
 
             
-          <h1>Manage Centre Users</h1>
+          <h2>Manage Centre Users</h2>
           <button onClick={() => setShowAddUserModal(true)}>Add New User</button>
       
           {/* Display the list of users */}
