@@ -386,8 +386,8 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
           toast({ title: "Error", description: "Cannot submit user form without a selected centre.", variant: "destructive"});
           return;
       }
-      if (!formData.id.trim()) {
-          toast({ title: "Validation Error", description: "User ID cannot be empty.", variant: "destructive"});
+      if (!initialUser && !formData.id.trim()) { // ID is required only for new users
+          toast({ title: "Validation Error", description: "User ID cannot be empty for new users.", variant: "destructive"});
           return;
       }
       if (!formData.name.trim()) {
@@ -429,24 +429,23 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <Card className="w-full max-w-md">
             <CardHeader>
-                <CardTitle>{initialUser ? 'Edit User' : 'Add New User'}</CardTitle>
+                <CardTitle>{initialUser ? `Edit User: ${initialUser.name}` : 'Add New User'}</CardTitle>
             </CardHeader>
             <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <Label htmlFor="id">User ID</Label>
-                        <Input 
-                            id="id" 
-                            name="id" 
-                            value={formData.id} 
-                            onChange={handleChange} 
-                            required 
-                            disabled={!!initialUser} 
-                            className={initialUser ? "bg-muted cursor-not-allowed" : ""}
-                            placeholder="Unique identifier for the user"
-                        />
-                        {initialUser && <p className="text-xs text-muted-foreground mt-1">User ID cannot be changed after creation.</p>}
-                    </div>
+                    {!initialUser && (
+                        <div>
+                            <Label htmlFor="id">User ID</Label>
+                            <Input 
+                                id="id" 
+                                name="id" 
+                                value={formData.id} 
+                                onChange={handleChange} 
+                                required 
+                                placeholder="Unique identifier for the user"
+                            />
+                        </div>
+                    )}
                     <div>
                         <Label htmlFor="name">Name</Label>
                         <Input id="name" name="name" value={formData.name} onChange={handleChange} required />
@@ -824,5 +823,7 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
       </div>
     );
 }
+
+    
 
     
