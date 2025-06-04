@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -21,7 +22,7 @@ interface CentreUser {
   diet: string | null;
   id: string;
   name: string;
-  role: "admin" | "carer" | "therapist";
+  role: "admin" | "rs";
 }
 
 interface Diet {
@@ -117,7 +118,7 @@ export default function ManageSettingsPage() {
                   .map(u => ({
                     id: u.id,
                     name: u.name,
-                    role: u.role || 'carer',
+                    role: u.role || 'rs',
                     diet: u.diet || null,
                     birthday: u.birthday || null,
                   })) as CentreUser[];
@@ -412,7 +413,7 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
       name: initialUser?.name || '',
       birthday: initialUser?.birthday || null,
       diet: initialUser?.diet || null,
-      role: initialUser?.role || 'carer',
+      role: initialUser?.role || 'rs',
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -501,8 +502,7 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="carer">Carer</SelectItem>
-                                <SelectItem value="therapist">Therapist</SelectItem>
+                                <SelectItem value="rs">rs</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -575,7 +575,7 @@ const DietForm: React.FC<DietFormProps> = ({ onSubmitDiet, onClose, submitting, 
                         </div>
                         <div>
                             <Label htmlFor="descriptionForm">Description</Label>
-                            <Input
+                            <Textarea
                                 id="descriptionForm"
                                 name="descriptionForm"
                                 value={description}
@@ -684,19 +684,19 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
             <CardContent className="grid gap-4 px-4 pt-4">
                 <Tabs defaultValue="centres" className="w-full">
                     <TabsList className="grid w-full grid-cols-4">
-                        <TabsTrigger value="centres">Manage Centres</TabsTrigger>
-                        <TabsTrigger value="users">Manage Users</TabsTrigger>
-                        <TabsTrigger value="diets">Manage Diets</TabsTrigger>
+                        <TabsTrigger value="centres">Centres</TabsTrigger>
+                        <TabsTrigger value="users">Users</TabsTrigger>
+                        <TabsTrigger value="diets">Diets</TabsTrigger>
                         <TabsTrigger value="notifications">Notifications</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="centres">
                         <Card className="mt-4">
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <CardTitle>Available Centres</CardTitle>
+                            <CardHeader className="flex flex-row items-center justify-between p-4 sm:p-6">
+                                <CardTitle>Centres</CardTitle>
                                 <Button onClick={() => { setEditingCentre(null); setShowCentreFormModal(true); }} disabled={submittingCentre}>Add New Centre</Button>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="p-2 sm:p-6">
                                 {loadingCentres && <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
                                 {centreError && <p className="text-red-500 py-2">{centreError}</p>}
                                 {!loadingCentres && !centreError && centres.length === 0 && <p>No centres found. Add one to get started!</p>}
@@ -705,7 +705,8 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
                                     {centres.map(centre => (
                                       <li key={centre.id} className="flex items-center justify-between p-3 border rounded-md hover:bg-secondary/50">
                                         <div>
-                                            <p className="font-semibold">{centre.name} <span className="text-sm text-muted-foreground">(ID: {centre.id})</span></p>
+                                            <p className="font-semibold">{centre.name}</p>
+                                            <p className="text-xs text-muted-foreground">ID: {centre.id}</p>
                                             <p className="text-xs text-muted-foreground">Code: {centre.code}</p>
                                         </div>
                                         <div className="space-x-2">
@@ -722,7 +723,7 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
 
                     <TabsContent value="users">
                         <div className="my-4">
-                            <Label htmlFor="centre-select-for-users">Select Centre to Manage Users:</Label>
+                            <Label htmlFor="centre-select-for-users">Select a centre:</Label>
                             <Select
                                 value={selectedCentreIdForUsers || ""}
                                 onValueChange={(value) => {
@@ -749,8 +750,9 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
                             </Select>
                         </div>
                         <Card>
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <CardTitle>Users for {selectedCentreNameForUsers || "N/A"}</CardTitle>
+                            {selectedCentreIdForUsers &&
+                            <CardHeader className="flex flex-row items-center justify-between p-4 sm:p-6">
+                                <CardTitle>Users</CardTitle>
                                 <Button
                                     onClick={() => { setEditingUser(null); setShowAddUserModal(true); }}
                                     disabled={submittingUser || !selectedCentreIdForUsers || isUsersLoadingForSelectedCentre}
@@ -758,7 +760,8 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
                                     Add New User
                                 </Button>
                             </CardHeader>
-                            <CardContent>
+                            }
+                            <CardContent className="p-2 sm:p-6">
                                 {isUsersLoadingForSelectedCentre && <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
                                 {userError && <p className="text-red-500 py-2">{userError}</p>}
                                 {!selectedCentreIdForUsers && !isUsersLoadingForSelectedCentre && <p>Please select a centre to view users.</p>}
@@ -768,7 +771,8 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
                                     {users.map(user => (
                                       <li key={user.id} className="flex items-center justify-between p-3 border rounded-md hover:bg-secondary/50">
                                         <div>
-                                            <p className="font-semibold">{user.name} <span className="text-sm text-muted-foreground">(ID: {user.id}, Role: {user.role})</span></p>
+                                            <p className="font-semibold">{user.name} {user.role && <span className="text-sm text-muted-foreground">({user.role})</span>}</p>
+                                            <p className="text-xs text-muted-foreground">ID: {user.id}</p>
                                             {user.diet && <p className="text-xs text-muted-foreground">Diet Code: {user.diet}</p>}
                                             {user.birthday && <p className="text-xs text-muted-foreground">Birthday: {user.birthday instanceof Timestamp ? user.birthday.toDate().toLocaleDateString() : String(user.birthday)}</p>}
                                         </div>
@@ -805,11 +809,11 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
 
                     <TabsContent value="diets">
                         <Card className="mt-4">
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <CardTitle>Manage Diets</CardTitle>
+                            <CardHeader className="flex flex-row items-center justify-between p-4 sm:p-6">
+                                <CardTitle>Diets</CardTitle>
                                 <Button onClick={() => { setEditingDiet(null); setShowDietFormModal(true); }} disabled={submittingDiet}>Add New Diet</Button>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="p-2 sm:p-6">
                                 {loadingDiets && <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
                                 {dietError && <p className="text-red-500 py-2">{dietError}</p>}
                                 {!loadingDiets && !dietError && diets.length === 0 && <p>No diets found. Add one to get started!</p>}
@@ -819,7 +823,7 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
                                       <li key={diet.id} className="flex items-center justify-between p-3 border rounded-md hover:bg-secondary/50">
                                         <div>
                                             <p className="font-semibold">{diet.name || diet.id}</p>
-                                            <p className="text-sm text-muted-foreground">{diet.description}</p>
+                                            <p className="text-sm text-muted-foreground">{diet.description.slice(0, 20) + (diet.description.length > 20 ? "..." : "")}</p>
                                         </div>
                                         <div className="space-x-2">
                                             <Button variant="outline" size="sm" onClick={() => { setEditingDiet(diet); setShowDietFormModal(true); }} disabled={submittingDiet}>Edit</Button>
