@@ -602,14 +602,14 @@ const selectOptions = (
 
                       {(['breakfast', 'lunch', 'dinner'] as const).map((meal: 'breakfast' | 'lunch' | 'dinner') => (
                         <div 
-                        key={meal}
-                        className="relative"
-                        onMouseDown={(e) => handleTouchStart(e as any, dateKey, meal)} // Added handlers for long press
-                        onTouchStart={(e) => handleTouchStart(e, dateKey, meal)}
-                        onTouchEnd={handleTouchEnd}
-                        onMouseUp={handleTouchEnd}
-                        onClick={() => {isSaving ? null : handleMealTimeBoxClick(date, meal)}}
-                      >
+                          key={meal}
+                          className="relative"
+                          onMouseDown={(e) => handleTouchStart(e as any, dateKey, meal)} // Added handlers for long press
+                          onTouchStart={(e) => handleTouchStart(e, dateKey, meal)}
+                          onTouchEnd={handleTouchEnd}
+                          onMouseUp={handleTouchEnd}
+                          onClick={() => {isSaving ? null : handleMealTimeBoxClick(date, meal)}}
+                        >
                         <div
                           className={cn(
                             "z-10 flex h-[50px] items-center justify-center p-4 rounded-lg bg-secondary hover:bg-accent cursor-pointer",

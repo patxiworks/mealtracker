@@ -432,9 +432,9 @@ const DailyReportPage = () => {
                 {/* Hide TabsList if on diets or birthdays view */}
                  {/*(viewMode !== 'diets' && viewMode !== 'birthdays') && (*/}
                     <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="daily">Daily View</TabsTrigger>
-                        <TabsTrigger value="summary">Summary</TabsTrigger>
-                        <TabsTrigger value="user">User View</TabsTrigger>
+                        <TabsTrigger value="daily" className="data-[state=active]:bg-primary data-[state=active]:text-white">Daily</TabsTrigger>
+                        <TabsTrigger value="summary" className="data-[state=active]:bg-primary data-[state=active]:text-white">Two-day</TabsTrigger>
+                        <TabsTrigger value="user" className="data-[state=active]:bg-primary data-[state=active]:text-white">All users</TabsTrigger>
                     </TabsList>
                  {/*})}*/}
 
@@ -446,7 +446,7 @@ const DailyReportPage = () => {
                     <>
                         {/* Daily View Content */}
                         <TabsContent value="daily">
-                            <h3 className="text-lg font-semibold mt-4">
+                            <h3 className="text-lg font-semibold mt-4 mb-2 flex justify-center">
                                 Daily Report for {formattedReportDisplayDate}
                             </h3>
                             {/* Daily Meal Attendance Table */}
@@ -493,7 +493,7 @@ const DailyReportPage = () => {
                                 summary.dailyData && Object.keys(summary.dailyData).length > 0 && (
                                     <Card className="mt-4" key={index}>
                                         <CardHeader className="pb-1 pt-4">
-                                            <CardTitle className="text-base font-semibold">Daily Diet Label Counts ({summary.title.replace('Dietary Attendance Summary', '').trim()})</CardTitle>
+                                            <CardTitle className="text-base font-semibold">Daily Diet Counts {summary.title.replace('Dietary Attendance Summary', '').trim()}</CardTitle>
                                         </CardHeader>
                                         <CardContent className="px-2 sm:p-4 pt-0">
                                             <Table>
@@ -532,21 +532,20 @@ const DailyReportPage = () => {
                         <TabsContent value="summary">
                             {summaryReport ? (
                                 <>
-                                    <h3 className="text-lg font-semibold mt-4">
-                                    Summary Report (Based on {formattedReportDisplayDate})
+                                    <h3 className="text-lg font-semibold mt-4 mb-2 flex justify-center">
+                                    Two-day Report (Based on {formattedReportDisplayDate})
                                     </h3>
 
                                     {/* Summary Meal Attendance Table */}
                                     <Card>
                                         <CardHeader className="pb-1 pt-4">
-                                            <CardTitle className="text-base font-semibold">Meal Attendance Summary</CardTitle>
+                                            <CardTitle className="text-base font-semibold">Two-day Attendance Summary</CardTitle>
                                         </CardHeader>
                                         <CardContent className="px-2 sm:p-4 pt-0">
                                             <Table>
                                             <TableHeader>
                                                 <TableRow>
                                                     <TableHead>Meal</TableHead>
-                                                    <TableHead>Date</TableHead>
                                                     <TableHead>Present</TableHead>
                                                     <TableHead>Packed</TableHead>
                                                     <TableHead>Late</TableHead>
@@ -554,22 +553,28 @@ const DailyReportPage = () => {
                                             </TableHeader>
                                             <TableBody>
                                                 <TableRow>
-                                                    <TableCell>Lunch</TableCell>
-                                                    <TableCell>{summaryReport.dates.nextDay}</TableCell>
+                                                    <TableCell>
+                                                        <span>Lunch</span> 
+                                                        <div className="text-xs text-muted-foreground">{summaryReport.dates.nextDay}</div>
+                                                    </TableCell>
                                                     <TableCell><CountWithPopover detail={summaryReport.mealAttendance.lunchNextDay.present} /></TableCell>
                                                     <TableCell><CountWithPopover detail={summaryReport.mealAttendance.lunchNextDay.packed} /></TableCell>
                                                     <TableCell><CountWithPopover detail={summaryReport.mealAttendance.lunchNextDay.late} /></TableCell>
                                                 </TableRow>
                                                 <TableRow>
-                                                    <TableCell>Dinner</TableCell>
-                                                    <TableCell>{summaryReport.dates.nextDay}</TableCell>
+                                                    <TableCell>
+                                                        <span>Dinner</span> 
+                                                        <div className="text-xs text-muted-foreground">{summaryReport.dates.nextDay}</div>
+                                                    </TableCell>
                                                     <TableCell><CountWithPopover detail={summaryReport.mealAttendance.dinnerNextDay.present} /></TableCell>
                                                     <TableCell><CountWithPopover detail={summaryReport.mealAttendance.dinnerNextDay.packed} /></TableCell>
                                                     <TableCell><CountWithPopover detail={summaryReport.mealAttendance.dinnerNextDay.late} /></TableCell>
                                                 </TableRow>
                                                 <TableRow>
-                                                    <TableCell>Breakfast</TableCell>
-                                                    <TableCell>{summaryReport.dates.dayAfter}</TableCell>
+                                                    <TableCell>
+                                                        <span>Breakfast</span> 
+                                                        <div className="text-xs text-muted-foreground">{summaryReport.dates.dayAfter}</div>
+                                                    </TableCell>
                                                     <TableCell><CountWithPopover detail={summaryReport.mealAttendance.breakfastDayAfter.present} /></TableCell>
                                                     <TableCell><CountWithPopover detail={summaryReport.mealAttendance.breakfastDayAfter.packed} /></TableCell>
                                                     <TableCell><CountWithPopover detail={summaryReport.mealAttendance.breakfastDayAfter.late} /></TableCell>
@@ -625,7 +630,7 @@ const DailyReportPage = () => {
 
                          {/* User View Content */}
                         <TabsContent value="user">
-                             <h3 className="text-lg font-semibold mt-4">
+                             <h3 className="text-lg font-semibold mt-4 mb-2 flex justify-center">
                                 User Attendance for {formattedReportDisplayDate}
                              </h3>
                              {userAttendanceReport && Object.keys(userAttendanceReport).length > 0 ? (
