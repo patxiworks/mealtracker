@@ -25,7 +25,7 @@ interface CentreUser {
 interface Diet {
   id: string; 
   description: string;
-  name?: string; // Optional: if diet ID itself isn't user-friendly enough for display
+  name?: string;
 }
 
 interface Centre {
@@ -39,8 +39,8 @@ export default function ManageSettingsPage() {
     
     // User Management States
     const [users, setUsers] = useState<CentreUser[]>([]);
-    const [loadingUsers, setLoadingUsers] = useState(false); // General loading for initial load or errors
-    const [isUsersLoadingForSelectedCentre, setIsUsersLoadingForSelectedCentre] = useState(false); // Specific loading for centre change
+    const [loadingUsers, setLoadingUsers] = useState(false); 
+    const [isUsersLoadingForSelectedCentre, setIsUsersLoadingForSelectedCentre] = useState(false); 
     const [submittingUser, setSubmittingUser] = useState(false);
     const [userError, setUserError] = useState<string | null>(null);
     const [showAddUserModal, setShowAddUserModal] = useState(false);
@@ -65,7 +65,6 @@ export default function ManageSettingsPage() {
     const [showCentreFormModal, setShowCentreFormModal] = useState(false);
     const [editingCentre, setEditingCentre] = useState<Centre | null>(null);
 
-    // Fetch Centres Effect (used by all tabs that need centre list)
     const fetchCentres = useCallback(async () => {
         try {
             setLoadingCentres(true);
@@ -79,11 +78,6 @@ export default function ManageSettingsPage() {
             }));
             const sortedCentres = centresList.sort((a, b) => a.name.localeCompare(b.name));
             setCentres(sortedCentres);
-            // Optionally set the first centre as selected for user management
-            // if (sortedCentres.length > 0 && !selectedCentreIdForUsers) {
-            //     setSelectedCentreIdForUsers(sortedCentres[0].id);
-            //     setSelectedCentreNameForUsers(sortedCentres[0].name);
-            // }
         } catch (err: any) {
             setCentreError(`Error fetching centres: ${err.message}`);
             toast({ title: "Error", description: `Error fetching centres: ${err.message}`, variant: "destructive" });
@@ -91,19 +85,17 @@ export default function ManageSettingsPage() {
         } finally {
             setLoadingCentres(false);
         }
-    }, [toast]); // Removed selectedCentreIdForUsers from deps
+    }, [toast]);
 
     useEffect(() => {
         fetchCentres();
     }, [fetchCentres]);
 
-
-    // Fetch Users Effect - Depends on selectedCentreIdForUsers
     useEffect(() => {
         const fetchUsersForSelectedCentre = async () => {
           if (!selectedCentreIdForUsers) {
-            setUsers([]); // Clear users if no centre is selected
-            setLoadingUsers(false);
+            setUsers([]); 
+            setIsUsersLoadingForSelectedCentre(false); 
             return;
           }
     
@@ -115,8 +107,18 @@ export default function ManageSettingsPage() {
       
             if (centreDoc.exists()) {
               const data = centreDoc.data();
-              if (data && data.users) {
-                setUsers((data.users as CentreUser[]).sort((a,b) => a.name.localeCompare(b.name)));
+              if (data && data.users && Array.isArray(data.users)) {
+                const rawUsers = data.users as any[];
+                const validUsers = rawUsers
+                  .filter(u => u && typeof u.id === 'string' && typeof u.name === 'string') // Ensure id and name are present strings
+                  .map(u => ({ // Map to CentreUser, providing defaults for optional fields
+                    id: u.id,
+                    name: u.name,
+                    role: u.role || 'carer', // Default role if not specified
+                    diet: u.diet || null,
+                    birthday: u.birthday || null,
+                  })) as CentreUser[];
+                setUsers(validUsers.sort((a,b) => a.name.localeCompare(b.name)));
               } else {
                 setUsers([]);
               }
@@ -130,14 +132,12 @@ export default function ManageSettingsPage() {
             setUsers([]);
           } finally {
             setIsUsersLoadingForSelectedCentre(false);
-            setLoadingUsers(false); // Also set general loading to false
           }
         };
     
         fetchUsersForSelectedCentre();
     }, [selectedCentreIdForUsers]);
 
-    // Fetch Diets Effect
     useEffect(() => {
         const fetchDietsData = async () => {
             try {
@@ -148,7 +148,7 @@ export default function ManageSettingsPage() {
                 const dietsList = dietsSnapshot.docs.map(docSnap => ({
                     id: docSnap.id,
                     description: docSnap.data().description || '',
-                    name: docSnap.data().name || docSnap.id, // Use name field or fallback to id
+                    name: docSnap.data().name || docSnap.id,
                 }));
                 setDiets(dietsList.sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id)));
             } catch (err: any) {
@@ -162,8 +162,6 @@ export default function ManageSettingsPage() {
         fetchDietsData();
     }, [toast]);
 
-
-    // User CRUD Operations - Scoped to selectedCentreIdForUsers
     const addUser = async (newUser: CentreUser) => {
         if (!selectedCentreIdForUsers) {
             setUserError("No centre selected to add the user to.");
@@ -248,7 +246,7 @@ export default function ManageSettingsPage() {
             toast({ title: "Success", description: "User deleted successfully." });
           } else {
              setUserError(`User with ID ${userId} not found in the current list for centre ${selectedCentreNameForUsers}.`);
-             toast({ title: "Warning", description: "User not found in current list.", variant = "default" });
+             toast({ title: "Warning", description: "User not found in current list.", variant: "default" });
           }
         } catch (err: any) {
           setUserError(`Error deleting user: ${err.message}`);
@@ -259,7 +257,6 @@ export default function ManageSettingsPage() {
         }
     };
 
-    // Diet CRUD Operations
     const handleAddOrUpdateDiet = async (dietData: Diet) => {
         try {
             setSubmittingDiet(true);
@@ -308,26 +305,22 @@ export default function ManageSettingsPage() {
         }
     };
 
-    // Centre CRUD Operations
     const handleAddOrUpdateCentre = async (centreData: Centre) => {
         try {
             setSubmittingCentre(true);
             setCentreError(null);
             const centreDocRef = doc(db, 'centres', centreData.id);
-            // For centres, we ensure the 'users' array exists if we are creating a new centre.
             const currentDoc = await getDoc(centreDocRef);
             const dataToSet: any = { name: centreData.name, code: centreData.code };
             if (!currentDoc.exists()) {
-                dataToSet.users = []; // Initialize users array for new centres
+                dataToSet.users = []; 
             }
             await setDoc(centreDocRef, dataToSet, { merge: true });
-
 
             if (editingCentre) {
                 setCentres(prevCentres => prevCentres.map(c => c.id === centreData.id ? centreData : c).sort((a,b) => a.name.localeCompare(b.name)));
                 toast({ title: "Success", description: `Centre ${centreData.name} updated successfully.` });
             } else {
-                 // Re-fetch centres to ensure the list is up-to-date, including the new one
                 await fetchCentres(); 
                 toast({ title: "Success", description: `Centre ${centreData.name} added successfully.` });
             }
@@ -350,7 +343,6 @@ export default function ManageSettingsPage() {
             const centreDocRef = doc(db, 'centres', centreIdToDelete);
             await deleteDoc(centreDocRef);
             setCentres(centres.filter(c => c.id !== centreIdToDelete));
-            // If the deleted centre was selected for user management, reset selection
             if (selectedCentreIdForUsers === centreIdToDelete) {
                 setSelectedCentreIdForUsers(null);
                 setSelectedCentreNameForUsers(null);
@@ -366,14 +358,12 @@ export default function ManageSettingsPage() {
         }
     };
 
-
-// UserForm Component
 interface UserFormProps {
     onSubmitUser: (user: CentreUser) => void;
     onClose: () => void;
     submitting: boolean;
     initialUser?: CentreUser | null;
-    selectedCentreId: string | null; // Pass selected centre ID
+    selectedCentreId: string | null; 
 }
 
 const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, initialUser, selectedCentreId }) => {
@@ -392,7 +382,6 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
       }
       const userWithId: CentreUser = {
           ...formData,
-          // Generate a new unique ID for the user if not editing
           id: initialUser?.id || doc(collection(db, 'some_temporary_collection_for_ids')).id 
       };
       onSubmitUser(userWithId);
@@ -409,9 +398,6 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const dateValue = e.target.value;
         if (dateValue) {
-            // Store as ISO string, or convert to Timestamp right before saving if preferred by backend
-            // For simplicity in form state, keeping as string or Timestamp from initial load.
-            // Firestore Timestamps are better for queries if you need to query by date ranges.
             setFormData({ ...formData, birthday: Timestamp.fromDate(new Date(dateValue)) });
         } else {
             setFormData({ ...formData, birthday: null });
@@ -423,7 +409,6 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
         if (formData.birthday instanceof Timestamp) {
             birthdayString = formData.birthday.toDate().toISOString().split('T')[0];
         } else if (typeof formData.birthday === 'string') {
-            // Attempt to parse if it's a string (e.g., from manual input or older data)
             try {
                 birthdayString = new Date(formData.birthday).toISOString().split('T')[0];
             } catch (e) { /* ignore invalid date string */ }
@@ -477,7 +462,6 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
     );
 };
 
-// DietForm Component
 interface DietFormProps {
     onSubmitDiet: (diet: Diet) => void;
     onClose: () => void;
@@ -492,7 +476,7 @@ const DietForm: React.FC<DietFormProps> = ({ onSubmitDiet, onClose, submitting, 
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!id.trim() || !description.trim()) { // Name can be optional, defaults to ID
+        if (!id.trim() || !description.trim()) { 
             toast({ title: "Validation Error", description: "Diet ID and Description cannot be empty.", variant: "destructive"});
             return;
         }
@@ -556,7 +540,6 @@ const DietForm: React.FC<DietFormProps> = ({ onSubmitDiet, onClose, submitting, 
     );
 };
 
-// CentreForm Component
 interface CentreFormProps {
     onSubmitCentre: (centre: Centre) => void;
     onClose: () => void;
@@ -721,7 +704,7 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
                                 {isUsersLoadingForSelectedCentre && <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
                                 {userError && <p className="text-red-500 py-2">{userError}</p>}
                                 {!selectedCentreIdForUsers && !isUsersLoadingForSelectedCentre && <p>Please select a centre to view users.</p>}
-                                {selectedCentreIdForUsers && !isUsersLoadingForSelectedCentre && !userError && users.length === 0 && <p>No users found for {selectedCentreNameForUsers}.</p>}
+                                {selectedCentreIdForUsers && !isUsersLoadingForSelectedCentre && !userError && users.length === 0 && <p>No users found for {selectedCentreNameForUsers || 'the selected centre'}.</p>}
                                 {selectedCentreIdForUsers && !isUsersLoadingForSelectedCentre && !userError && users.length > 0 && (
                                   <ul className="space-y-2">
                                     {users.map(user => (
@@ -780,7 +763,6 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
                             </CardHeader>
                             <CardContent>
                                 <p>Notification settings functionality will be here.</p>
-                                {/* Placeholder for future notification settings UI */}
                             </CardContent>
                         </Card>
                     </TabsContent>
