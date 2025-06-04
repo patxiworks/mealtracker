@@ -110,11 +110,11 @@ export default function ManageSettingsPage() {
               if (data && data.users && Array.isArray(data.users)) {
                 const rawUsers = data.users as any[];
                 const validUsers = rawUsers
-                  .filter(u => u && typeof u.id === 'string' && typeof u.name === 'string') // Ensure id and name are present strings
-                  .map(u => ({ // Map to CentreUser, providing defaults for optional fields
+                  .filter(u => u && typeof u.id === 'string' && typeof u.name === 'string') 
+                  .map(u => ({ 
                     id: u.id,
                     name: u.name,
-                    role: u.role || 'carer', // Default role if not specified
+                    role: u.role || 'carer', 
                     diet: u.diet || null,
                     birthday: u.birthday || null,
                   })) as CentreUser[];
@@ -166,6 +166,11 @@ export default function ManageSettingsPage() {
         if (!selectedCentreIdForUsers) {
             setUserError("No centre selected to add the user to.");
             toast({ title: "Error", description: "Please select a centre first.", variant: "destructive" });
+            return;
+        }
+        if (users.some(user => user.id === newUser.id)) {
+            setUserError(`User with ID ${newUser.id} already exists in this centre.`);
+            toast({ title: "Error", description: `User with ID ${newUser.id} already exists.`, variant: "destructive" });
             return;
         }
         try {
@@ -367,7 +372,8 @@ interface UserFormProps {
 }
 
 const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, initialUser, selectedCentreId }) => {
-    const [formData, setFormData] = useState<Omit<CentreUser, 'id'>>({
+    const [formData, setFormData] = useState<CentreUser>({
+      id: initialUser?.id || '',
       name: initialUser?.name || '',
       birthday: initialUser?.birthday || null,
       diet: initialUser?.diet || null,
@@ -380,11 +386,15 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
           toast({ title: "Error", description: "Cannot submit user form without a selected centre.", variant: "destructive"});
           return;
       }
-      const userWithId: CentreUser = {
-          ...formData,
-          id: initialUser?.id || doc(collection(db, 'some_temporary_collection_for_ids')).id 
-      };
-      onSubmitUser(userWithId);
+      if (!formData.id.trim()) {
+          toast({ title: "Validation Error", description: "User ID cannot be empty.", variant: "destructive"});
+          return;
+      }
+      if (!formData.name.trim()) {
+        toast({ title: "Validation Error", description: "User Name cannot be empty.", variant: "destructive"});
+        return;
+    }
+      onSubmitUser(formData);
     };
   
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -423,6 +433,20 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
             </CardHeader>
             <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <Label htmlFor="id">User ID</Label>
+                        <Input 
+                            id="id" 
+                            name="id" 
+                            value={formData.id} 
+                            onChange={handleChange} 
+                            required 
+                            disabled={!!initialUser} 
+                            className={initialUser ? "bg-muted cursor-not-allowed" : ""}
+                            placeholder="Unique identifier for the user"
+                        />
+                        {initialUser && <p className="text-xs text-muted-foreground mt-1">User ID cannot be changed after creation.</p>}
+                    </div>
                     <div>
                         <Label htmlFor="name">Name</Label>
                         <Input id="name" name="name" value={formData.name} onChange={handleChange} required />
@@ -710,7 +734,7 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
                                     {users.map(user => (
                                       <li key={user.id} className="flex items-center justify-between p-3 border rounded-md hover:bg-secondary/50">
                                         <div>
-                                            <p className="font-semibold">{user.name} <span className="text-sm text-muted-foreground">({user.role})</span></p>
+                                            <p className="font-semibold">{user.name} <span className="text-sm text-muted-foreground">(ID: {user.id}, Role: {user.role})</span></p>
                                             {user.diet && <p className="text-xs text-muted-foreground">Diet Code: {user.diet}</p>}
                                             {user.birthday && <p className="text-xs text-muted-foreground">Birthday: {user.birthday instanceof Timestamp ? user.birthday.toDate().toLocaleDateString() : String(user.birthday)}</p>}
                                         </div>
