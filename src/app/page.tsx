@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { format, startOfWeek, addDays, addWeeks, eachDayOfInterval, endOfWeek } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Loader2, CalendarCheck2, NotepadText, MessageCircleMore, LogOut, Sun, Utensils, Moon, PackageCheck, X, Check, AlarmClockMinus } from 'lucide-react';
+import { Loader2, LoaderPinwheel, CalendarCheck2, NotepadText, MessageCircleMore, LogOut, Sun, Utensils, Moon, PackageCheck, X, Check, AlarmClockMinus } from 'lucide-react';
 import Link from 'next/link';
 import {
   createUserMealAttendance,
@@ -72,6 +72,7 @@ const MealCheckin = () => {
   const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({}); // Track loading state per meal box
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [applyAllStatus, setApplyAllStatus] = useState<MealStatus | null>(null); // New state for applying status to all meals
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [openSelects, setOpenSelects] = useState<Record<string, boolean>>({});
   const [isLongPress, setIsLongPress] = useState(false);
@@ -494,6 +495,28 @@ const MealCheckin = () => {
   }
 }
 
+const handleApplyAllChange = (value: string) => {
+  const newStatus: MealStatus | null = value === 'None' ? null : value as MealStatus;
+  setApplyAllStatus(newStatus); // Update the state for the dropdown
+  // Iterate through all days of the week and all meal types
+  const newTemporaryAttendance = { ...temporaryMealAttendance };
+  weekDates.forEach(date => {
+    if (date > new Date()) { // only for future dates
+      const dateKey = formatDateForKey(date);
+      newTemporaryAttendance[dateKey] = {
+        ...(newTemporaryAttendance[dateKey] || { breakfast: null, lunch: null, dinner: null }),
+        breakfast: newStatus,
+        lunch: newStatus,
+        dinner: newStatus,
+      };
+    }
+  });
+  // Update the temporary meal attendance state
+  setTemporaryMealAttendance(newTemporaryAttendance);
+  // Optionally reset the applyAllStatus dropdown after applying
+  // setApplyAllStatus(null); // Or set it to a placeholder value
+};
+
 const selectOptions = (
   <SelectContent className="w-fit">
     <SelectItem value="present" className="justify-center" onClick={(e) => e.stopPropagation()}>{mealStatusIcons["present"]}</SelectItem>
@@ -531,7 +554,7 @@ const selectOptions = (
             {/* Meal Check-in Section */}
           {loading ? (
             <div className="flex justify-center items-center py-10">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <LoaderPinwheel className="h-8 w-8 animate-spin text-[#4864c3]" />
             </div>
             ) : (
             <section className="grid gap-4">
@@ -632,9 +655,25 @@ const selectOptions = (
                    );
                 })}
               </div>
+              {/* Apply to All Dropdown */}
+              <div className="flex justify-end items-center mt-4">
+                <span className="px-2">Apply to all for this week:</span>
+                <Select onValueChange={handleApplyAllChange} value={applyAllStatus || ''}>
+                  <SelectTrigger className="w-auto max-w-xs">
+                    <SelectValue placeholder="" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="present">{mealStatusIcons["present"]}</SelectItem>
+                    <SelectItem value="absent">{mealStatusIcons["absent"]}</SelectItem>
+                    <SelectItem value="packed">{mealStatusIcons["packed"]}</SelectItem>
+                    <SelectItem value="late">{mealStatusIcons["late"]}</SelectItem>
+                    <SelectItem value="None">None</SelectItem> {/* Option for null/unset */}
+                  </SelectContent>
+                </Select>
+              </div>
               <Button 
                 onClick={handleSaveWeek} 
-                className={`flex h-12 mt-4 p-2 self-end justify-center items-center w-full ${mealChanged ? 'bg-[#f36767]' : 'bg-[#4864c3]'} font-semibold text-lg`}
+                className={`flex h-12 mt-0 p-2 self-end justify-center items-center w-full ${mealChanged ? 'bg-[#f36767]' : 'bg-[#4864c3]'} font-semibold text-lg`}
                 disabled={isSaving}
               >
                 {isSaving ? (

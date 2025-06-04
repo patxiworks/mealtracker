@@ -4,7 +4,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { getFirestore, Timestamp, collection, doc, query, orderBy, limit, addDoc, serverTimestamp, CollectionReference, onSnapshot, where, updateDoc, arrayUnion, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase/firebase';
 import { formatDate } from '@/lib/utils';
-import { Send, CircleX } from 'lucide-react';
+import { LoaderPinwheel, Send, CircleX } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Message {
@@ -31,7 +31,8 @@ export function ChatRoom() {
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [formValue, setFormValue] = useState('');
-  const isMobile = useIsMobile();
+  const [loading, setLoading] = useState(false);
+  //const isMobile = useIsMobile();
 
   useEffect(() => {
     // Access localStorage inside useEffect
@@ -42,17 +43,23 @@ export function ChatRoom() {
   useEffect(() => {
     // Only set up the snapshot listener if currentUser is available
     if (currentUser) {
-      const messagesQuery = query(messagesRef, where('uid', '==', currentUser), orderBy('createdAt'), limit(50));
-
-      const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-        const messagesData: Message[] = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data() as Omit<Message, 'id'>
-        }));
-        setMessages(messagesData.sort((a, b) => b.createdAt - a.createdAt));
-      });
-      
-      return () => unsubscribe();
+      try {
+        setLoading(true)
+        const messagesQuery = query(messagesRef, where('uid', '==', currentUser), orderBy('createdAt'), limit(50));
+        const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+          const messagesData: Message[] = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data() as Omit<Message, 'id'>
+          }));
+          setMessages(messagesData.sort((a, b) => b.createdAt - a.createdAt));
+        });
+        
+        return () => unsubscribe();
+      } catch (e: any) {
+        console.error('Error fetching messages:', e);
+      } finally {
+        setLoading(false)
+      }
     } else {
       // Clear messages if currentUser becomes null (e.g., on sign out)
       setMessages([]);
@@ -119,9 +126,11 @@ export function ChatRoom() {
   return (
     <>
       <main className="p-2 h-[84vh] mt-[6vh] overflow-y-scroll flex flex-col items-center">
-          {/*{messages && messages.map(msg => <ChatMessage key={msg.id ? msg.id : Date.now()+'-'+Math.random()} message={msg} />)}
-          <span ref={dummy}></span>*/}
-          {messages.map(msg => (
+        {/*{messages && messages.map(msg => <ChatMessage key={msg.id ? msg.id : Date.now()+'-'+Math.random()} message={msg} />)}*/}
+        {loading ? (
+            <LoaderPinwheel className="h-8 w-8 animate-spin text-[#4864c3]" />
+          ) : (
+          messages.map(msg => (
             <ChatMessage
               key={msg.id ? msg.id : Date.now() + '-' + Math.random()}
               message={msg}
@@ -130,7 +139,8 @@ export function ChatRoom() {
               highlightedMessageId={highlightedMessageId}
               onDeleteMessage={handleDeleteMessage}
             />
-          ))}
+          ))
+        )}
       </main>
       <form className="fixed bottom-0 bg-[rgb(24,23,23)] w-full max-w-[890px] flex text-xl" onSubmit={sendMessage}>
           <textarea className="leading-normal w-full text-base bg-[rgb(58,58,58)] text-white outline-none border-none px-4 py-2" value={formValue} onChange={(e) => setFormValue(e.target.value)} placeholder="Send a message" />
@@ -242,7 +252,7 @@ function ChatMessage(props: ChatMessageProps) {
             {message?.replies && message.replies.map((reply, index) => (
               <div key={index} className={`max-w-sm leading-6 -mt-1 p-3 rounded-xl relative text-[#2c2c2c] text-left bg-[#F0E68C] border border-[#D4C77E]`}>
                 {msgFormat(reply)} {/* Use msgFormat for replies as well */}
-            </div>
+              </div>
           ))}
         </div>
       </div>

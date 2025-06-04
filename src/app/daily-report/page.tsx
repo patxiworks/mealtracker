@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/table";
 import { getDailyReportData, getUserAttendanceForDate, getDietsData, getUsersBirthdays } from "@/lib/firebase/db"; // Added getDietsData, getUsersBirthdays
 import type { DailyReportDataWithUsers, MealAttendanceDetail, DietCountsDetail, MealAttendanceState, DietInfo, BirthdayInfo } from "@/lib/firebase/db"; // Added MealAttendanceState, DietInfo, BirthdayInfo
-import { CalendarCheck2, CalendarIcon, HomeIcon, Loader2, Sun, Utensils, Moon, PackageCheck, X, Check, NotebookText, Cake, Gift, AlarmClockMinus } from "lucide-react"; // Added Loader2, Sun, Utensils, Moon, PackageCheck, X, Check, NotebookText, Cake, Gift
+import { CalendarCheck2, CalendarIcon, HomeIcon, Loader2, LoaderPinwheel, Sun, Utensils, Moon, PackageCheck, X, Check, NotebookText, Cake, Gift, AlarmClockMinus } from "lucide-react"; // Added Loader2, Sun, Utensils, Moon, PackageCheck, X, Check, NotebookText, Cake, Gift
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Header } from "@/components/ui/header";
 
@@ -354,8 +354,6 @@ const DailyReportPage = () => {
 
   const formattedReportDisplayDate = selectedDate ? formatReportDate(selectedDate) : formatReportDate(today);
 
-  const tableHeaders = ["Present", "Packed", "Late"];
-
   const summaryData = [
     {
         title: "Dietary Attendance Summary (Present)",
@@ -439,7 +437,7 @@ const DailyReportPage = () => {
 
                 {loading ? (
                     <div className="flex justify-center items-center py-10">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <LoaderPinwheel className="h-8 w-8 animate-spin text-[#4864c3]" />
                     </div>
                 ) : (
                     <>
