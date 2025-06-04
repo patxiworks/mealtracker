@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Timestamp, collection, doc, getDoc, updateDoc, arrayRemove, arrayUnion, writeBatch, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase/firebase';
@@ -23,12 +23,13 @@ interface CentreUser {
 }
 
 interface Diet {
-  id: string; // Document ID, e.g., "D1"
+  id: string; 
   description: string;
+  name?: string; // Optional: if diet ID itself isn't user-friendly enough for display
 }
 
 interface Centre {
-  id: string; // Document ID, e.g., "vi"
+  id: string; 
   name: string;
   code: string;
 }
@@ -38,11 +39,15 @@ export default function ManageSettingsPage() {
     
     // User Management States
     const [users, setUsers] = useState<CentreUser[]>([]);
-    const [loadingUsers, setLoadingUsers] = useState(true);
+    const [loadingUsers, setLoadingUsers] = useState(false); // General loading for initial load or errors
+    const [isUsersLoadingForSelectedCentre, setIsUsersLoadingForSelectedCentre] = useState(false); // Specific loading for centre change
     const [submittingUser, setSubmittingUser] = useState(false);
     const [userError, setUserError] = useState<string | null>(null);
     const [showAddUserModal, setShowAddUserModal] = useState(false);
     const [editingUser, setEditingUser] = useState<CentreUser | null>(null);
+    const [selectedCentreIdForUsers, setSelectedCentreIdForUsers] = useState<string | null>(null);
+    const [selectedCentreNameForUsers, setSelectedCentreNameForUsers] = useState<string | null>(null);
+
 
     // Diet Management States
     const [diets, setDiets] = useState<Diet[]>([]);
@@ -60,39 +65,81 @@ export default function ManageSettingsPage() {
     const [showCentreFormModal, setShowCentreFormModal] = useState(false);
     const [editingCentre, setEditingCentre] = useState<Centre | null>(null);
 
-    const centreIdForUserManagement = 'vi'; // Replace with actual logic to get centreId for user management if needed
+    // Fetch Centres Effect (used by all tabs that need centre list)
+    const fetchCentres = useCallback(async () => {
+        try {
+            setLoadingCentres(true);
+            setCentreError(null);
+            const centresCollectionRef = collection(db, 'centres');
+            const centresSnapshot = await getDocs(centresCollectionRef);
+            const centresList = centresSnapshot.docs.map(docSnap => ({
+                id: docSnap.id,
+                name: docSnap.data().name || '',
+                code: docSnap.data().code || ''
+            }));
+            const sortedCentres = centresList.sort((a, b) => a.name.localeCompare(b.name));
+            setCentres(sortedCentres);
+            // Optionally set the first centre as selected for user management
+            // if (sortedCentres.length > 0 && !selectedCentreIdForUsers) {
+            //     setSelectedCentreIdForUsers(sortedCentres[0].id);
+            //     setSelectedCentreNameForUsers(sortedCentres[0].name);
+            // }
+        } catch (err: any) {
+            setCentreError(`Error fetching centres: ${err.message}`);
+            toast({ title: "Error", description: `Error fetching centres: ${err.message}`, variant: "destructive" });
+            console.error(err);
+        } finally {
+            setLoadingCentres(false);
+        }
+    }, [toast]); // Removed selectedCentreIdForUsers from deps
 
-    // Fetch Users Effect
     useEffect(() => {
-        const fetchUsers = async () => {
+        fetchCentres();
+    }, [fetchCentres]);
+
+
+    // Fetch Users Effect - Depends on selectedCentreIdForUsers
+    useEffect(() => {
+        const fetchUsersForSelectedCentre = async () => {
+          if (!selectedCentreIdForUsers) {
+            setUsers([]); // Clear users if no centre is selected
+            setLoadingUsers(false);
+            return;
+          }
+    
           try {
-            setLoadingUsers(true);
-            const centreRef = doc(db, 'centres', centreIdForUserManagement);
+            setIsUsersLoadingForSelectedCentre(true);
+            setUserError(null);
+            const centreRef = doc(db, 'centres', selectedCentreIdForUsers);
             const centreDoc = await getDoc(centreRef);
       
             if (centreDoc.exists()) {
               const data = centreDoc.data();
               if (data && data.users) {
-                setUsers(data.users);
+                setUsers((data.users as CentreUser[]).sort((a,b) => a.name.localeCompare(b.name)));
               } else {
                 setUsers([]);
               }
             } else {
               setUsers([]);
+              setUserError(`Centre document for ${selectedCentreIdForUsers} not found.`);
             }
           } catch (err: any) {
-            setUserError(`Error fetching users: ${err.message}`);
+            setUserError(`Error fetching users for ${selectedCentreIdForUsers}: ${err.message}`);
             console.error(err);
+            setUsers([]);
           } finally {
-            setLoadingUsers(false);
+            setIsUsersLoadingForSelectedCentre(false);
+            setLoadingUsers(false); // Also set general loading to false
           }
         };
-        fetchUsers();
-    }, [centreIdForUserManagement]);
+    
+        fetchUsersForSelectedCentre();
+    }, [selectedCentreIdForUsers]);
 
     // Fetch Diets Effect
     useEffect(() => {
-        const fetchDiets = async () => {
+        const fetchDietsData = async () => {
             try {
                 setLoadingDiets(true);
                 setDietError(null);
@@ -100,9 +147,10 @@ export default function ManageSettingsPage() {
                 const dietsSnapshot = await getDocs(dietsCollectionRef);
                 const dietsList = dietsSnapshot.docs.map(docSnap => ({
                     id: docSnap.id,
-                    description: docSnap.data().description || ''
+                    description: docSnap.data().description || '',
+                    name: docSnap.data().name || docSnap.id, // Use name field or fallback to id
                 }));
-                setDiets(dietsList.sort((a, b) => a.id.localeCompare(b.id)));
+                setDiets(dietsList.sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id)));
             } catch (err: any) {
                 setDietError(`Error fetching diets: ${err.message}`);
                 toast({ title: "Error", description: `Error fetching diets: ${err.message}`, variant: "destructive" });
@@ -111,45 +159,27 @@ export default function ManageSettingsPage() {
                 setLoadingDiets(false);
             }
         };
-        fetchDiets();
+        fetchDietsData();
     }, [toast]);
 
-    // Fetch Centres Effect
-    useEffect(() => {
-        const fetchCentres = async () => {
-            try {
-                setLoadingCentres(true);
-                setCentreError(null);
-                const centresCollectionRef = collection(db, 'centres');
-                const centresSnapshot = await getDocs(centresCollectionRef);
-                const centresList = centresSnapshot.docs.map(docSnap => ({
-                    id: docSnap.id,
-                    name: docSnap.data().name || '',
-                    code: docSnap.data().code || ''
-                }));
-                setCentres(centresList.sort((a, b) => a.name.localeCompare(b.name)));
-            } catch (err: any) {
-                setCentreError(`Error fetching centres: ${err.message}`);
-                toast({ title: "Error", description: `Error fetching centres: ${err.message}`, variant: "destructive" });
-                console.error(err);
-            } finally {
-                setLoadingCentres(false);
-            }
-        };
-        fetchCentres();
-    }, [toast]);
 
-    // User CRUD Operations
+    // User CRUD Operations - Scoped to selectedCentreIdForUsers
     const addUser = async (newUser: CentreUser) => {
+        if (!selectedCentreIdForUsers) {
+            setUserError("No centre selected to add the user to.");
+            toast({ title: "Error", description: "Please select a centre first.", variant: "destructive" });
+            return;
+        }
         try {
           setSubmittingUser(true);
           setUserError(null);
-          const centreRef = doc(db, 'centres', centreIdForUserManagement);
+          const centreRef = doc(db, 'centres', selectedCentreIdForUsers);
           await updateDoc(centreRef, {
             users: arrayUnion(newUser)
           });
           setUsers(prevUsers => [...prevUsers, newUser].sort((a,b) => a.name.localeCompare(b.name)));
           setShowAddUserModal(false);
+          setEditingUser(null);
           toast({ title: "Success", description: "User added successfully." });
         } catch (err: any) {
           setUserError(`Error adding user: ${err.message}`);
@@ -161,8 +191,13 @@ export default function ManageSettingsPage() {
     };
       
     const updateUser = async (updatedUser: CentreUser) => {
+        if (!selectedCentreIdForUsers) {
+            setUserError("No centre selected to update the user in.");
+            toast({ title: "Error", description: "Please select a centre first.", variant: "destructive" });
+            return;
+        }
         try {
-          const centreRef = doc(db, 'centres', centreIdForUserManagement);
+          const centreRef = doc(db, 'centres', selectedCentreIdForUsers);
           setSubmittingUser(true);
           setUserError(null);
           
@@ -182,6 +217,7 @@ export default function ManageSettingsPage() {
       
           setUsers(users.map(user => user.id === updatedUser.id ? updatedUser : user).sort((a,b) => a.name.localeCompare(b.name))); 
           setEditingUser(null); 
+          setShowAddUserModal(false);
           toast({ title: "Success", description: "User updated successfully." });
         } catch (err: any) {
           setUserError(`Error updating user: ${err.message}`);
@@ -193,9 +229,14 @@ export default function ManageSettingsPage() {
     };
       
     const deleteUser = async (userId: string) => {
+        if (!selectedCentreIdForUsers) {
+            setUserError("No centre selected to delete the user from.");
+            toast({ title: "Error", description: "Please select a centre first.", variant: "destructive" });
+            return;
+        }
         if (!confirm("Are you sure you want to delete this user?")) return;
         try {
-          const centreRef = doc(db, 'centres', centreIdForUserManagement);
+          const centreRef = doc(db, 'centres', selectedCentreIdForUsers);
           setSubmittingUser(true);
           setUserError(null); 
           const userToRemove = users.find(user => user.id === userId);
@@ -205,6 +246,9 @@ export default function ManageSettingsPage() {
             });
             setUsers(users.filter(user => user.id !== userId)); 
             toast({ title: "Success", description: "User deleted successfully." });
+          } else {
+             setUserError(`User with ID ${userId} not found in the current list for centre ${selectedCentreNameForUsers}.`);
+             toast({ title: "Warning", description: "User not found in current list.", variant = "default" });
           }
         } catch (err: any) {
           setUserError(`Error deleting user: ${err.message}`);
@@ -221,25 +265,25 @@ export default function ManageSettingsPage() {
             setSubmittingDiet(true);
             setDietError(null);
             const dietDocRef = doc(db, 'diets', dietData.id);
-            await setDoc(dietDocRef, { description: dietData.description }); 
+            await setDoc(dietDocRef, { description: dietData.description, name: dietData.name || dietData.id }); 
 
             if (editingDiet) { 
-                setDiets(diets.map(d => d.id === dietData.id ? dietData : d).sort((a,b) => a.id.localeCompare(b.id)));
-                toast({ title: "Success", description: `Diet ${dietData.id} updated successfully.` });
+                setDiets(diets.map(d => d.id === dietData.id ? dietData : d).sort((a,b) => (a.name || a.id).localeCompare(b.name || b.id)));
+                toast({ title: "Success", description: `Diet ${dietData.name || dietData.id} updated successfully.` });
             } else { 
                 if (diets.some(d => d.id === dietData.id)) {
-                    setDiets(diets.map(d => d.id === dietData.id ? dietData : d).sort((a,b) => a.id.localeCompare(b.id)));
-                    toast({ title: "Success", description: `Diet ${dietData.id} (existing) updated successfully.` });
+                    setDiets(diets.map(d => d.id === dietData.id ? dietData : d).sort((a,b) => (a.name || a.id).localeCompare(b.name || b.id)));
+                    toast({ title: "Success", description: `Diet ${dietData.name || dietData.id} (existing) updated successfully.` });
                 } else {
-                    setDiets(prevDiets => [...prevDiets, dietData].sort((a,b) => a.id.localeCompare(b.id)));
-                    toast({ title: "Success", description: `Diet ${dietData.id} added successfully.` });
+                    setDiets(prevDiets => [...prevDiets, dietData].sort((a,b) => (a.name || a.id).localeCompare(b.name || b.id)));
+                    toast({ title: "Success", description: `Diet ${dietData.name || dietData.id} added successfully.` });
                 }
             }
             setShowDietFormModal(false);
             setEditingDiet(null);
         } catch (err: any) {
             setDietError(`Error saving diet: ${err.message}`);
-            toast({ title: "Error", description: `Error saving diet ${dietData.id}: ${err.message}`, variant: "destructive" });
+            toast({ title: "Error", description: `Error saving diet ${dietData.name || dietData.id}: ${err.message}`, variant: "destructive" });
             console.error(err);
         } finally {
             setSubmittingDiet(false);
@@ -270,19 +314,22 @@ export default function ManageSettingsPage() {
             setSubmittingCentre(true);
             setCentreError(null);
             const centreDocRef = doc(db, 'centres', centreData.id);
-            await setDoc(centreDocRef, { name: centreData.name, code: centreData.code });
+            // For centres, we ensure the 'users' array exists if we are creating a new centre.
+            const currentDoc = await getDoc(centreDocRef);
+            const dataToSet: any = { name: centreData.name, code: centreData.code };
+            if (!currentDoc.exists()) {
+                dataToSet.users = []; // Initialize users array for new centres
+            }
+            await setDoc(centreDocRef, dataToSet, { merge: true });
+
 
             if (editingCentre) {
-                setCentres(centres.map(c => c.id === centreData.id ? centreData : c).sort((a,b) => a.name.localeCompare(b.name)));
+                setCentres(prevCentres => prevCentres.map(c => c.id === centreData.id ? centreData : c).sort((a,b) => a.name.localeCompare(b.name)));
                 toast({ title: "Success", description: `Centre ${centreData.name} updated successfully.` });
             } else {
-                if (centres.some(c => c.id === centreData.id)) {
-                     setCentres(centres.map(c => c.id === centreData.id ? centreData : c).sort((a,b) => a.name.localeCompare(b.name)));
-                     toast({ title: "Success", description: `Centre ${centreData.name} (existing) updated successfully.` });
-                } else {
-                    setCentres(prevCentres => [...prevCentres, centreData].sort((a,b) => a.name.localeCompare(b.name)));
-                    toast({ title: "Success", description: `Centre ${centreData.name} added successfully.` });
-                }
+                 // Re-fetch centres to ensure the list is up-to-date, including the new one
+                await fetchCentres(); 
+                toast({ title: "Success", description: `Centre ${centreData.name} added successfully.` });
             }
             setShowCentreFormModal(false);
             setEditingCentre(null);
@@ -296,13 +343,19 @@ export default function ManageSettingsPage() {
     };
 
     const handleDeleteCentre = async (centreIdToDelete: string) => {
-        if (!confirm(`Are you sure you want to delete centre ${centreIdToDelete}? This action cannot be undone.`)) return;
+        if (!confirm(`Are you sure you want to delete centre ${centreIdToDelete}? This action CANNOT be undone and will delete all associated users.`)) return;
         try {
             setSubmittingCentre(true);
             setCentreError(null);
             const centreDocRef = doc(db, 'centres', centreIdToDelete);
             await deleteDoc(centreDocRef);
             setCentres(centres.filter(c => c.id !== centreIdToDelete));
+            // If the deleted centre was selected for user management, reset selection
+            if (selectedCentreIdForUsers === centreIdToDelete) {
+                setSelectedCentreIdForUsers(null);
+                setSelectedCentreNameForUsers(null);
+                setUsers([]);
+            }
             toast({ title: "Success", description: `Centre ${centreIdToDelete} deleted successfully.` });
         } catch (err: any) {
             setCentreError(`Error deleting centre: ${err.message}`);
@@ -320,9 +373,10 @@ interface UserFormProps {
     onClose: () => void;
     submitting: boolean;
     initialUser?: CentreUser | null;
+    selectedCentreId: string | null; // Pass selected centre ID
 }
 
-const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, initialUser }) => {
+const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, initialUser, selectedCentreId }) => {
     const [formData, setFormData] = useState<Omit<CentreUser, 'id'>>({
       name: initialUser?.name || '',
       birthday: initialUser?.birthday || null,
@@ -332,9 +386,14 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
 
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
+      if (!selectedCentreId) {
+          toast({ title: "Error", description: "Cannot submit user form without a selected centre.", variant: "destructive"});
+          return;
+      }
       const userWithId: CentreUser = {
           ...formData,
-          id: initialUser?.id || doc(collection(db, 'centres', centreIdForUserManagement, 'temp')).id 
+          // Generate a new unique ID for the user if not editing
+          id: initialUser?.id || doc(collection(db, 'some_temporary_collection_for_ids')).id 
       };
       onSubmitUser(userWithId);
     };
@@ -350,6 +409,9 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
     const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const dateValue = e.target.value;
         if (dateValue) {
+            // Store as ISO string, or convert to Timestamp right before saving if preferred by backend
+            // For simplicity in form state, keeping as string or Timestamp from initial load.
+            // Firestore Timestamps are better for queries if you need to query by date ranges.
             setFormData({ ...formData, birthday: Timestamp.fromDate(new Date(dateValue)) });
         } else {
             setFormData({ ...formData, birthday: null });
@@ -361,9 +423,10 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
         if (formData.birthday instanceof Timestamp) {
             birthdayString = formData.birthday.toDate().toISOString().split('T')[0];
         } else if (typeof formData.birthday === 'string') {
+            // Attempt to parse if it's a string (e.g., from manual input or older data)
             try {
                 birthdayString = new Date(formData.birthday).toISOString().split('T')[0];
-            } catch (e) { /* ignore */ }
+            } catch (e) { /* ignore invalid date string */ }
         }
     }
   
@@ -402,8 +465,8 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
                     </div>
                     <div className="flex justify-end space-x-2">
                         <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>Cancel</Button>
-                        <Button type="submit" disabled={submitting}>
-                            {submitting ? (initialUser ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Loader2 className="mr-2 h-4 w-4 animate-spin" />) : null}
+                        <Button type="submit" disabled={submitting || !selectedCentreId}>
+                            {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                             {submitting ? (initialUser ? 'Updating...' : 'Adding...') : (initialUser ? 'Update User' : 'Add User')}
                         </Button>
                     </div>
@@ -424,22 +487,23 @@ interface DietFormProps {
 
 const DietForm: React.FC<DietFormProps> = ({ onSubmitDiet, onClose, submitting, initialDiet }) => {
     const [id, setId] = useState(initialDiet?.id || '');
+    const [name, setName] = useState(initialDiet?.name || initialDiet?.id || '');
     const [description, setDescription] = useState(initialDiet?.description || '');
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!id.trim() || !description.trim()) {
+        if (!id.trim() || !description.trim()) { // Name can be optional, defaults to ID
             toast({ title: "Validation Error", description: "Diet ID and Description cannot be empty.", variant: "destructive"});
             return;
         }
-        onSubmitDiet({ id: id.trim().toUpperCase(), description: description.trim() });
+        onSubmitDiet({ id: id.trim().toUpperCase(), name: name.trim() || id.trim().toUpperCase(), description: description.trim() });
     };
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <Card className="w-full max-w-md">
                 <CardHeader>
-                    <CardTitle>{initialDiet ? `Edit Diet: ${initialDiet.id}` : 'Add New Diet'}</CardTitle>
+                    <CardTitle>{initialDiet ? `Edit Diet: ${initialDiet.name || initialDiet.id}` : 'Add New Diet'}</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-4">
@@ -452,9 +516,20 @@ const DietForm: React.FC<DietFormProps> = ({ onSubmitDiet, onClose, submitting, 
                                 onChange={(e) => setId(e.target.value)} 
                                 required 
                                 disabled={!!initialDiet} 
-                                className={initialDiet ? "bg-muted" : ""}
+                                className={initialDiet ? "bg-muted cursor-not-allowed" : ""}
+                                placeholder="Unique identifier (e.g., VEGAN)"
                             />
                             {initialDiet && <p className="text-xs text-muted-foreground mt-1">Diet ID cannot be changed after creation.</p>}
+                        </div>
+                        <div>
+                            <Label htmlFor="dietNameForm">Diet Name (Optional, for display)</Label>
+                            <Input 
+                                id="dietNameForm" 
+                                name="dietNameForm" 
+                                value={name} 
+                                onChange={(e) => setName(e.target.value)} 
+                                placeholder="User-friendly name (e.g., Vegan Diet)"
+                            />
                         </div>
                         <div>
                             <Label htmlFor="descriptionForm">Description</Label>
@@ -464,6 +539,7 @@ const DietForm: React.FC<DietFormProps> = ({ onSubmitDiet, onClose, submitting, 
                                 value={description} 
                                 onChange={(e) => setDescription(e.target.value)} 
                                 required 
+                                placeholder="Detailed description of the diet"
                             />
                         </div>
                         <div className="flex justify-end space-x-2">
@@ -511,15 +587,16 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
                 <CardContent>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
-                            <Label htmlFor="centreIdForm">Centre ID (e.g., vi, southcreek)</Label>
+                            <Label htmlFor="centreIdForm">Centre ID (e.g., vi, southcreek - all lowercase, no spaces)</Label>
                             <Input
                                 id="centreIdForm"
                                 name="centreIdForm"
                                 value={id}
-                                onChange={(e) => setId(e.target.value)}
+                                onChange={(e) => setId(e.target.value.toLowerCase().replace(/\s+/g, ''))}
                                 required
                                 disabled={!!initialCentre}
-                                className={initialCentre ? "bg-muted" : ""}
+                                className={initialCentre ? "bg-muted cursor-not-allowed" : ""}
+                                placeholder="Unique ID (e.g., mainsite)"
                             />
                             {initialCentre && <p className="text-xs text-muted-foreground mt-1">Centre ID cannot be changed after creation.</p>}
                         </div>
@@ -531,6 +608,7 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 required
+                                placeholder="Full display name (e.g., Main Site Campus)"
                             />
                         </div>
                         <div>
@@ -541,6 +619,7 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
                                 value={code}
                                 onChange={(e) => setCode(e.target.value)}
                                 required
+                                placeholder="Secure code for user sign-in"
                             />
                         </div>
                         <div className="flex justify-end space-x-2">
@@ -560,9 +639,9 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
     return (
       <div className="container mx-auto pb-10">
         <Card className="w-full max-w-4xl mx-auto">
-            <Header centre={centreIdForUserManagement} title="Settings" />
+            <Header centre={selectedCentreNameForUsers || "Settings"} title="Management" />
             <CardContent className="grid gap-4 px-4 pt-4">
-                <Tabs defaultValue="users" className="w-full">
+                <Tabs defaultValue="centres" className="w-full">
                     <TabsList className="grid w-full grid-cols-4">
                         <TabsTrigger value="centres">Manage Centres</TabsTrigger>
                         <TabsTrigger value="users">Manage Users</TabsTrigger>
@@ -573,14 +652,14 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
                     <TabsContent value="centres">
                         <Card className="mt-4">
                             <CardHeader className="flex flex-row items-center justify-between">
-                                <CardTitle>Manage Centres</CardTitle>
+                                <CardTitle>Available Centres</CardTitle>
                                 <Button onClick={() => { setEditingCentre(null); setShowCentreFormModal(true); }} disabled={submittingCentre}>Add New Centre</Button>
                             </CardHeader>
                             <CardContent>
                                 {loadingCentres && <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
                                 {centreError && <p className="text-red-500 py-2">{centreError}</p>}
-                                {!loadingCentres && centres.length === 0 && <p>No centres found. Add one to get started!</p>}
-                                {!loadingCentres && centres.length > 0 && (
+                                {!loadingCentres && !centreError && centres.length === 0 && <p>No centres found. Add one to get started!</p>}
+                                {!loadingCentres && !centreError && centres.length > 0 && (
                                   <ul className="space-y-2">
                                     {centres.map(centre => (
                                       <li key={centre.id} className="flex items-center justify-between p-3 border rounded-md hover:bg-secondary/50">
@@ -601,16 +680,49 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
                     </TabsContent>
 
                     <TabsContent value="users">
-                        <Card className="mt-4">
+                        <div className="my-4">
+                            <Label htmlFor="centre-select-for-users">Select Centre to Manage Users:</Label>
+                            <Select
+                                value={selectedCentreIdForUsers || ""}
+                                onValueChange={(value) => {
+                                    setSelectedCentreIdForUsers(value);
+                                    const selected = centres.find(c => c.id === value);
+                                    setSelectedCentreNameForUsers(selected ? selected.name : null);
+                                }}
+                                disabled={loadingCentres || centres.length === 0}
+                            >
+                                <SelectTrigger id="centre-select-for-users" className="w-full md:w-1/2 mt-1">
+                                    <SelectValue placeholder="Select a centre..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {loadingCentres ? (
+                                        <SelectItem value="loading" disabled>Loading centres...</SelectItem>
+                                    ) : centres.length === 0 ? (
+                                        <SelectItem value="no-centres" disabled>No centres available. Add a centre first.</SelectItem>
+                                    ) : (
+                                        centres.map(centre => (
+                                            <SelectItem key={centre.id} value={centre.id}>{centre.name}</SelectItem>
+                                        ))
+                                    )}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <Card>
                             <CardHeader className="flex flex-row items-center justify-between">
-                                <CardTitle>Manage Centre Users ({centreIdForUserManagement})</CardTitle>
-                                <Button onClick={() => { setEditingUser(null); setShowAddUserModal(true); }} disabled={submittingUser}>Add New User</Button>
+                                <CardTitle>Users for {selectedCentreNameForUsers || "N/A"}</CardTitle>
+                                <Button 
+                                    onClick={() => { setEditingUser(null); setShowAddUserModal(true); }} 
+                                    disabled={submittingUser || !selectedCentreIdForUsers || isUsersLoadingForSelectedCentre}
+                                >
+                                    Add New User
+                                </Button>
                             </CardHeader>
                             <CardContent>
-                                {loadingUsers && <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
-                                {userError && <p className="text-red-500">{userError}</p>}
-                                {!loadingUsers && users.length === 0 && <p>No users found for this centre.</p>}
-                                {!loadingUsers && users.length > 0 && (
+                                {isUsersLoadingForSelectedCentre && <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
+                                {userError && <p className="text-red-500 py-2">{userError}</p>}
+                                {!selectedCentreIdForUsers && !isUsersLoadingForSelectedCentre && <p>Please select a centre to view users.</p>}
+                                {selectedCentreIdForUsers && !isUsersLoadingForSelectedCentre && !userError && users.length === 0 && <p>No users found for {selectedCentreNameForUsers}.</p>}
+                                {selectedCentreIdForUsers && !isUsersLoadingForSelectedCentre && !userError && users.length > 0 && (
                                   <ul className="space-y-2">
                                     {users.map(user => (
                                       <li key={user.id} className="flex items-center justify-between p-3 border rounded-md hover:bg-secondary/50">
@@ -640,13 +752,13 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
                             <CardContent>
                                 {loadingDiets && <div className="flex justify-center py-4"><Loader2 className="h-6 w-6 animate-spin" /></div>}
                                 {dietError && <p className="text-red-500 py-2">{dietError}</p>}
-                                {!loadingDiets && diets.length === 0 && <p>No diets found. Add one to get started!</p>}
-                                {!loadingDiets && diets.length > 0 && (
+                                {!loadingDiets && !dietError && diets.length === 0 && <p>No diets found. Add one to get started!</p>}
+                                {!loadingDiets && !dietError && diets.length > 0 && (
                                   <ul className="space-y-2">
                                     {diets.map(diet => (
                                       <li key={diet.id} className="flex items-center justify-between p-3 border rounded-md hover:bg-secondary/50">
                                         <div>
-                                            <p className="font-semibold">{diet.id}</p>
+                                            <p className="font-semibold">{diet.name || diet.id}</p>
                                             <p className="text-sm text-muted-foreground">{diet.description}</p>
                                         </div>
                                         <div className="space-x-2">
@@ -668,17 +780,19 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
                             </CardHeader>
                             <CardContent>
                                 <p>Notification settings functionality will be here.</p>
+                                {/* Placeholder for future notification settings UI */}
                             </CardContent>
                         </Card>
                     </TabsContent>
                 </Tabs>
 
-                {showAddUserModal && (
+                {showAddUserModal && selectedCentreIdForUsers && (
                     <UserForm
                       initialUser={editingUser}
                       onSubmitUser={editingUser ? updateUser : addUser}
                       onClose={() => { setShowAddUserModal(false); setEditingUser(null); }}
                       submitting={submittingUser}
+                      selectedCentreId={selectedCentreIdForUsers}
                     />
                 )}
             
@@ -705,3 +819,4 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
     );
 }
 
+    
