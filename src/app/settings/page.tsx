@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Timestamp, collection, doc, getDoc, updateDoc, arrayRemove, arrayUnion, writeBatch, documentId } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast'; // Use your custom toast hook
 import { db } from '@/lib/firebase/firebase'; // Adjust the import path as needed
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Header } from "@/components/ui/header";
 
 // Assuming you have the CentreUser interface defined in db.ts or here
 interface CentreUser {
@@ -207,7 +209,17 @@ const EditUserForm: React.FC<EditUserFormProps & { submitting: boolean }> = ({ u
     }
       
     return (
-        <div>
+      <div className="container mx-auto pb-10">
+      <Card className="w-full max-w-4xl mx-auto">
+        <Header centre="" title="Settings" />
+        <CardContent className="grid gap-4 px-4">
+        <section className="grid gap-2 pt-4">
+          <div className="flex flex-col justify-between items-center gap-4 flex-wrap ">
+            
+
+            
+
+            
           <h1>Manage Centre Users</h1>
           <button onClick={() => setShowAddUserModal(true)}>Add New User</button>
       
@@ -243,6 +255,10 @@ const EditUserForm: React.FC<EditUserFormProps & { submitting: boolean }> = ({ u
               onClose={() => setEditingUser(null)}
             />
           )}
+        </div>
+        </section>
+        </CardContent>
+        </Card>
         </div>
     );
 
