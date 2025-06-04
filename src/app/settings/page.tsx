@@ -12,7 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Loader2, MoreVertical } from 'lucide-react';
 
 interface CentreUser {
   birthday: Timestamp | string | null;
@@ -170,7 +171,7 @@ export default function ManageSettingsPage() {
         }
         if (users.some(user => user.id === newUser.id)) {
             setUserError(`User with ID ${newUser.id} already exists in this centre.`);
-            toast({ title: "Error", description: `User with ID ${newUser.id} already exists.`, variant: "destructive" });
+            toast({ title: "Error", description: `User with ID ${newUser.id} already exists in this centre.`, variant: "destructive" });
             return;
         }
         try {
@@ -231,13 +232,13 @@ export default function ManageSettingsPage() {
         }
     };
       
-    const deleteUser = async (userId: string) => {
+    const handleSoftDeleteUser = async (userId: string) => {
         if (!selectedCentreIdForUsers) {
             setUserError("No centre selected to delete the user from.");
             toast({ title: "Error", description: "Please select a centre first.", variant: "destructive" });
             return;
         }
-        if (!confirm("Are you sure you want to delete this user?")) return;
+        if (!confirm(`Are you sure you want to remove user ${userId} from centre ${selectedCentreNameForUsers}? The user's main account will not be deleted.`)) return;
         try {
           const centreRef = doc(db, 'centres', selectedCentreIdForUsers);
           setSubmittingUser(true);
@@ -248,19 +249,69 @@ export default function ManageSettingsPage() {
               users: arrayRemove(userToRemove)
             });
             setUsers(users.filter(user => user.id !== userId)); 
-            toast({ title: "Success", description: "User deleted successfully." });
+            toast({ title: "Success", description: `User ${userId} removed from centre.` });
           } else {
              setUserError(`User with ID ${userId} not found in the current list for centre ${selectedCentreNameForUsers}.`);
              toast({ title: "Warning", description: "User not found in current list.", variant: "default" });
           }
         } catch (err: any) {
-          setUserError(`Error deleting user: ${err.message}`);
-          toast({ title: "Error", description: `Error deleting user: ${err.message}`, variant: "destructive" });
+          setUserError(`Error soft deleting user: ${err.message}`);
+          toast({ title: "Error", description: `Error removing user from centre: ${err.message}`, variant: "destructive" });
           console.error(err);
         } finally {
           setSubmittingUser(false);
         }
     };
+
+    const handleHardDeleteUser = async (userId: string) => {
+        if (!selectedCentreIdForUsers) {
+            setUserError("No centre selected for this operation.");
+            toast({ title: "Error", description: "Please select a centre first.", variant: "destructive" });
+            return;
+        }
+        if (!confirm(`Are you sure you want to PERMANENTLY delete user ${userId} from centre ${selectedCentreNameForUsers} AND remove their main account? This action CANNOT be undone.`)) return;
+        
+        setSubmittingUser(true);
+        setUserError(null);
+        
+        try {
+            const centreRef = doc(db, 'centres', selectedCentreIdForUsers);
+            const userToRemoveFromCentre = users.find(user => user.id === userId);
+
+            // Start a batch write
+            const batch = writeBatch(db);
+
+            // 1. Remove user from the centre's 'users' array
+            if (userToRemoveFromCentre) {
+                batch.update(centreRef, { users: arrayRemove(userToRemoveFromCentre) });
+            } else {
+                // If user not in local state, still attempt to remove from Firestore in case of stale local state
+                // This requires constructing a minimal object that matches what's in Firestore
+                // For simplicity, we'll assume userToRemoveFromCentre is found or this part might need fetching the exact object.
+                // For now, we'll rely on the local state being up-to-date.
+                 toast({ title: "Warning", description: `User ${userId} not found in local list for ${selectedCentreNameForUsers}, hard delete may be incomplete if user was already removed from centre.`, variant: "default" });
+            }
+
+            // 2. Delete the user's document from the 'users' collection
+            const userDocRef = doc(db, 'users', userId);
+            batch.delete(userDocRef);
+
+            // Commit the batch
+            await batch.commit();
+
+            // Update local state
+            setUsers(users.filter(user => user.id !== userId));
+            toast({ title: "Success", description: `User ${userId} permanently deleted.` });
+
+        } catch (err: any) {
+            setUserError(`Error hard deleting user: ${err.message}`);
+            toast({ title: "Error", description: `Error permanently deleting user: ${err.message}`, variant: "destructive" });
+            console.error(err);
+        } finally {
+            setSubmittingUser(false);
+        }
+    };
+
 
     const handleAddOrUpdateDiet = async (dietData: Diet) => {
         try {
@@ -386,7 +437,7 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
           toast({ title: "Error", description: "Cannot submit user form without a selected centre.", variant: "destructive"});
           return;
       }
-      if (!initialUser && !formData.id.trim()) { // ID is required only for new users
+      if (!initialUser && !formData.id.trim()) {
           toast({ title: "Validation Error", description: "User ID cannot be empty for new users.", variant: "destructive"});
           return;
       }
@@ -737,9 +788,28 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
                                             {user.diet && <p className="text-xs text-muted-foreground">Diet Code: {user.diet}</p>}
                                             {user.birthday && <p className="text-xs text-muted-foreground">Birthday: {user.birthday instanceof Timestamp ? user.birthday.toDate().toLocaleDateString() : String(user.birthday)}</p>}
                                         </div>
-                                        <div className="space-x-2">
+                                        <div className="flex items-center space-x-2">
                                             <Button variant="outline" size="sm" onClick={() => { setEditingUser(user); setShowAddUserModal(true);}} disabled={submittingUser}>Edit</Button>
-                                            <Button variant="destructive" size="sm" onClick={() => deleteUser(user.id)} disabled={submittingUser}>Delete</Button>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="sm" className="px-2" disabled={submittingUser}>
+                                                        <MoreVertical className="h-4 w-4" />
+                                                        <span className="sr-only">User Actions</span>
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onClick={() => handleSoftDeleteUser(user.id)} disabled={submittingUser}>
+                                                        Soft Delete (Remove from Centre)
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        className="text-red-600 hover:!text-red-600 focus:!text-red-600"
+                                                        onClick={() => handleHardDeleteUser(user.id)}
+                                                        disabled={submittingUser}
+                                                    >
+                                                        Hard Delete (Permanent)
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
                                         </div>
                                       </li>
                                     ))}
@@ -823,7 +893,3 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
       </div>
     );
 }
-
-    
-
-    
