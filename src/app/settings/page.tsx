@@ -8,11 +8,12 @@ import { db } from '@/lib/firebase/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Header } from "@/components/ui/header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Loader2, MoreVertical } from 'lucide-react';
 
 interface CentreUser {
@@ -24,30 +25,31 @@ interface CentreUser {
 }
 
 interface Diet {
-  id: string; 
+  id: string;
   description: string;
   name?: string;
 }
 
 interface Centre {
-  id: string; 
+  id: string;
   name: string;
   code: string;
 }
 
 export default function ManageSettingsPage() {
     const { toast } = useToast();
-    
+
     // User Management States
     const [users, setUsers] = useState<CentreUser[]>([]);
-    const [loadingUsers, setLoadingUsers] = useState(false); 
-    const [isUsersLoadingForSelectedCentre, setIsUsersLoadingForSelectedCentre] = useState(false); 
+    const [isUsersLoadingForSelectedCentre, setIsUsersLoadingForSelectedCentre] = useState(false);
     const [submittingUser, setSubmittingUser] = useState(false);
     const [userError, setUserError] = useState<string | null>(null);
     const [showAddUserModal, setShowAddUserModal] = useState(false);
     const [editingUser, setEditingUser] = useState<CentreUser | null>(null);
     const [selectedCentreIdForUsers, setSelectedCentreIdForUsers] = useState<string | null>(null);
     const [selectedCentreNameForUsers, setSelectedCentreNameForUsers] = useState<string | null>(null);
+    const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
+    const [deleteAction, setDeleteAction] = useState<{ type: 'soft' | 'hard'; userId: string; userName: string; } | null>(null);
 
 
     // Diet Management States
@@ -95,27 +97,27 @@ export default function ManageSettingsPage() {
     useEffect(() => {
         const fetchUsersForSelectedCentre = async () => {
           if (!selectedCentreIdForUsers) {
-            setUsers([]); 
-            setIsUsersLoadingForSelectedCentre(false); 
+            setUsers([]);
+            setIsUsersLoadingForSelectedCentre(false);
             return;
           }
-    
+
           try {
             setIsUsersLoadingForSelectedCentre(true);
             setUserError(null);
             const centreRef = doc(db, 'centres', selectedCentreIdForUsers);
             const centreDoc = await getDoc(centreRef);
-      
+
             if (centreDoc.exists()) {
               const data = centreDoc.data();
               if (data && data.users && Array.isArray(data.users)) {
                 const rawUsers = data.users as any[];
                 const validUsers = rawUsers
-                  .filter(u => u && typeof u.id === 'string' && typeof u.name === 'string') 
-                  .map(u => ({ 
+                  .filter(u => u && typeof u.id === 'string' && typeof u.name === 'string')
+                  .map(u => ({
                     id: u.id,
                     name: u.name,
-                    role: u.role || 'carer', 
+                    role: u.role || 'carer',
                     diet: u.diet || null,
                     birthday: u.birthday || null,
                   })) as CentreUser[];
@@ -136,9 +138,9 @@ export default function ManageSettingsPage() {
             setIsUsersLoadingForSelectedCentre(false);
           }
         };
-    
+
         fetchUsersForSelectedCentre();
-    }, [selectedCentreIdForUsers, toast]); // Added toast to dependencies
+    }, [selectedCentreIdForUsers, toast]);
 
     useEffect(() => {
         const fetchDietsData = async () => {
@@ -170,6 +172,11 @@ export default function ManageSettingsPage() {
             toast({ title: "Error", description: "Please select a centre first.", variant: "destructive" });
             return;
         }
+        if (!newUser.id || !newUser.id.trim()) {
+            setUserError("User ID cannot be empty.");
+            toast({ title: "Error", description: "User ID cannot be empty.", variant: "destructive" });
+            return;
+        }
         if (users.some(user => user.id === newUser.id)) {
             setUserError(`User with ID ${newUser.id} already exists in this centre.`);
             toast({ title: "Error", description: `User with ID ${newUser.id} already exists in this centre.`, variant: "destructive" });
@@ -194,7 +201,7 @@ export default function ManageSettingsPage() {
           setSubmittingUser(false);
         }
     };
-      
+
     const updateUser = async (updatedUser: CentreUser) => {
         if (!selectedCentreIdForUsers) {
             setUserError("No centre selected to update the user in.");
@@ -205,7 +212,7 @@ export default function ManageSettingsPage() {
         setUserError(null);
         try {
           const centreRef = doc(db, 'centres', selectedCentreIdForUsers);
-          
+
           const userToUpdate = users.find(user => user.id === updatedUser.id);
           if (!userToUpdate) {
             throw new Error("User not found for update.");
@@ -219,9 +226,9 @@ export default function ManageSettingsPage() {
             users: arrayUnion(updatedUser)
           });
           await batch.commit();
-      
-          setUsers(users.map(user => user.id === updatedUser.id ? updatedUser : user).sort((a,b) => a.name.localeCompare(b.name))); 
-          setEditingUser(null); 
+
+          setUsers(users.map(user => user.id === updatedUser.id ? updatedUser : user).sort((a,b) => a.name.localeCompare(b.name)));
+          setEditingUser(null);
           setShowAddUserModal(false);
           toast({ title: "Success", description: "User updated successfully." });
         } catch (err: any) {
@@ -232,76 +239,60 @@ export default function ManageSettingsPage() {
           setSubmittingUser(false);
         }
     };
-      
-    const handleSoftDeleteUser = async (userId: string) => {
-        if (!selectedCentreIdForUsers) {
-            setUserError("No centre selected to delete the user from.");
-            toast({ title: "Error", description: "Please select a centre first.", variant: "destructive" });
-            return;
-        }
-        if (!confirm(`Are you sure you want to remove user ${userId} from centre ${selectedCentreNameForUsers || 'this centre'}? The user's main account will not be deleted.`)) return;
-        
-        setSubmittingUser(true);
-        setUserError(null); 
-        try {
-          const centreRef = doc(db, 'centres', selectedCentreIdForUsers);
-          const userToRemove = users.find(user => user.id === userId);
-          if (userToRemove) {
-            await updateDoc(centreRef, {
-              users: arrayRemove(userToRemove)
-            });
-            setUsers(users.filter(user => user.id !== userId)); 
-            toast({ title: "Success", description: `User ${userId} removed from centre.` });
-          } else {
-             setUserError(`User with ID ${userId} not found in the current list for centre ${selectedCentreNameForUsers || 'this centre'}.`);
-             toast({ title: "Warning", description: "User not found in current list.", variant: "default" });
-          }
-        } catch (err: any) {
-          setUserError(`Error soft deleting user: ${err.message}`);
-          toast({ title: "Error", description: `Error removing user from centre: ${err.message}`, variant: "destructive" });
-          console.error(err);
-        } finally {
-          setSubmittingUser(false);
-        }
+
+    const openDeleteConfirmationDialog = (type: 'soft' | 'hard', userId: string, userName: string) => {
+        setDeleteAction({ type, userId, userName });
+        setShowDeleteConfirmDialog(true);
     };
 
-    const handleHardDeleteUser = async (userId: string) => {
-        if (!selectedCentreIdForUsers) {
-            setUserError("No centre selected for this operation.");
-            toast({ title: "Error", description: "Please select a centre first.", variant: "destructive" });
+    const handleConfirmDelete = async () => {
+        if (!deleteAction || !selectedCentreIdForUsers) {
+            toast({ title: "Error", description: "Delete action or centre ID is missing.", variant: "destructive" });
+            setShowDeleteConfirmDialog(false);
+            setDeleteAction(null);
             return;
         }
-        if (!confirm(`Are you sure you want to PERMANENTLY delete user ${userId} from ${selectedCentreNameForUsers || 'this centre'} AND remove their main account? This action CANNOT be undone.`)) return;
-        
+
         setSubmittingUser(true);
         setUserError(null);
-        
+        const { type, userId, userName } = deleteAction;
+
         try {
-            const centreRef = doc(db, 'centres', selectedCentreIdForUsers);
-            const userToRemoveFromCentre = users.find(user => user.id === userId);
+            if (type === 'soft') {
+                const centreRef = doc(db, 'centres', selectedCentreIdForUsers);
+                const userToRemove = users.find(user => user.id === userId);
+                if (userToRemove) {
+                    await updateDoc(centreRef, { users: arrayRemove(userToRemove) });
+                    setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+                    toast({ title: "Success", description: `User ${userName} removed from centre.` });
+                } else {
+                    setUserError(`User with ID ${userId} not found in the current list for centre ${selectedCentreNameForUsers || 'this centre'}.`);
+                    toast({ title: "Warning", description: "User not found in current list.", variant: "default" });
+                }
+            } else if (type === 'hard') {
+                const centreRef = doc(db, 'centres', selectedCentreIdForUsers);
+                const userToRemoveFromCentre = users.find(user => user.id === userId);
+                const batch = writeBatch(db);
 
-            const batch = writeBatch(db);
-
-            if (userToRemoveFromCentre) {
-                batch.update(centreRef, { users: arrayRemove(userToRemoveFromCentre) });
-            } else {
-                 toast({ title: "Warning", description: `User ${userId} not found in local list for ${selectedCentreNameForUsers || 'this centre'}, hard delete may be incomplete if user was already removed from centre.`, variant: "default" });
+                if (userToRemoveFromCentre) {
+                    batch.update(centreRef, { users: arrayRemove(userToRemoveFromCentre) });
+                } else {
+                    toast({ title: "Warning", description: `User ${userId} not found in local list for ${selectedCentreNameForUsers || 'this centre'}, hard delete may be incomplete.`, variant: "default" });
+                }
+                const userDocRef = doc(db, 'users', userId);
+                batch.delete(userDocRef);
+                await batch.commit();
+                setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+                toast({ title: "Success", description: `User ${userName} permanently deleted.` });
             }
-
-            const userDocRef = doc(db, 'users', userId);
-            batch.delete(userDocRef);
-
-            await batch.commit();
-
-            setUsers(users.filter(user => user.id !== userId));
-            toast({ title: "Success", description: `User ${userId} permanently deleted.` });
-
         } catch (err: any) {
-            setUserError(`Error hard deleting user: ${err.message}`);
-            toast({ title: "Error", description: `Error permanently deleting user: ${err.message}`, variant: "destructive" });
+            setUserError(`Error ${type === 'soft' ? 'removing user from centre' : 'permanently deleting user'}: ${err.message}`);
+            toast({ title: "Error", description: `Error performing delete: ${err.message}`, variant: "destructive" });
             console.error(err);
         } finally {
             setSubmittingUser(false);
+            setShowDeleteConfirmDialog(false);
+            setDeleteAction(null);
         }
     };
 
@@ -311,12 +302,12 @@ export default function ManageSettingsPage() {
         setDietError(null);
         try {
             const dietDocRef = doc(db, 'diets', dietData.id);
-            await setDoc(dietDocRef, { description: dietData.description, name: dietData.name || dietData.id }); 
+            await setDoc(dietDocRef, { description: dietData.description, name: dietData.name || dietData.id });
 
-            if (editingDiet) { 
+            if (editingDiet) {
                 setDiets(diets.map(d => d.id === dietData.id ? dietData : d).sort((a,b) => (a.name || a.id).localeCompare(b.name || b.id)));
                 toast({ title: "Success", description: `Diet ${dietData.name || dietData.id} updated successfully.` });
-            } else { 
+            } else {
                 if (diets.some(d => d.id === dietData.id)) {
                     setDiets(diets.map(d => d.id === dietData.id ? dietData : d).sort((a,b) => (a.name || a.id).localeCompare(b.name || b.id)));
                     toast({ title: "Success", description: `Diet ${dietData.name || dietData.id} (existing) updated successfully.` });
@@ -362,7 +353,7 @@ export default function ManageSettingsPage() {
             const currentDoc = await getDoc(centreDocRef);
             const dataToSet: any = { name: centreData.name, code: centreData.code };
             if (!currentDoc.exists()) {
-                dataToSet.users = []; 
+                dataToSet.users = [];
             }
             await setDoc(centreDocRef, dataToSet, { merge: true });
 
@@ -370,7 +361,7 @@ export default function ManageSettingsPage() {
                 setCentres(prevCentres => prevCentres.map(c => c.id === centreData.id ? centreData : c).sort((a,b) => a.name.localeCompare(b.name)));
                 toast({ title: "Success", description: `Centre ${centreData.name} updated successfully.` });
             } else {
-                await fetchCentres(); 
+                await fetchCentres();
                 toast({ title: "Success", description: `Centre ${centreData.name} added successfully.` });
             }
             setShowCentreFormModal(false);
@@ -412,7 +403,7 @@ interface UserFormProps {
     onClose: () => void;
     submitting: boolean;
     initialUser?: CentreUser | null;
-    selectedCentreId: string | null; 
+    selectedCentreId: string | null;
 }
 
 const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, initialUser, selectedCentreId }) => {
@@ -430,7 +421,7 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
           toast({ title: "Error", description: "Cannot submit user form without a selected centre.", variant: "destructive"});
           return;
       }
-      if (!initialUser && !formData.id.trim()) { // Check ID only for new users
+      if (!initialUser && !formData.id.trim()) {
         toast({ title: "Validation Error", description: "User ID cannot be empty for new users.", variant: "destructive"});
         return;
       }
@@ -440,7 +431,7 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
       }
       onSubmitUser(formData);
     };
-  
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       setFormData({ ...formData, [e.target.name]: e.target.value });
     };
@@ -468,7 +459,7 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
             } catch (e) { /* ignore invalid date string */ }
         }
     }
-  
+
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <Card className="w-full max-w-md">
@@ -477,15 +468,15 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
             </CardHeader>
             <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    {!initialUser && ( // Only show ID field for new users
+                    {!initialUser && (
                         <div>
                             <Label htmlFor="id">User ID</Label>
-                            <Input 
-                                id="id" 
-                                name="id" 
-                                value={formData.id} 
-                                onChange={handleChange} 
-                                required 
+                            <Input
+                                id="id"
+                                name="id"
+                                value={formData.id}
+                                onChange={handleChange}
+                                required
                                 placeholder="Unique identifier for the user"
                             />
                         </div>
@@ -543,7 +534,7 @@ const DietForm: React.FC<DietFormProps> = ({ onSubmitDiet, onClose, submitting, 
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!id.trim() || !description.trim()) { 
+        if (!id.trim() || !description.trim()) {
             toast({ title: "Validation Error", description: "Diet ID and Description cannot be empty.", variant: "destructive"});
             return;
         }
@@ -560,13 +551,13 @@ const DietForm: React.FC<DietFormProps> = ({ onSubmitDiet, onClose, submitting, 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
                             <Label htmlFor="dietIdForm">Diet ID (e.g., D1, VEG)</Label>
-                            <Input 
-                                id="dietIdForm" 
-                                name="dietIdForm" 
-                                value={id} 
-                                onChange={(e) => setId(e.target.value)} 
-                                required 
-                                disabled={!!initialDiet} 
+                            <Input
+                                id="dietIdForm"
+                                name="dietIdForm"
+                                value={id}
+                                onChange={(e) => setId(e.target.value)}
+                                required
+                                disabled={!!initialDiet}
                                 className={initialDiet ? "bg-muted cursor-not-allowed" : ""}
                                 placeholder="Unique identifier (e.g., VEGAN)"
                             />
@@ -574,22 +565,22 @@ const DietForm: React.FC<DietFormProps> = ({ onSubmitDiet, onClose, submitting, 
                         </div>
                         <div>
                             <Label htmlFor="dietNameForm">Diet Name (Optional, for display)</Label>
-                            <Input 
-                                id="dietNameForm" 
-                                name="dietNameForm" 
-                                value={name} 
-                                onChange={(e) => setName(e.target.value)} 
+                            <Input
+                                id="dietNameForm"
+                                name="dietNameForm"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
                                 placeholder="User-friendly name (e.g., Vegan Diet)"
                             />
                         </div>
                         <div>
                             <Label htmlFor="descriptionForm">Description</Label>
-                            <Input 
-                                id="descriptionForm" 
-                                name="descriptionForm" 
-                                value={description} 
-                                onChange={(e) => setDescription(e.target.value)} 
-                                required 
+                            <Input
+                                id="descriptionForm"
+                                name="descriptionForm"
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                required
                                 placeholder="Detailed description of the diet"
                             />
                         </div>
@@ -685,11 +676,11 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
         </div>
     );
 };
-      
+
     return (
       <div className="container mx-auto pb-10">
         <Card className="w-full max-w-4xl mx-auto">
-            <Header centre={selectedCentreNameForUsers || "Settings"} title="Management" />
+            <Header centre={selectedCentreNameForUsers || "Settings"} title="Settings" />
             <CardContent className="grid gap-4 px-4 pt-4">
                 <Tabs defaultValue="centres" className="w-full">
                     <TabsList className="grid w-full grid-cols-4">
@@ -760,8 +751,8 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between">
                                 <CardTitle>Users for {selectedCentreNameForUsers || "N/A"}</CardTitle>
-                                <Button 
-                                    onClick={() => { setEditingUser(null); setShowAddUserModal(true); }} 
+                                <Button
+                                    onClick={() => { setEditingUser(null); setShowAddUserModal(true); }}
                                     disabled={submittingUser || !selectedCentreIdForUsers || isUsersLoadingForSelectedCentre}
                                 >
                                     Add New User
@@ -791,12 +782,12 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onSelect={() => handleSoftDeleteUser(user.id)} disabled={submittingUser}>
+                                                    <DropdownMenuItem onSelect={() => openDeleteConfirmationDialog('soft', user.id, user.name)} disabled={submittingUser}>
                                                         Soft Delete (Remove from Centre)
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
                                                         className="text-red-600 hover:!text-red-600 focus:!text-red-600"
-                                                        onSelect={() => handleHardDeleteUser(user.id)}
+                                                        onSelect={() => openDeleteConfirmationDialog('hard', user.id, user.name)}
                                                         disabled={submittingUser}
                                                     >
                                                         Hard Delete (Permanent)
@@ -863,7 +854,7 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
                       selectedCentreId={selectedCentreIdForUsers}
                     />
                 )}
-            
+
                 {showDietFormModal && (
                     <DietForm
                         initialDiet={editingDiet}
@@ -881,9 +872,41 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
                         submitting={submittingCentre}
                     />
                 )}
+
+                {showDeleteConfirmDialog && deleteAction && (
+                    <AlertDialog open={showDeleteConfirmDialog} onOpenChange={(isOpen) => {
+                        setShowDeleteConfirmDialog(isOpen);
+                        if (!isOpen) setDeleteAction(null);
+                    }}>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                    Are you sure you want to {deleteAction.type === 'soft' ? 'soft delete' : 'permanently delete'} user "{deleteAction.userName}"?
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    {deleteAction.type === 'soft'
+                                        ? `This will remove the user from the centre "${selectedCentreNameForUsers || 'this centre'}". The user's main account will not be affected.`
+                                        : `This action CANNOT be undone. It will remove the user from the centre "${selectedCentreNameForUsers || 'this centre'}" AND permanently delete their main account.`}
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel onClick={() => { setShowDeleteConfirmDialog(false); setDeleteAction(null); }} disabled={submittingUser}>
+                                    Cancel
+                                </AlertDialogCancel>
+                                <AlertDialogAction
+                                    onClick={handleConfirmDelete}
+                                    disabled={submittingUser}
+                                    className={deleteAction.type === 'hard' ? buttonVariants({ variant: "destructive" }) : ""}
+                                >
+                                    {submittingUser ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                    Confirm {deleteAction.type === 'soft' ? 'Soft Delete' : 'Hard Delete'}
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                )}
             </CardContent>
         </Card>
       </div>
     );
 }
-
