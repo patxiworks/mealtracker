@@ -271,7 +271,7 @@ export default function ManageSettingsPage() {
             toast({ title: "Error", description: "Please select a centre first.", variant: "destructive" });
             return;
         }
-        if (!confirm(`Are you sure you want to PERMANENTLY delete user ${userId} from centre ${selectedCentreNameForUsers || 'this centre'} AND remove their main account? This action CANNOT be undone.`)) return;
+        if (!confirm(`Are you sure you want to PERMANENTLY delete user ${userId} from ${selectedCentreNameForUsers || 'this centre'} AND remove their main account? This action CANNOT be undone.`)) return;
         
         setSubmittingUser(true);
         setUserError(null);

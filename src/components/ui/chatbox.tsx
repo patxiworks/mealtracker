@@ -228,7 +228,7 @@ function ChatMessage(props: ChatMessageProps) {
                 }}>Yes</button>
                 <button className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400" onClick={() => setShowDeleteConfirm(false)}>No</button>
               </div>
-          </div>
+            </div>
           </div>
         )}
         {/*<div className={`flex flex-col items-center max-w-[80%] ${opacityClass} transition-opacity-transform duration-300`} onMouseDown={handleMouseDown} onMouseUp={handleMouseUp} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} onClick={(e) => { e.stopPropagation(); onMessageClick(message.id || null); }}>*/}
