@@ -129,6 +129,7 @@ export default function ManageSettingsPage() {
             }
           } catch (err: any) {
             setUserError(`Error fetching users for ${selectedCentreIdForUsers}: ${err.message}`);
+            toast({ title: "Error", description: `Error fetching users: ${err.message}`, variant: "destructive" });
             console.error(err);
             setUsers([]);
           } finally {
@@ -137,7 +138,7 @@ export default function ManageSettingsPage() {
         };
     
         fetchUsersForSelectedCentre();
-    }, [selectedCentreIdForUsers]);
+    }, [selectedCentreIdForUsers, toast]); // Added toast to dependencies
 
     useEffect(() => {
         const fetchDietsData = async () => {
@@ -174,9 +175,9 @@ export default function ManageSettingsPage() {
             toast({ title: "Error", description: `User with ID ${newUser.id} already exists in this centre.`, variant: "destructive" });
             return;
         }
+        setSubmittingUser(true);
+        setUserError(null);
         try {
-          setSubmittingUser(true);
-          setUserError(null);
           const centreRef = doc(db, 'centres', selectedCentreIdForUsers);
           await updateDoc(centreRef, {
             users: arrayUnion(newUser)
@@ -200,10 +201,10 @@ export default function ManageSettingsPage() {
             toast({ title: "Error", description: "Please select a centre first.", variant: "destructive" });
             return;
         }
+        setSubmittingUser(true);
+        setUserError(null);
         try {
           const centreRef = doc(db, 'centres', selectedCentreIdForUsers);
-          setSubmittingUser(true);
-          setUserError(null);
           
           const userToUpdate = users.find(user => user.id === updatedUser.id);
           if (!userToUpdate) {
@@ -238,11 +239,12 @@ export default function ManageSettingsPage() {
             toast({ title: "Error", description: "Please select a centre first.", variant: "destructive" });
             return;
         }
-        if (!confirm(`Are you sure you want to remove user ${userId} from centre ${selectedCentreNameForUsers}? The user's main account will not be deleted.`)) return;
+        if (!confirm(`Are you sure you want to remove user ${userId} from centre ${selectedCentreNameForUsers || 'this centre'}? The user's main account will not be deleted.`)) return;
+        
+        setSubmittingUser(true);
+        setUserError(null); 
         try {
           const centreRef = doc(db, 'centres', selectedCentreIdForUsers);
-          setSubmittingUser(true);
-          setUserError(null); 
           const userToRemove = users.find(user => user.id === userId);
           if (userToRemove) {
             await updateDoc(centreRef, {
@@ -251,7 +253,7 @@ export default function ManageSettingsPage() {
             setUsers(users.filter(user => user.id !== userId)); 
             toast({ title: "Success", description: `User ${userId} removed from centre.` });
           } else {
-             setUserError(`User with ID ${userId} not found in the current list for centre ${selectedCentreNameForUsers}.`);
+             setUserError(`User with ID ${userId} not found in the current list for centre ${selectedCentreNameForUsers || 'this centre'}.`);
              toast({ title: "Warning", description: "User not found in current list.", variant: "default" });
           }
         } catch (err: any) {
@@ -269,7 +271,7 @@ export default function ManageSettingsPage() {
             toast({ title: "Error", description: "Please select a centre first.", variant: "destructive" });
             return;
         }
-        if (!confirm(`Are you sure you want to PERMANENTLY delete user ${userId} from centre ${selectedCentreNameForUsers} AND remove their main account? This action CANNOT be undone.`)) return;
+        if (!confirm(`Are you sure you want to PERMANENTLY delete user ${userId} from centre ${selectedCentreNameForUsers || 'this centre'} AND remove their main account? This action CANNOT be undone.`)) return;
         
         setSubmittingUser(true);
         setUserError(null);
@@ -278,28 +280,19 @@ export default function ManageSettingsPage() {
             const centreRef = doc(db, 'centres', selectedCentreIdForUsers);
             const userToRemoveFromCentre = users.find(user => user.id === userId);
 
-            // Start a batch write
             const batch = writeBatch(db);
 
-            // 1. Remove user from the centre's 'users' array
             if (userToRemoveFromCentre) {
                 batch.update(centreRef, { users: arrayRemove(userToRemoveFromCentre) });
             } else {
-                // If user not in local state, still attempt to remove from Firestore in case of stale local state
-                // This requires constructing a minimal object that matches what's in Firestore
-                // For simplicity, we'll assume userToRemoveFromCentre is found or this part might need fetching the exact object.
-                // For now, we'll rely on the local state being up-to-date.
-                 toast({ title: "Warning", description: `User ${userId} not found in local list for ${selectedCentreNameForUsers}, hard delete may be incomplete if user was already removed from centre.`, variant: "default" });
+                 toast({ title: "Warning", description: `User ${userId} not found in local list for ${selectedCentreNameForUsers || 'this centre'}, hard delete may be incomplete if user was already removed from centre.`, variant: "default" });
             }
 
-            // 2. Delete the user's document from the 'users' collection
             const userDocRef = doc(db, 'users', userId);
             batch.delete(userDocRef);
 
-            // Commit the batch
             await batch.commit();
 
-            // Update local state
             setUsers(users.filter(user => user.id !== userId));
             toast({ title: "Success", description: `User ${userId} permanently deleted.` });
 
@@ -314,9 +307,9 @@ export default function ManageSettingsPage() {
 
 
     const handleAddOrUpdateDiet = async (dietData: Diet) => {
+        setSubmittingDiet(true);
+        setDietError(null);
         try {
-            setSubmittingDiet(true);
-            setDietError(null);
             const dietDocRef = doc(db, 'diets', dietData.id);
             await setDoc(dietDocRef, { description: dietData.description, name: dietData.name || dietData.id }); 
 
@@ -345,9 +338,9 @@ export default function ManageSettingsPage() {
 
     const handleDeleteDiet = async (dietId: string) => {
         if (!confirm(`Are you sure you want to delete diet ${dietId}?`)) return;
+        setSubmittingDiet(true);
+        setDietError(null);
         try {
-            setSubmittingDiet(true);
-            setDietError(null);
             const dietDocRef = doc(db, 'diets', dietId);
             await deleteDoc(dietDocRef);
             setDiets(diets.filter(d => d.id !== dietId));
@@ -362,9 +355,9 @@ export default function ManageSettingsPage() {
     };
 
     const handleAddOrUpdateCentre = async (centreData: Centre) => {
+        setSubmittingCentre(true);
+        setCentreError(null);
         try {
-            setSubmittingCentre(true);
-            setCentreError(null);
             const centreDocRef = doc(db, 'centres', centreData.id);
             const currentDoc = await getDoc(centreDocRef);
             const dataToSet: any = { name: centreData.name, code: centreData.code };
@@ -392,10 +385,10 @@ export default function ManageSettingsPage() {
     };
 
     const handleDeleteCentre = async (centreIdToDelete: string) => {
-        if (!confirm(`Are you sure you want to delete centre ${centreIdToDelete}? This action CANNOT be undone and will delete all associated users.`)) return;
+        if (!confirm(`Are you sure you want to delete centre ${centreIdToDelete}? This action CANNOT be undone and will delete all associated users within this centre's listing.`)) return;
+        setSubmittingCentre(true);
+        setCentreError(null);
         try {
-            setSubmittingCentre(true);
-            setCentreError(null);
             const centreDocRef = doc(db, 'centres', centreIdToDelete);
             await deleteDoc(centreDocRef);
             setCentres(centres.filter(c => c.id !== centreIdToDelete));
@@ -437,14 +430,14 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
           toast({ title: "Error", description: "Cannot submit user form without a selected centre.", variant: "destructive"});
           return;
       }
-      if (!initialUser && !formData.id.trim()) {
-          toast({ title: "Validation Error", description: "User ID cannot be empty for new users.", variant: "destructive"});
-          return;
+      if (!initialUser && !formData.id.trim()) { // Check ID only for new users
+        toast({ title: "Validation Error", description: "User ID cannot be empty for new users.", variant: "destructive"});
+        return;
       }
       if (!formData.name.trim()) {
         toast({ title: "Validation Error", description: "User Name cannot be empty.", variant: "destructive"});
         return;
-    }
+      }
       onSubmitUser(formData);
     };
   
@@ -484,7 +477,7 @@ const UserForm: React.FC<UserFormProps> = ({ onSubmitUser, onClose, submitting, 
             </CardHeader>
             <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    {!initialUser && (
+                    {!initialUser && ( // Only show ID field for new users
                         <div>
                             <Label htmlFor="id">User ID</Label>
                             <Input 
@@ -798,12 +791,12 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => handleSoftDeleteUser(user.id)} disabled={submittingUser}>
+                                                    <DropdownMenuItem onSelect={() => handleSoftDeleteUser(user.id)} disabled={submittingUser}>
                                                         Soft Delete (Remove from Centre)
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
                                                         className="text-red-600 hover:!text-red-600 focus:!text-red-600"
-                                                        onClick={() => handleHardDeleteUser(user.id)}
+                                                        onSelect={() => handleHardDeleteUser(user.id)}
                                                         disabled={submittingUser}
                                                     >
                                                         Hard Delete (Permanent)
@@ -893,3 +886,4 @@ const CentreForm: React.FC<CentreFormProps> = ({ onSubmitCentre, onClose, submit
       </div>
     );
 }
+
