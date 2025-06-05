@@ -9,7 +9,7 @@ export const Logo = ({ centre, title }: { centre: string | null; title: string |
                 <CalendarCheck2 className="inline-block" size={18} />
                 <span className="text-[18px] leading-none">
                     <Link href="/">MealTrack</Link>
-                    <span className="font-normal">{title}</span>
+                    <span className="font-normal"> {title}</span>
                 </span>
             </CardTitle>
             <span className="text-sm text-[#7d8fc8] font-medium">{centre ? `/ ${centre}` : ''}</span>
