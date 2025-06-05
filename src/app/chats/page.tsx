@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChatRoom } from "@/components/ui/chatbox";
-import { Header } from "@/components/ui/header";
+import { ChatRoom } from "@/components/chatbox";
+import { Header } from "@/components/header";
 
 export default function Chats() {
     const [centre, setCentre] = useState<string | null>(null);

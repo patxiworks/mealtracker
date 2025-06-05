@@ -17,7 +17,7 @@ import {
   format, startOfWeek, addDays, addWeeks
 } from 'date-fns';
 import Link from 'next/link';
-import { Header } from "@/components/ui/header";
+import { Header } from "@/components/header";
 
 const formatDate = (date: Date): string => {
   return format(date, 'MMM dd, yyyy');
@@ -175,7 +175,7 @@ const SignIn = () => {
     <>
       <div className="container mx-auto pb-10">
         <Card className="w-full max-w-md mx-auto">
-          <Header centre={centre} title="Sign-In" />
+          <Header centre={centre} title="Sign-In" menu={false} />
           <CardHeader className="pb-2">
             <CardTitle className="text-2xl">Sign In {centre ? `to ${centre}` : ""}</CardTitle>
           </CardHeader>

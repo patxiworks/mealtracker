@@ -17,8 +17,8 @@ import {
 } from '@/lib/firebase/db';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Logo } from '@/components/ui/logo';
-import { Header } from '@/components/ui/header';
+import { Logo } from '@/components/logo';
+import { Header } from '@/components/header';
 import { registerForPushNotifications } from '@/lib/utils';
 import useFCM from '@/hooks/use-fcm';
 
@@ -532,27 +532,7 @@ const selectOptions = (
   return (
       <div className="container mx-auto py-0">
         <Card className="w-full max-w-4xl mx-auto">
-          {/* <Header centre={centre} title="" /> */}
-          <CardHeader className="px-4 py-4 sm:px-6 bg-[#4864c3]">
-            <div className="flex justify-between items-center">
-              <Logo centre={centre} title="" />
-              <div className="flex gap-4 items-center">
-                <Link href="/reports">
-                  <Button variant="secondary" className="px-2 h-8">
-                    <NotepadText size={10} />
-                  </Button>
-                </Link>
-                <Link href="/chats">
-                  <Button variant="secondary" className="px-2 h-8">
-                    <MessageCircleMore size={10} />
-                  </Button>
-                </Link>
-                <Button variant="outline" onClick={handleSignOut} className="px-2 h-8">
-                  <LogOut size={10} />
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
+          <Header centre={centre} title="" />
           <CardContent className="grid gap-4 px-4 pb-16 sm:p-6 pt-4">
             {/* Meal Check-in Section */}
           {loading ? (

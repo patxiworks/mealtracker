@@ -7,7 +7,7 @@ import { Logo } from "./logo";
 import { Menu, Table, NotepadText, MessageCircleMore, Settings, LogOut, } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-export const Header = ({ centre, title }: { centre: string | null; title: string | null }) => {
+export const Header = ({ centre, title, menu = true }: { centre: string | null; title: string | null; menu?: boolean }) => {
     const router = useRouter();
 
     const handleSignOut = () => {
@@ -19,6 +19,7 @@ export const Header = ({ centre, title }: { centre: string | null; title: string
         <CardHeader className="px-4 py-4 sm:px-4 bg-[#4864c3]">
           <div className="flex justify-between items-center">
             <Logo centre={centre} title={title} />
+            {menu ?
             <div className="flex gap-4 items-center">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -45,6 +46,7 @@ export const Header = ({ centre, title }: { centre: string | null; title: string
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
+            : ''}
           </div>
         </CardHeader>
     )

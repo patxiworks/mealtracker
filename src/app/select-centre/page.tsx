@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { db } from '@/lib/firebase/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react'; // Import Loader2
-import { Header } from "@/components/ui/header";
+import { Header } from "@/components/header";
 
 const CentreSelectionPage = () => {
   // Update state type to include name
@@ -48,7 +48,7 @@ const CentreSelectionPage = () => {
   return (
     <div className="container mx-auto pb-10">
       <Card className="w-full max-w-md mx-auto">
-        <Header centre="" title="" />
+        <Header centre="" title="" menu={false} />
         <CardHeader className="pb-4"> {/* Increased bottom padding */}
           <CardTitle className="text-2xl text-center">Select Your Centre</CardTitle>
         </CardHeader>

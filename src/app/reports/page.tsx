@@ -23,7 +23,7 @@ import { getDailyReportData, getUserAttendanceForDate, getDietsData, getUsersBir
 import type { DailyReportDataWithUsers, MealAttendanceDetail, DietCountsDetail, MealAttendanceState, DietInfo, BirthdayInfo } from "@/lib/firebase/db"; // Added MealAttendanceState, DietInfo, BirthdayInfo
 import { CalendarCheck2, CalendarIcon, HomeIcon, Loader2, LoaderPinwheel, Sun, Utensils, Moon, PackageCheck, X, Check, NotebookText, Cake, Gift, AlarmClockMinus } from "lucide-react"; // Added Loader2, Sun, Utensils, Moon, PackageCheck, X, Check, NotebookText, Cake, Gift
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Header } from "@/components/ui/header";
+import { Header } from "@/components/header";
 
 // Define the meal status type locally for getMealStatusIcon if needed, or rely on import
 type MealStatus = 'present' | 'absent' | 'packed' | 'late' | null;

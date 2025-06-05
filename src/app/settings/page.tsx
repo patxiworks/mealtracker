@@ -7,7 +7,7 @@ import { Timestamp, collection, doc, getDoc, updateDoc, arrayRemove, arrayUnion,
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Header } from "@/components/ui/header";
+import { Header } from "@/components/header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
