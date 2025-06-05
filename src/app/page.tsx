@@ -535,7 +535,7 @@ const selectOptions = (
             <div className="flex justify-between items-center">
               <Logo centre={centre} title="" />
               <div className="flex gap-4 items-center">
-                <Link href="/daily-report">
+                <Link href="/reports">
                   <Button variant="secondary" className="px-2 h-8">
                     <NotepadText size={10} />
                   </Button>
