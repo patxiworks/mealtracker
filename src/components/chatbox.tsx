@@ -130,7 +130,7 @@ export function ChatRoom() {
 
   return (
     <>
-      <main className="p-2 h-[84vh] mt-[6vh] overflow-y-scroll flex flex-col items-center bg-[url(/chatbg-1.jpg)] bg-repeat-x">
+      <main className="p-2 h-[84vh] mt-[6vh] overflow-y-scroll flex flex-col items-center bg-[url(/chatbg-6.jpg)] bg-contain">
         {/*{messages && messages.map(msg => <ChatMessage key={msg.id ? msg.id : Date.now()+'-'+Math.random()} message={msg} />)}*/}
         {loading ? (
             <LoaderPinwheel className="h-8 w-8 animate-spin text-[#4864c3]" />
@@ -148,7 +148,7 @@ export function ChatRoom() {
         )}
       </main>
       <form className="fixed bottom-0 bg-[rgb(24,23,23)] w-full max-w-[890px] flex text-xl" onSubmit={sendMessage}>
-          <textarea className="leading-normal w-full text-base bg-[rgb(58,58,58)] text-white outline-none border-none px-4 py-2" value={formValue} onChange={(e) => setFormValue(e.target.value)} placeholder={highlightedMessageId ? 'Reply the message' : "Send a new message"} />
+          <textarea className="leading-normal w-full text-base bg-[rgb(58,58,58)] text-white outline-none border-none px-4 py-2" value={formValue} onChange={(e) => setFormValue(e.target.value)} placeholder={highlightedMessageId ? 'Send a reply' : "Send a new message"} />
           <button className="flex justify-center items-center w-1/5 bg-[#4864c3] disabled:opacity-70 disabled:cursor-not-allowed" type="submit" disabled={!formValue}><Send size={30} /></button>
       </form>
     </>
@@ -217,7 +217,7 @@ function ChatMessage(props: ChatMessageProps) {
     )
   }
 
-  const opacityClass = isHighlighted ? 'opacity-100' : (props.highlightedMessageId === null ? 'opacity-100' : 'opacity-25'); // Fixed opacity logic
+  const opacityClass = isHighlighted ? 'opacity-100' : (props.highlightedMessageId === null ? 'opacity-100' : 'opacity-40'); // Fixed opacity logic
 
   return (
     <>

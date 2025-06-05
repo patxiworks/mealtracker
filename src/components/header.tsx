@@ -1,4 +1,6 @@
+"use client"
 
+import { useState, useEffect } from 'react';
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
@@ -8,7 +10,12 @@ import { Menu, Table, NotepadText, MessageCircleMore, Settings, LogOut, } from "
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export const Header = ({ centre, title, menu = true }: { centre: string | null; title: string | null; menu?: boolean }) => {
+    const [role, setRole] = useState<string | null>(null);
     const router = useRouter();
+
+    useEffect(() => {
+        setRole(localStorage.getItem('role'));
+    }, []);
 
     const handleSignOut = () => {
         localStorage.clear();
@@ -31,15 +38,19 @@ export const Header = ({ centre, title, menu = true }: { centre: string | null; 
                         <Link href="/">
                             <DropdownMenuItem><Table size={10} /> Mealsheet</DropdownMenuItem>
                         </Link>
-                        <Link href="/reports">
-                            <DropdownMenuItem><NotepadText size={10} /> Reports</DropdownMenuItem>
-                        </Link>
+                        {role == 'admin' &&
+                            <Link href="/reports">
+                                <DropdownMenuItem><NotepadText size={10} /> Reports</DropdownMenuItem>
+                            </Link>
+                        }
                         <Link href="/chats">
                             <DropdownMenuItem><MessageCircleMore size={10} /> Messages</DropdownMenuItem>
                         </Link>
+                        {role == 'admin' && 
                         <Link href="/settings">
                             <DropdownMenuItem><Settings size={10} /> Settings</DropdownMenuItem>
                         </Link>
+                        }
                         <div onClick={handleSignOut}>
                             <DropdownMenuItem><LogOut size={10} /> Sign out</DropdownMenuItem>
                         </div>
