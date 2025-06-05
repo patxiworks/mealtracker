@@ -18,6 +18,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Logo } from '@/components/ui/logo';
+import { Header } from '@/components/ui/header';
 import { registerForPushNotifications } from '@/lib/utils';
 import useFCM from '@/hooks/use-fcm';
 
@@ -531,6 +532,7 @@ const selectOptions = (
   return (
       <div className="container mx-auto py-0">
         <Card className="w-full max-w-4xl mx-auto">
+          {/* <Header centre={centre} title="" /> */}
           <CardHeader className="px-4 py-4 sm:px-6 bg-[#4864c3]">
             <div className="flex justify-between items-center">
               <Logo centre={centre} title="" />

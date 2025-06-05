@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
@@ -149,13 +150,17 @@ const DailyReportPage = () => {
   const [selectedCentre, setSelectedCentre] = useState<string | null>(null);
   const [centreName, setCentreName] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'daily' | 'summary' | 'user' | 'diets' | 'birthdays'>('daily'); // State to control view: added 'user', 'diets', 'birthdays'
-
+  const router = useRouter();
 
   useEffect(() => {
     const centre = localStorage.getItem('selectedCentre');
     const centreName = localStorage.getItem('ctrName');
-    setSelectedCentre(centre);
-    setCentreName(centreName)
+    if (centre && centreName) {
+        setSelectedCentre(centre);
+        setCentreName(centreName);
+    } else {
+        router.push('/select-centre'); // Redirect to centre selection page
+    }
   }, []);
 
   // Load daily/user report data from Firebase

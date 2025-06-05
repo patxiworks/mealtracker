@@ -1,16 +1,22 @@
 "use client"
 
 import { useEffect, useState } from "react";
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChatRoom } from "@/components/ui/chatbox";
 import { Header } from "@/components/ui/header";
 
 export default function Chats() {
     const [centre, setCentre] = useState<string | null>(null);
+    const router = useRouter();
 
     useEffect(() => {
-        // Access localStorage inside useEffect
-        setCentre(localStorage.getItem('selectedCentre'));
+        const centre = localStorage.getItem('selectedCentre');
+        if (centre) {
+            setCentre(localStorage.getItem('selectedCentre'));
+        } else {
+            router.push('/select-centre'); // Redirect to centre selection page
+        }
     }, []); // Run this effect only once on component mount
     
     return (

@@ -20,8 +20,6 @@ export const Header = ({ centre, title }: { centre: string | null; title: string
           <div className="flex justify-between items-center">
             <Logo centre={centre} title={title} />
             <div className="flex gap-4 items-center">
-                <Link href="/">
-                </Link>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="secondary" className="px-2 h-8">
@@ -41,9 +39,9 @@ export const Header = ({ centre, title }: { centre: string | null; title: string
                         <Link href="/settings">
                             <DropdownMenuItem><Settings size={10} /> Settings</DropdownMenuItem>
                         </Link>
-                        <Link href="#" onClick={handleSignOut}>
+                        <div onClick={handleSignOut}>
                             <DropdownMenuItem><LogOut size={10} /> Sign out</DropdownMenuItem>
-                        </Link>
+                        </div>
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>

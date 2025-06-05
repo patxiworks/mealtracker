@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Timestamp, collection, doc, getDoc, updateDoc, arrayRemove, arrayUnion, writeBatch, getDocs, setDoc, deleteDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase/firebase';
@@ -39,6 +40,8 @@ interface Centre {
 
 export default function ManageSettingsPage() {
     const { toast } = useToast();
+    
+    const [admin, setAdmin] = useState<string | null>(null);
 
     // User Management States
     const [users, setUsers] = useState<CentreUser[]>([]);
@@ -51,7 +54,6 @@ export default function ManageSettingsPage() {
     const [selectedCentreNameForUsers, setSelectedCentreNameForUsers] = useState<string | null>(null);
     const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
     const [deleteAction, setDeleteAction] = useState<{ type: 'soft' | 'hard'; userId: string; userName: string; } | null>(null);
-
 
     // Diet Management States
     const [diets, setDiets] = useState<Diet[]>([]);
@@ -68,6 +70,16 @@ export default function ManageSettingsPage() {
     const [centreError, setCentreError] = useState<string | null>(null);
     const [showCentreFormModal, setShowCentreFormModal] = useState(false);
     const [editingCentre, setEditingCentre] = useState<Centre | null>(null);
+
+    const router = useRouter();
+
+    useEffect(() => {
+        const username = localStorage.getItem('username');
+        const role = localStorage.getItem('role');
+        if (!username && role != 'admin') {
+            router.push('/select-centre'); // Redirect to centre selection page
+        }
+    }, []); // Run this effect only once on component mount
 
     const fetchCentres = useCallback(async () => {
         try {
