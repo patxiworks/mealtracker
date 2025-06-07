@@ -21,5 +21,7 @@
   "display": "standalone",
   "background_color": "#A7E9AF",
   "theme_color": "#A7E9AF",
-  "scope": "/"
+  "scope": "/",
+  "orientation": "portrait",
+  "dir": "ltr"
 }
