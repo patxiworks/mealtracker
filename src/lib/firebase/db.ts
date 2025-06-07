@@ -27,6 +27,18 @@ interface UserData {
     birthday?: Timestamp | string; // Assuming birthday exists, could be Timestamp or string
 }
 
+interface CentreUser {
+    diet: string | null;
+    id: string;
+    name: string; // Assuming name exists for various purposes
+    role: string;
+    birthday?: Timestamp | string; // Assuming birthday exists, could be Timestamp or string
+}
+
+export interface CentreData {
+    users: CentreUser[];
+}
+
 // Interface for detailed attendance count including users
 export interface MealAttendanceDetail {
     count: number;
@@ -420,63 +432,121 @@ export const getDietsData = async (): Promise<DietInfo[]> => {
 // Function to get user birthdays for a specific centre
 export const getUsersBirthdays = async (centre: string): Promise<BirthdayInfo[]> => {
     try {
-        const q = query(collection(db, USERS_COLLECTION), where("centre", "==", centre));
-        const snapshot = await getDocs(q);
-
+        // Query the 'centres' collection for the document matching the centre name
+        const centreDocRef = doc(db, 'centres', centre);
+        const centreDocSnap = await getDoc(centreDocRef);
         const birthdays: BirthdayInfo[] = [];
-
-        snapshot.forEach((doc) => {
-            const userData = doc.data() as UserData;
-            // Use the 'initials' field directly, if it exists, along with birthday
-            if (userData.initials && userData.birthday) {
-                const initials = userData.initials; // Get initials directly from the field
-                let birthdayDate: Date | null = null;
-
-                // Handle both Timestamp and string date formats
-                if (userData.birthday instanceof Timestamp) {
+        if (centreDocSnap.exists()) {
+            const centreData = centreDocSnap.data() as CentreData;
+            const users = centreData.users || []; // Get the array of users
+                users.forEach((userData: CentreUser) => {
+                // Use the 'initials' field directly, if it exists, along with birthday
+                if (userData.id && userData.birthday) {
+                    const initials = userData.id; // Get initials directly from the field
+                    let birthdayDate: Date | null = null;
+                    // Handle both Timestamp and string date formats
+                    if (userData.birthday instanceof Timestamp) {
                     birthdayDate = userData.birthday.toDate();
-                } else if (typeof userData.birthday === 'string') {
+                    } else if (typeof userData.birthday === 'string') {
                     try {
                         // Attempt to parse common formats, adjust if needed
-                        // Example: 'YYYY-MM-DD', 'MM/DD/YYYY', 'Month DD, YYYY'
                         birthdayDate = new Date(userData.birthday);
                         // Basic validation if it's a string date
                         if (isNaN(birthdayDate.getTime())) {
-                            console.warn(`Invalid birthday string format for user ${userData.name || doc.id}: ${userData.birthday}`);
-                            birthdayDate = null;
+                        console.warn(`Invalid birthday string format for user ${userData.name || 'unknown'}: ${userData.birthday}`);
+                        birthdayDate = null;
                         }
                     } catch (e) {
-                         console.warn(`Error parsing birthday string for user ${userData.name || doc.id}: ${userData.birthday}`, e);
-                         birthdayDate = null;
+                        console.warn(`Error parsing birthday string for user ${userData.name || 'unknown'}: ${userData.birthday}`, e);
+                        birthdayDate = null;
                     }
-                }
-
-                if (birthdayDate) {
+                    }
+                    if (birthdayDate) {
                     const formattedBirthday = format(birthdayDate, 'MMMM dd'); // Format as "Month Day" (e.g., "January 01")
                     const sortKey = format(birthdayDate, 'MM-dd'); // Use MM-dd for reliable sorting
                     const isUpcoming = isBirthdayUpcoming(birthdayDate); // Check if upcoming
-                     birthdays.push({
+                    birthdays.push({
                         initials,
                         birthday: formattedBirthday,
                         sortKey,
                         isUpcoming, // Add the upcoming status
                     });
+                    }
+                } else if (userData.birthday && !userData.id) {
+                    // Fallback or warning if initials field is missing but birthday exists
+                    console.warn(`User ${userData.name || 'unknown'} has birthday but missing 'initials' field.`);
                 }
-            } else if (userData.birthday && !userData.initials) {
-                // Fallback or warning if initials field is missing but birthday exists
-                 console.warn(`User ${userData.name || doc.id} has birthday but missing 'initials' field.`);
-                // Optionally, you could try to calculate initials from 'name' here as a fallback
-                // const fallbackInitials = calculateInitials(userData.name); // Assuming calculateInitials exists
-                // if (fallbackInitials) { ... push with fallbackInitials ... }
+                });
+            } else {
+                console.log(`Centre document not found for ${centre}`);
             }
-        });
-
-        // Sort birthdays by month and day
-        birthdays.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
-
+            // Sort birthdays by month and day
+            birthdays.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
         return birthdays;
     } catch (error) {
         console.error('Error getting user birthdays:', error);
         return []; // Return empty array on error
     }
 };
+// export const getUsersBirthdays = async (centre: string): Promise<BirthdayInfo[]> => {
+//     try {
+//         const q = query(collection(db, USERS_COLLECTION), where("centre", "==", centre));
+//         const snapshot = await getDocs(q);
+
+//         const birthdays: BirthdayInfo[] = [];
+
+//         snapshot.forEach((doc) => {
+//             const userData = doc.data() as UserData;
+//             // Use the 'initials' field directly, if it exists, along with birthday
+//             if (userData.initials && userData.birthday) {
+//                 const initials = userData.initials; // Get initials directly from the field
+//                 let birthdayDate: Date | null = null;
+
+//                 // Handle both Timestamp and string date formats
+//                 if (userData.birthday instanceof Timestamp) {
+//                     birthdayDate = userData.birthday.toDate();
+//                 } else if (typeof userData.birthday === 'string') {
+//                     try {
+//                         // Attempt to parse common formats, adjust if needed
+//                         // Example: 'YYYY-MM-DD', 'MM/DD/YYYY', 'Month DD, YYYY'
+//                         birthdayDate = new Date(userData.birthday);
+//                         // Basic validation if it's a string date
+//                         if (isNaN(birthdayDate.getTime())) {
+//                             console.warn(`Invalid birthday string format for user ${userData.name || doc.id}: ${userData.birthday}`);
+//                             birthdayDate = null;
+//                         }
+//                     } catch (e) {
+//                          console.warn(`Error parsing birthday string for user ${userData.name || doc.id}: ${userData.birthday}`, e);
+//                          birthdayDate = null;
+//                     }
+//                 }
+
+//                 if (birthdayDate) {
+//                     const formattedBirthday = format(birthdayDate, 'MMMM dd'); // Format as "Month Day" (e.g., "January 01")
+//                     const sortKey = format(birthdayDate, 'MM-dd'); // Use MM-dd for reliable sorting
+//                     const isUpcoming = isBirthdayUpcoming(birthdayDate); // Check if upcoming
+//                      birthdays.push({
+//                         initials,
+//                         birthday: formattedBirthday,
+//                         sortKey,
+//                         isUpcoming, // Add the upcoming status
+//                     });
+//                 }
+//             } else if (userData.birthday && !userData.initials) {
+//                 // Fallback or warning if initials field is missing but birthday exists
+//                  console.warn(`User ${userData.name || doc.id} has birthday but missing 'initials' field.`);
+//                 // Optionally, you could try to calculate initials from 'name' here as a fallback
+//                 // const fallbackInitials = calculateInitials(userData.name); // Assuming calculateInitials exists
+//                 // if (fallbackInitials) { ... push with fallbackInitials ... }
+//             }
+//         });
+
+//         // Sort birthdays by month and day
+//         birthdays.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+
+//         return birthdays;
+//     } catch (error) {
+//         console.error('Error getting user birthdays:', error);
+//         return []; // Return empty array on error
+//     }
+// };

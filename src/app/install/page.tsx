@@ -1,0 +1,107 @@
+
+"use client";
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Download, ArrowRight } from 'lucide-react'; // Added ArrowRight
+
+export default function InstallPage() {
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isCheckingInstallState, setIsCheckingInstallState] = useState(true);
+  const router = useRouter();
+
+  const navigateToApp = useCallback(() => {
+    router.replace('/select-centre');
+  }, [router]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (window.matchMedia('(display-mode: standalone)').matches) {
+        // Already in standalone mode, navigate to app
+        navigateToApp();
+      } else {
+        setIsCheckingInstallState(false); // Not standalone, proceed to show install UI
+        const handler = (e: Event) => {
+          e.preventDefault();
+          setDeferredPrompt(e);
+        };
+        window.addEventListener('beforeinstallprompt', handler);
+        return () => {
+          window.removeEventListener('beforeinstallprompt', handler);
+        };
+      }
+    }
+  }, [navigateToApp]);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) {
+      return;
+    }
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      // User accepted the install prompt
+      // The app will likely reload in standalone mode, or they can navigate manually.
+      // To be safe, we can try to navigate after a short delay,
+      // though the 'display-mode: standalone' check should handle it.
+      setTimeout(navigateToApp, 1000); // Navigate after 1 sec
+    } else {
+      // User dismissed the install prompt
+    }
+    setDeferredPrompt(null); // Prompt can only be used once
+  };
+
+  const handleContinueToApp = () => {
+    navigateToApp();
+  };
+
+  if (isCheckingInstallState) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-6 bg-secondary">
+        <p className="text-lg text-foreground">Checking app status...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-primary to-secondary">
+      <Card className="w-full max-w-md shadow-2xl">
+        <CardHeader>
+          <CardTitle className="text-center text-2xl sm:text-3xl font-bold text-primary-foreground bg-primary -m-6 p-6 rounded-t-lg">
+            Install Mealtime Tracker
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6 pt-12 text-center">
+          <img
+            src="https://placehold.co/128x128.png"
+            alt="App Icon"
+            data-ai-hint="app logo"
+            className="mx-auto rounded-xl shadow-md h-24 w-24 sm:h-32 sm:w-32"
+          />
+          <p className="text-muted-foreground text-sm sm:text-base">
+            For the best experience, add Mealtime Tracker to your home screen.
+            It's fast, works offline, and feels like a native app!
+          </p>
+          {deferredPrompt ? (
+            <Button onClick={handleInstallClick} size="lg" className="w-full text-base sm:text-lg py-3">
+              <Download className="mr-2 h-5 w-5" /> Install App
+            </Button>
+          ) : (
+            <p className="text-xs sm:text-sm text-muted-foreground p-3 bg-muted rounded-md">
+              To install, use your browser's "Add to Home Screen" option if available.
+              You might have already installed the app or the prompt may not be available right now.
+            </p>
+          )}
+          <Button variant="outline" onClick={handleContinueToApp} className="w-full text-base sm:text-lg py-3">
+            Continue in Browser <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
+        </CardContent>
+      </Card>
+      <p className="mt-8 text-xs text-center text-background/70">
+        Ensuring you have the best meal tracking experience.
+      </p>
+    </div>
+  );
+}

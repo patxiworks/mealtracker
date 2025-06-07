@@ -721,7 +721,7 @@ const DailyReportPage = () => {
                                                         <TableCell className="font-medium">{user.initials}</TableCell>
                                                         <TableCell>{user.birthday}</TableCell>
                                                         <TableCell className="text-center">
-                                                            {user.isUpcoming ? <Gift className="h-5 w-5 text-primary inline-block" /> : null} {/* Conditionally render Gift icon */}
+                                                            {user.isUpcoming ? <Gift className="h-5 w-5 text-primary inline-block animate-pulse" /> : null} {/* Conditionally render Gift icon */}
                                                         </TableCell>
                                                     </TableRow>
                                                 ))}

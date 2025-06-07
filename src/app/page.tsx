@@ -542,7 +542,7 @@ const selectOptions = (
             ) : (
             <section className="grid gap-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm text-muted-foreground">Welcome, {fullname?.split(" ")[0]}</h4>
+                <h4 className="text-sm text-muted-foreground">Hello, {fullname?.split(" ")[0]}</h4>
                 <Select onValueChange={value => handleWeekChange(new Date(value))} value={initialWeekOption.start.toISOString()}>
                   <SelectTrigger className="w-auto pr-4">
                     <SelectValue placeholder={initialWeekOption.label} />
@@ -640,7 +640,7 @@ const selectOptions = (
               </div>
               {/* Apply to All Dropdown */}
               <div className="flex justify-end items-center mt-4">
-                <span className="px-2">Apply to all for this week:</span>
+                <span className="px-2 text-sm text-muted-foreground">Apply to all for this week:</span>
                 <Select onValueChange={handleApplyAllChange} value={applyAllStatus || ''}>
                   <SelectTrigger className="w-auto max-w-xs">
                     <SelectValue placeholder="" />
