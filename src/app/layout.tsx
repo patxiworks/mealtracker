@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'MealTrack',
-  description: 'Are you present at breakfast/lunch/dinner today?',
+  title: 'MealTicker',
+  description: 'A quick way to tick off your availability at mealtimes',
 };
 
 

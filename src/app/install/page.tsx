@@ -66,23 +66,25 @@ export default function InstallPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-primary to-secondary">
+    <div className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-[#e0e7fc] to-secondary">
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader>
-          <CardTitle className="text-center text-2xl sm:text-3xl font-bold text-primary-foreground bg-primary -m-6 p-6 rounded-t-lg">
-            Install Mealtime Tracker
+          <CardTitle className="text-center text-2xl sm:text-3xl font-bold text-primary-foreground bg-[#4864c3] -m-6 p-6 rounded-t-lg">
+            Install MealTicker
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6 pt-12 text-center">
+          <div className="mx-auto h-24 w-27 sm:h-32 sm:w-32">
+          <div className="mx-auto w-[115px] sm:w-[150px] px-2 shadow-md rounded-xl bg-[#4864c3] align-center">
           <img
-            src="https://placehold.co/128x128.png"
+            src="/mealticker.png"
             alt="App Icon"
-            data-ai-hint="app logo"
-            className="mx-auto rounded-xl shadow-md h-24 w-24 sm:h-32 sm:w-32"
-          />
-          <p className="text-muted-foreground text-sm sm:text-base">
-            For the best experience, add Mealtime Tracker to your home screen.
-            It's fast, works offline, and feels like a native app!
+            data-ai-hint="MealTicker logo"
+            className="h-24 w-27 sm:h-32 sm:w-32"
+          /></div>
+          </div>
+          <p className="text-[#4864c3] text-sm sm:text-base font-bold">
+            Add MealTicker to your home screen!
           </p>
           {deferredPrompt ? (
             <Button onClick={handleInstallClick} size="lg" className="w-full text-base sm:text-lg py-3">
@@ -90,8 +92,10 @@ export default function InstallPage() {
             </Button>
           ) : (
             <p className="text-xs sm:text-sm text-muted-foreground p-3 bg-muted rounded-md">
-              To install, use your browser's "Add to Home Screen" option if available.
-              You might have already installed the app or the prompt may not be available right now.
+              If you don't see an install button above, use your browser's "Add to Home Screen" option if available.
+              Otherwise, you might have already installed the app or the prompt may not be available right now.
+              <br/><br/>
+              If you need help, <a href="https://wa.me/08137245046" target="blank">click here to ask for it</a>.
             </p>
           )}
           <Button variant="outline" onClick={handleContinueToApp} className="w-full text-base sm:text-lg py-3">

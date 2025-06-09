@@ -17,21 +17,21 @@ const CentreSelectionPage = () => {
   const router = useRouter();
   const [initialCheckComplete, setInitialCheckComplete] = useState(false);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      if (!window.matchMedia('(display-mode: standalone)').matches && window.location.pathname !== '/install') {
-        router.replace('/install');
-      } else {
-        setInitialCheckComplete(true);
-      }
-    } else {
-      // For SSR or environments without window, assume we proceed
-      setInitialCheckComplete(true);
-    }
-  }, [router]);
+  // useEffect(() => {
+  //   if (typeof window !== 'undefined') {
+  //     if (!window.matchMedia('(display-mode: standalone)').matches && window.location.pathname !== '/install') {
+  //       router.replace('/install');
+  //     } else {
+  //       setInitialCheckComplete(true);
+  //     }
+  //   } else {
+  //     // For SSR or environments without window, assume we proceed
+  //     setInitialCheckComplete(true);
+  //   }
+  // }, [router]);
 
   useEffect(() => {
-    if (!initialCheckComplete) return; // Don't fetch centres until initial PWA check is done
+    //if (!initialCheckComplete) return; // Don't fetch centres until initial PWA check is done
 
     const fetchCentres = async () => {
       setLoading(true); // Start loading
@@ -61,15 +61,15 @@ const CentreSelectionPage = () => {
     router.push('/sign-in'); // Redirect to the sign-in page
   };
 
-  if (!initialCheckComplete && (typeof window !== 'undefined' && !window.matchMedia('(display-mode: standalone)').matches)) {
-    // Still waiting for the redirect to /install or initial check is pending
-    return (
-        <div className="flex min-h-screen flex-col items-center justify-center p-6 bg-secondary">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="mt-4 text-lg text-foreground">Loading...</p>
-        </div>
-    );
-  }
+  // if (!initialCheckComplete && (typeof window !== 'undefined' && !window.matchMedia('(display-mode: standalone)').matches)) {
+  //   // Still waiting for the redirect to /install or initial check is pending
+  //   return (
+  //       <div className="flex min-h-screen flex-col items-center justify-center p-6 bg-secondary">
+  //           <Loader2 className="h-12 w-12 animate-spin text-primary" />
+  //           <p className="mt-4 text-lg text-foreground">Loading...</p>
+  //       </div>
+  //   );
+  // }
 
 
   return (

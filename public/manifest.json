@@ -1,17 +1,17 @@
 
 {
   "name": "Mealtime Tracker",
-  "short_name": "MealTrack",
+  "short_name": "MealTicker",
   "description": "Track meal attendance easily.",
   "icons": [
     {
-      "src": "/icon-192x192.png",
+      "src": "/mealticker-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "/mealticker-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -19,8 +19,8 @@
   ],
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#A7E9AF",
-  "theme_color": "#A7E9AF",
+  "background_color": "#e0e7fc",
+  "theme_color": "#4864c3",
   "scope": "/",
   "orientation": "portrait",
   "dir": "ltr"

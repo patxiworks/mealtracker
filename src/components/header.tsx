@@ -20,7 +20,7 @@ export const Header = ({ centre, title, menu = true }: { centre: string | null; 
     const handleSignOut = () => {
         localStorage.clear();
         router.push('/select-centre'); // Redirect to centre selection page
-      };
+    };
     
     return (
         <CardHeader className="px-4 py-4 sm:px-4 bg-[#4864c3]">
