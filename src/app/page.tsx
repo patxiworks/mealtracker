@@ -533,7 +533,7 @@ const selectOptions = (
       <div className="container mx-auto py-0">
         <Card className="w-full max-w-4xl mx-auto">
           <Header centre={centre} title="" />
-          <CardContent className="grid gap-4 px-4 pb-16 sm:p-6 pt-4">
+          <CardContent className="grid gap-4 px-4 sm:p-6 pt-4">
             {/* Meal Check-in Section */}
           {loading ? (
             <div className="flex justify-center items-center py-10">
