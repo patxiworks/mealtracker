@@ -46,7 +46,7 @@ export default function InstallPage() {
       // The app will likely reload in standalone mode, or they can navigate manually.
       // To be safe, we can try to navigate after a short delay,
       // though the 'display-mode: standalone' check should handle it.
-      setTimeout(navigateToApp, 1000); // Navigate after 1 sec
+      setTimeout(navigateToApp, 10000); // Navigate after 10 sec
     } else {
       // User dismissed the install prompt
     }
