@@ -1,17 +1,17 @@
 
 {
-  "name": "Mealtime Tracker",
+  "name": "Mealtime Attendance Ticker",
   "short_name": "MealTicker",
-  "description": "Track meal attendance easily.",
+  "description": "Track meal attendance easily!",
   "icons": [
     {
-      "src": "/mealticker.png",
+      "src": "/mealticker-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/mealticker.png",
+      "src": "/mealticker-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
