@@ -17,21 +17,21 @@ const CentreSelectionPage = () => {
   const router = useRouter();
   const [initialCheckComplete, setInitialCheckComplete] = useState(false);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      if (!window.matchMedia('(display-mode: standalone)').matches && window.location.pathname !== '/install') {
-        router.replace('/install');
-      } else {
-        setInitialCheckComplete(true);
-      }
-    } else {
-      // For SSR or environments without window, assume we proceed
-      setInitialCheckComplete(true);
-    }
-  }, [router]);
+  // useEffect(() => {
+  //   if (typeof window !== 'undefined') {
+  //     if (!window.matchMedia('(display-mode: standalone)').matches && window.location.pathname !== '/install') {
+  //       router.replace('/install');
+  //     } else {
+  //       setInitialCheckComplete(true);
+  //     }
+  //   } else {
+  //     // For SSR or environments without window, assume we proceed
+  //     setInitialCheckComplete(true);
+  //   }
+  // }, [router]);
 
   useEffect(() => {
-    if (!initialCheckComplete) return; // Don't fetch centres until initial PWA check is done
+    //if (!initialCheckComplete) return; // Don't fetch centres until initial PWA check is done
 
     const fetchCentres = async () => {
       setLoading(true); // Start loading
