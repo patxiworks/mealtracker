@@ -5,13 +5,13 @@
   "description": "Track meal attendance easily.",
   "icons": [
     {
-      "src": "/mealticker-192x192.png",
+      "src": "/mealticker.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/mealticker-512x512.png",
+      "src": "/mealticker.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

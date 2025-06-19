@@ -103,7 +103,7 @@ export default function InstallPage() {
           </Button>
         </CardContent>
       </Card>
-      <p className="mt-8 text-xs text-center text-background/70">
+      <p className="mt-8 text-xs text-center text-[#4864c3]">
         Ensuring you have the best meal tracking experience.
       </p>
     </div>
