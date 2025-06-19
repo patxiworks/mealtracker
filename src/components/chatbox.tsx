@@ -130,7 +130,7 @@ export function ChatRoom() {
 
   return (
     <>
-      <main className="p-2 h-[84vh] mt-[6vh] overflow-y-scroll flex flex-col items-center bg-[url(/chatbg-6.jpg)] bg-contain">
+      <main className="p-2 h-[84vh] mt-[6vh] overflow-y-scroll flex flex-col items-center bg-[url(/chatbg-1.jpg)] bg-contain">
         {/*{messages && messages.map(msg => <ChatMessage key={msg.id ? msg.id : Date.now()+'-'+Math.random()} message={msg} />)}*/}
         {loading ? (
             <LoaderPinwheel className="h-8 w-8 animate-spin text-[#4864c3]" />
