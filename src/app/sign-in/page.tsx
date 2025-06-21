@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -18,6 +19,18 @@ import {
 } from 'date-fns';
 import Link from 'next/link';
 import { Header } from "@/components/header";
+import { Loader2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Label } from '@/components/ui/label';
 
 const formatDate = (date: Date): string => {
   return format(date, 'MMM dd, yyyy');
@@ -29,12 +42,27 @@ interface MealAttendanceState {
   dinner: 'present' | 'absent' | 'packed' | null;
 }
 
+// Define a more detailed user type
+interface CentreUser {
+  id: string;
+  name: string;
+  diet: string;
+  centre: string;
+  role: 'admin' | 'rs';
+  pwd?: string; // Password is optional
+}
+
 const SignIn = () => {
-  const [preloadedUsers, setPreloadedUsers] = useState<{ id: string; name: string; diet: string; centre: string; role: string}[]>([]);
+  // Use the new CentreUser type
+  const [preloadedUsers, setPreloadedUsers] = useState<CentreUser[]>([]);
   const [centreCode, setCentreCode] = useState<string | null>(null);
   const [centre, setCentre] = useState<string | null>(null);
   const [isValidCentreCode, setIsValidCentreCode] = useState<boolean>(false);
   const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<CentreUser | null>(null); // State for the full user object
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const [weekDates, setWeekDates] = useState<Date[]>([]);
@@ -55,14 +83,15 @@ const SignIn = () => {
 
           if (docSnap.exists()) {
             const data = docSnap.data();
-            const users = (data.users || []) as { id: string; name: string; diet: string }[];
-            // Fetch the centre for each user
-            const usersWithCentre = await Promise.all(
-              users.map(async (user: { id: string; name: string; diet: string }) => {
-                return { ...user, centre: selectedCentre }; // Assuming the centre is 'vi' for all users in this document.  Can modify as needed.
-              })
-            );
-            setPreloadedUsers(usersWithCentre as { id: string; name: string; diet: string; centre: string; role: string }[]);
+            // Cast to a more specific type including role and pwd
+            const users = (data.users || []) as { id: string; name: string; diet: string; role: 'admin' | 'rs'; pwd?: string }[];
+            
+            const usersWithCentre = users.map(user => ({
+              ...user,
+              centre: selectedCentre,
+            }));
+            
+            setPreloadedUsers(usersWithCentre);
           } else {
             console.log('No such document!');
             setPreloadedUsers([]);
@@ -82,31 +111,18 @@ const SignIn = () => {
         dates.push(addDays(weekStart, i));
       }
       setWeekDates(dates);
-
     }
   }, [router]);
 
-  const handleSignInWithPreload = async (user: { id: string; name: string; diet: string; centre: string; role: string }) => {
-    if (!isValidCentreCode) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a valid centre code.',
-      });
-      return;
-
-    }
-
-    localStorage.setItem('username', user.id); // Use id instead of name
+  const handleSignInWithPreload = async (user: CentreUser) => {
+    localStorage.setItem('username', user.id);
     localStorage.setItem('fullname', user.name);
     localStorage.setItem('diet', user.diet);
     localStorage.setItem('selectedCentre', user.centre);
     localStorage.setItem('role', user.role);
 
     try {
-      // Fetch existing meal attendance, if any
-      const existingUserData = await getUserMealAttendance(user.name);
-
-      // If existing data exists, use it. Otherwise, create initial attendance.
+      const existingUserData = await getUserMealAttendance(user.id);
       let initialAttendance;
       if (existingUserData && existingUserData.mealAttendance) {
         initialAttendance = existingUserData.mealAttendance;
@@ -116,18 +132,48 @@ const SignIn = () => {
           return acc;
         }, {} as Record<string, MealAttendanceState>);
       }
-
-      await createUserMealAttendance(user.id, initialAttendance, user.diet || null, user.centre); // Use id instead of name
-
+      await createUserMealAttendance(user.id, initialAttendance, user.diet || null, user.centre);
       router.push('/');
     } catch (error: any) {
       console.error('Error creating user meal attendance:', error);
       toast({
         title: 'Error',
-        description: `Failed to create meal attendance. ${error.message || 'Please check your connection.'
-          }`,
+        description: `Failed to create meal attendance. ${error.message || 'Please check your connection.'}`,
+        variant: 'destructive',
       });
     }
+  };
+
+  const handleSignInClick = () => {
+    if (!isValidCentreCode) {
+      toast({ title: 'Error', description: 'Please enter a valid centre code.', variant: 'destructive' });
+      return;
+    }
+    if (!selectedUser) {
+      toast({ title: 'Error', description: 'Please select a user.', variant: 'destructive' });
+      return;
+    }
+
+    if (selectedUser.role === 'admin') {
+      setShowPasswordModal(true);
+    } else {
+      handleSignInWithPreload(selectedUser);
+    }
+  };
+
+  const handleVerifyPassword = () => {
+    if (!selectedUser) return;
+    setIsVerifying(true);
+    // Check password
+    if (adminPassword === selectedUser.pwd) {
+      toast({ title: 'Success', description: 'Password verified.' });
+      setShowPasswordModal(false);
+      handleSignInWithPreload(selectedUser);
+    } else {
+      toast({ title: 'Error', description: 'Incorrect password.', variant: 'destructive' });
+    }
+    setIsVerifying(false);
+    setAdminPassword('');
   };
 
   useEffect(() => {
@@ -156,12 +202,15 @@ const SignIn = () => {
       }
     };
 
-    verifyCentreCode();
+    if (centreCode) {
+        verifyCentreCode();
+    } else {
+        setIsValidCentreCode(false);
+    }
   }, [centreCode, router]);
-
+  
   useEffect(() => {
     if (selectedUsername) {
-      // Check if service workers are supported and active
       if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
         navigator.serviceWorker.controller.postMessage({
           type: 'SET_USER_ID',
@@ -169,7 +218,7 @@ const SignIn = () => {
         });
       }
     }
-  }, [selectedUsername]); // This effect runs whenever selectedUsername changes
+  }, [selectedUsername]);
 
   return (
     <>
@@ -182,27 +231,29 @@ const SignIn = () => {
           <CardContent className="grid gap-4">
             {preloadedUsers.length > 0 && (
               <div className="grid gap-2">
-                <label htmlFor="preloaded-users">Choose User:</label>
+                <Label htmlFor="preloaded-users">Choose User:</Label>
                 <Select
                   onValueChange={value => {
+                    const user = preloadedUsers.find(u => u.name === value) || null;
                     setSelectedUsername(value);
+                    setSelectedUser(user);
                   }}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger id="preloaded-users" className="w-full">
                     <SelectValue placeholder="Select a user" />
                   </SelectTrigger>
                   <SelectContent>
-                    {preloadedUsers.map(user => (
-                      <SelectItem key={user.name} value={user.name}>
+                    {preloadedUsers.sort((a,b) => a.name.localeCompare(b.name)).map(user => (
+                      <SelectItem key={user.id} value={user.name}>
                         {user.name} {user.diet ? `(${user.diet})` : ''}
- </SelectItem>
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             )}
             <div className="grid gap-2">
-              <label htmlFor="centre-code">Centre Code:</label>
+              <Label htmlFor="centre-code">Centre Code:</Label>
               <Input
                 id="centre-code"
                 placeholder="Enter centre code"
@@ -215,24 +266,45 @@ const SignIn = () => {
             </div>
             <Button
               disabled={!isValidCentreCode || !selectedUsername}
-              onClick={() => {
-                const selectedUser = preloadedUsers.find(u => u.name === selectedUsername);
-                if (selectedUser) {
-                  handleSignInWithPreload(selectedUser);
-                } else {
-                  toast({
-                    title: 'Error',
-                    description: 'Please select a user from the dropdown.',
-                  });
-                }
-              }}
+              onClick={handleSignInClick}
             >
               Sign In
             </Button>
           </CardContent>
         </Card>
-
       </div>
+
+      {showPasswordModal && selectedUser && (
+         <AlertDialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Admin Verification</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Please enter the password for {selectedUser.name} to continue.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="grid gap-2 py-2">
+                  <Label htmlFor="admin-password">Password</Label>
+                  <Input
+                    id="admin-password"
+                    type="password"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleVerifyPassword()}
+                    autoFocus
+                  />
+              </div>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setAdminPassword('')}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleVerifyPassword} disabled={isVerifying || !adminPassword}>
+                  {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Verify & Sign In
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+         </AlertDialog>
+      )}
+
       <div className="text-center text-sm mt-2">
         <Link href="/select-centre" className="text-muted-foreground hover:underline">
           Choose a different centre
@@ -243,5 +315,3 @@ const SignIn = () => {
 };
 
 export default SignIn;
-
-

@@ -32,6 +32,7 @@ interface CentreUser {
     id: string;
     name: string; // Assuming name exists for various purposes
     role: string;
+    pwd?: string;
     birthday?: Timestamp | string; // Assuming birthday exists, could be Timestamp or string
 }
 
@@ -486,6 +487,29 @@ export const getUsersBirthdays = async (centre: string): Promise<BirthdayInfo[]>
     } catch (error) {
         console.error('Error getting user birthdays:', error);
         return []; // Return empty array on error
+    }
+};
+
+// Function to get the admin password for a specific centre
+export const getAdminPassword = async (centre: string, userId: string): Promise<string | null> => {
+    try {
+        // Query the 'centres' collection for the document matching the centre name
+        const centreDocRef = doc(db, 'centres', centre);
+        const centreDocSnap = await getDoc(centreDocRef);
+        if (centreDocSnap.exists()) {
+            const centreData = centreDocSnap.data() as CentreData & { code?: string }; // Include 'code' field
+            const users = centreData.users || []; // Get the array of users
+            const adminUser = users.find(user => user.role === 'admin' && user.id === userId);
+            if (adminUser?.pwd) {
+                return adminUser.pwd; // Return the password if it exists for the admin user
+            } else if (centreData.code) {
+                return centreData.code; // Return the 'code' field as default if admin password doesn't exist
+            }
+        }
+        return null; // Return null if centre or admin user not found, or no password/code
+    } catch (error) {
+        console.error('Error getting admin password:', error);
+        throw error; // Rethrow the error for the caller to handle
     }
 };
 // export const getUsersBirthdays = async (centre: string): Promise<BirthdayInfo[]> => {
