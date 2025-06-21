@@ -62,6 +62,7 @@ const SignIn = () => {
   const [selectedUser, setSelectedUser] = useState<CentreUser | null>(null); // State for the full user object
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -155,6 +156,7 @@ const SignIn = () => {
     }
 
     if (selectedUser.role === 'admin') {
+      setPasswordError(''); // Clear previous errors
       setShowPasswordModal(true);
     } else {
       handleSignInWithPreload(selectedUser);
@@ -164,16 +166,17 @@ const SignIn = () => {
   const handleVerifyPassword = () => {
     if (!selectedUser) return;
     setIsVerifying(true);
-    // Check password
+    setPasswordError(''); // Clear error on new attempt
+
+    // This is a simplified check. In a real app, this should be an async call to a backend.
     if (adminPassword === selectedUser.pwd) {
       toast({ title: 'Success', description: 'Password verified.' });
       setShowPasswordModal(false);
       handleSignInWithPreload(selectedUser);
     } else {
-      toast({ title: 'Error', description: 'Incorrect password.', variant: 'destructive' });
+      setPasswordError('Incorrect password. Please try again.');
     }
     setIsVerifying(false);
-    setAdminPassword('');
   };
 
   useEffect(() => {
@@ -275,7 +278,14 @@ const SignIn = () => {
       </div>
 
       {showPasswordModal && selectedUser && (
-         <AlertDialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
+         <AlertDialog open={showPasswordModal} onOpenChange={(open) => {
+            if (!open) {
+                // Reset state when modal is closed
+                setAdminPassword('');
+                setPasswordError('');
+            }
+            setShowPasswordModal(open);
+         }}>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Admin Verification</AlertDialogTitle>
@@ -293,9 +303,10 @@ const SignIn = () => {
                     onKeyDown={(e) => e.key === 'Enter' && handleVerifyPassword()}
                     autoFocus
                   />
+                  {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
               </div>
               <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setAdminPassword('')}>Cancel</AlertDialogCancel>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction onClick={handleVerifyPassword} disabled={isVerifying || !adminPassword}>
                   {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Verify & Sign In
