@@ -22,7 +22,6 @@ import { Header } from "@/components/header";
 import { Loader2 } from 'lucide-react';
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -307,10 +306,10 @@ const SignIn = () => {
               </div>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleVerifyPassword} disabled={isVerifying || !adminPassword}>
+                <Button onClick={handleVerifyPassword} disabled={isVerifying || !adminPassword}>
                   {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Verify & Sign In
-                </AlertDialogAction>
+                </Button>
               </AlertDialogFooter>
             </AlertDialogContent>
          </AlertDialog>
