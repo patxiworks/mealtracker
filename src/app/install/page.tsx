@@ -46,7 +46,7 @@ export default function InstallPage() {
       // The app will likely reload in standalone mode, or they can navigate manually.
       // To be safe, we can try to navigate after a short delay,
       // though the 'display-mode: standalone' check should handle it.
-      setTimeout(navigateToApp, 10000); // Navigate after 10 sec
+      setTimeout(navigateToApp, 20000); // Navigate after 20 sec
     } else {
       // User dismissed the install prompt
     }
@@ -98,9 +98,9 @@ export default function InstallPage() {
               If you need help, <a href="https://wa.me/08137245046" target="blank">click here to ask for it</a>.
             </p>
           )}
-          <Button variant="outline" onClick={handleContinueToApp} className="w-full text-base sm:text-lg py-3">
+          {/* <Button variant="outline" onClick={handleContinueToApp} className="w-full text-base sm:text-lg py-3">
             Continue in Browser <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
+          </Button> */}
         </CardContent>
       </Card>
       <p className="mt-8 text-xs text-center text-[#4864c3]">

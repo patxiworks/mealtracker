@@ -189,7 +189,7 @@ const SignIn = () => {
                   }}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a preloaded user" />
+                    <SelectValue placeholder="Select a user" />
                   </SelectTrigger>
                   <SelectContent>
                     {preloadedUsers.map(user => (
