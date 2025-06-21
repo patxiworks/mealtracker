@@ -228,7 +228,7 @@ const SignIn = () => {
         <Card className="w-full max-w-md mx-auto">
           <Header centre={centre} title="Sign-In" menu={false} />
           <CardHeader className="pb-2">
-            <CardTitle className="text-2xl">Sign In {centre ? `to ${centre}` : ""}</CardTitle>
+            <CardTitle className="text-2xl">Sign in {centre ? `to ${centre}` : ""}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
             {preloadedUsers.length > 0 && (
