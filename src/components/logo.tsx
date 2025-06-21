@@ -8,7 +8,7 @@ export const Logo = ({ centre, title }: { centre: string | null; title: string |
             <CardTitle className="flex gap-1 text-2xl text-[#d3dcfb]">
                 {/* <CalendarCheck2 className="inline-block" size={18} /> */}
                 <img
-                    src="/mealticker.png"
+                    src="/mealticker-blue.png"
                     alt="App Icon"
                     data-ai-hint="MealTicker logo"
                     //className="mx-auto rounded-xl shadow-md h-15 w-16 sm:h-15 sm:w-16"
