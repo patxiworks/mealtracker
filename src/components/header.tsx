@@ -38,18 +38,18 @@ export const Header = ({ centre, title, menu = true }: { centre: string | null; 
                         <Link href="/">
                             <DropdownMenuItem><Table size={10} /> Mealsheet</DropdownMenuItem>
                         </Link>
-                        {role == 'admin' &&
+                        {/*role == 'admin' && */}
                             <Link href="/reports">
                                 <DropdownMenuItem><NotepadText size={10} /> Reports</DropdownMenuItem>
                             </Link>
-                        }
+                        {/* */}
                         <Link href="/chats">
                             <DropdownMenuItem><MessageCircleMore size={10} /> Messages</DropdownMenuItem>
                         </Link>
                         {role == 'admin' && 
-                        <Link href="/settings">
-                            <DropdownMenuItem><Settings size={10} /> Settings</DropdownMenuItem>
-                        </Link>
+                            <Link href="/settings">
+                                <DropdownMenuItem><Settings size={10} /> Settings</DropdownMenuItem>
+                            </Link>
                         }
                         <div onClick={handleSignOut}>
                             <DropdownMenuItem><LogOut size={10} /> Sign out</DropdownMenuItem>

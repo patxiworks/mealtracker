@@ -231,19 +231,19 @@ const DailyReportPage = () => {
                 lunchNextDay: {
                     present: reportNextDay.attendancePresent.lunch,
                     packed: reportNextDay.attendancePacked.lunch,
-                    late: reportNextDay.attendancePacked.lunch,
+                    late: reportNextDay.attendanceLate.lunch,
                     date: formattedNextDayForDisplay, // Use display format
                 },
                 dinnerNextDay: {
                     present: reportNextDay.attendancePresent.dinner,
                     packed: reportNextDay.attendancePacked.dinner,
-                    late: reportNextDay.attendancePacked.dinner,
+                    late: reportNextDay.attendanceLate.dinner,
                     date: formattedNextDayForDisplay, // Use display format
                 },
                 breakfastDayAfter: {
                     present: reportDayAfter.attendancePresent.breakfast,
                     packed: reportDayAfter.attendancePacked.breakfast,
-                    late: reportDayAfter.attendancePacked.breakfast,
+                    late: reportDayAfter.attendanceLate.breakfast,
                     date: formattedDayAfterForDisplay, // Use display format
                 }
             },
