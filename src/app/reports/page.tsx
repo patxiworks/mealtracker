@@ -68,10 +68,12 @@ interface SummaryViewData {
       lunchNextDay: SummaryMealAttendance;
       dinnerNextDay: SummaryMealAttendance;
       breakfastDayAfter: SummaryMealAttendance;
+      lunchDayAfter: SummaryMealAttendance;
     };
     dietCountsPresent: DietCountsDetail; // Re-use DietCountsDetail
     dietCountsPacked: DietCountsDetail; // Re-use DietCountsDetail
     dietCountsLate: DietCountsDetail; // Re-use DietCountsDetail
+    dietCountsPackedDayAfter: DietCountsDetail; // New property for day after's packed diets
     dates: { // Store dates for display
         nextDay: string;
         dayAfter: string;
@@ -245,18 +247,25 @@ const DailyReportPage = () => {
                     packed: reportDayAfter.attendancePacked.breakfast,
                     late: reportDayAfter.attendanceLate.breakfast,
                     date: formattedDayAfterForDisplay, // Use display format
+                },
+                lunchDayAfter: {
+                    present: reportDayAfter.attendancePresent.lunch,
+                    packed: reportDayAfter.attendancePacked.lunch,
+                    late: reportDayAfter.attendanceLate.lunch,
+                    date: formattedDayAfterForDisplay, // Use display format
                 }
             },
             dietCountsPresent: {}, // Initialize
             dietCountsPacked: {}, // Initialize
             dietCountsLate: {}, // Initialize
+            dietCountsPackedDayAfter: reportDayAfter.dietCountsPacked, // Directly assign packed diets for the day after
             dates: { // Store display dates
                 nextDay: formattedNextDayForDisplay,
                 dayAfter: formattedDayAfterForDisplay,
             }
         };
 
-        // Aggregate Diet Counts (Present & Packed)
+        // Aggregate Diet Counts for main summary tables (Present, Packed, Late)
         const allDiets = new Set<string>();
         // Collect all unique diet keys from both present and packed counts for both days
         [
@@ -364,17 +373,17 @@ const DailyReportPage = () => {
 
   const summaryData = [
     {
-        title: "Dietary Attendance Summary (Present)",
+        title: "Diets (Present)",
         data: summaryReport?.dietCountsPresent, // For the summary tables
         dailyData: dailyReport?.dietCountsPresent, // For the daily tables
     },
     {
-        title: "Dietary Attendance Summary (Packed)",
+        title: "Diets (Packed)",
         data: summaryReport?.dietCountsPacked,
         dailyData: dailyReport?.dietCountsPacked,
     },
     {
-        title: "Dietary Attendance Summary (Late)",
+        title: "Diets (Late)",
         data: summaryReport?.dietCountsLate,
         dailyData: dailyReport?.dietCountsLate,
     },
@@ -544,7 +553,7 @@ const DailyReportPage = () => {
                                     {/* Summary Meal Attendance Table */}
                                     <Card>
                                         <CardHeader className="pb-1 pt-4">
-                                            <CardTitle className="text-base font-semibold">Two-day Attendance Summary</CardTitle>
+                                            <CardTitle className="text-base font-semibold">Two-day Summary</CardTitle>
                                         </CardHeader>
                                         <CardContent className="px-2 sm:p-4 pt-0">
                                             <Table>
@@ -552,8 +561,8 @@ const DailyReportPage = () => {
                                                 <TableRow>
                                                     <TableHead>Meal</TableHead>
                                                     <TableHead>Present</TableHead>
-                                                    <TableHead>Packed</TableHead>
                                                     <TableHead>Late</TableHead>
+                                                    <TableHead>Packed</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -563,8 +572,8 @@ const DailyReportPage = () => {
                                                         <div className="text-xs text-muted-foreground">{summaryReport.dates.nextDay}</div>
                                                     </TableCell>
                                                     <TableCell><CountWithPopover detail={summaryReport.mealAttendance.lunchNextDay.present} /></TableCell>
-                                                    <TableCell><CountWithPopover detail={summaryReport.mealAttendance.lunchNextDay.packed} /></TableCell>
                                                     <TableCell><CountWithPopover detail={summaryReport.mealAttendance.lunchNextDay.late} /></TableCell>
+                                                    <TableCell className="bg-[#eee] text-center"><CountWithPopover detail={summaryReport.mealAttendance.lunchNextDay.packed} /></TableCell>
                                                 </TableRow>
                                                 <TableRow>
                                                     <TableCell>
@@ -572,8 +581,8 @@ const DailyReportPage = () => {
                                                         <div className="text-xs text-muted-foreground">{summaryReport.dates.nextDay}</div>
                                                     </TableCell>
                                                     <TableCell><CountWithPopover detail={summaryReport.mealAttendance.dinnerNextDay.present} /></TableCell>
-                                                    <TableCell><CountWithPopover detail={summaryReport.mealAttendance.dinnerNextDay.packed} /></TableCell>
                                                     <TableCell><CountWithPopover detail={summaryReport.mealAttendance.dinnerNextDay.late} /></TableCell>
+                                                    <TableCell className="bg-[#eee] text-center"><CountWithPopover detail={summaryReport.mealAttendance.dinnerNextDay.packed} /></TableCell>
                                                 </TableRow>
                                                 <TableRow>
                                                     <TableCell>
@@ -581,13 +590,69 @@ const DailyReportPage = () => {
                                                         <div className="text-xs text-muted-foreground">{summaryReport.dates.dayAfter}</div>
                                                     </TableCell>
                                                     <TableCell><CountWithPopover detail={summaryReport.mealAttendance.breakfastDayAfter.present} /></TableCell>
-                                                    <TableCell><CountWithPopover detail={summaryReport.mealAttendance.breakfastDayAfter.packed} /></TableCell>
                                                     <TableCell><CountWithPopover detail={summaryReport.mealAttendance.breakfastDayAfter.late} /></TableCell>
+                                                    <TableCell className="bg-[#eee] text-center"><CountWithPopover detail={summaryReport.mealAttendance.breakfastDayAfter.packed} /></TableCell>
                                                 </TableRow>
                                             </TableBody>
                                             </Table>
                                         </CardContent>
                                     </Card>
+
+                                    {/* Packed Meal Table */}
+                                    <Card className="border-t-0">
+                                        <CardHeader className="pb-1 pt-4">
+                                            <CardTitle className="text-base font-semibold">Packed Meals ({summaryReport.dates.dayAfter})</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="px-2 sm:p-4 pt-0 pb-2">
+                                            <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead className="h-8 text-center">Breakfast</TableHead>
+                                                    <TableHead className="h-8 text-center">Lunch</TableHead>
+                                                    <TableHead className="h-8 text-center">Dinner</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                <TableRow>
+                                                    <TableCell className="p-2 text-center"><CountWithPopover detail={summaryReport.mealAttendance.breakfastDayAfter.packed} /></TableCell>
+                                                    <TableCell className="p-2 text-center"><CountWithPopover detail={summaryReport.mealAttendance.lunchDayAfter.packed} /></TableCell>
+                                                    <TableCell className="p-2 text-center">-</TableCell>
+                                                </TableRow>
+                                            </TableBody>
+                                            </Table>
+                                        </CardContent>
+                                    </Card>
+                                    
+                                    {/* NEW: Packed Diets Table for Day After */}
+                                    {summaryReport && Object.keys(summaryReport.dietCountsPackedDayAfter).length > 0 && (
+                                        <Card className="mt-4">
+                                            <CardHeader className="pb-1 pt-4">
+                                                <CardTitle className="text-base font-semibold">Packed Diets ({summaryReport.dates.dayAfter})</CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="px-2 sm:p-4 pt-0">
+                                                <Table>
+                                                    <TableHeader>
+                                                        <TableRow>
+                                                            <TableHead>Diet</TableHead>
+                                                            <TableHead>Breakfast</TableHead>
+                                                            <TableHead>Lunch</TableHead>
+                                                            <TableHead>Dinner</TableHead>
+                                                        </TableRow>
+                                                    </TableHeader>
+                                                    <TableBody>
+                                                        {Object.entries(summaryReport.dietCountsPackedDayAfter).map(([diet, counts]) => (
+                                                            <TableRow key={diet}>
+                                                                <TableCell>{diet}</TableCell>
+                                                                <TableCell><CountWithPopover detail={counts?.breakfast} /></TableCell>
+                                                                <TableCell><CountWithPopover detail={counts?.lunch} /></TableCell>
+                                                                <TableCell><CountWithPopover detail={counts?.dinner} /></TableCell>
+                                                            </TableRow>
+                                                        ))}
+                                                    </TableBody>
+                                                </Table>
+                                            </CardContent>
+                                        </Card>
+                                    )}
 
                                     {/* Summary Dietary Attendance Tables */}
                                     {summaryData.map((summary, index) => (
@@ -636,7 +701,7 @@ const DailyReportPage = () => {
                          {/* User View Content */}
                         <TabsContent value="user">
                              <h3 className="text-lg font-semibold mt-4 mb-2 flex justify-center">
-                                User Attendance for {formattedReportDisplayDate}
+                                What users ticked for {formattedReportDisplayDate}
                              </h3>
                              {userAttendanceReport && Object.keys(userAttendanceReport).length > 0 ? (
                                 <Card className="mt-4">
