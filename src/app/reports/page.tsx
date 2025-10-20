@@ -190,7 +190,7 @@ const DailyReportPage = () => {
         console.error("Error fetching daily and user report:", error);
         setDailyReport(emptyReport); // Reset on error
         setUserAttendanceReport(null); // Reset on error
-        // Optionally set an error state
+        // Optionally set an error state 
       } finally {
         setLoading(false);
       }
